@@ -6,5 +6,5 @@ A lightweight Java-based system developed using Agile methods to streamline the 
 
 ## 📋 Group Name-list
 
-- TianXihe-Escape — 231222877
-- wyx1216 — 231221434
+- TianXihe-Escape：231222877
+- wyx1216：231221434
