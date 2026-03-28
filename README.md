@@ -17,7 +17,7 @@ A lightweight Java-based system developed using Agile methods to streamline the 
 # BUPT International School TA Recruitment System
 
 ## Project Overview
-This repository contains a stand-alone Java desktop application for managing Teaching Assistant recruitment at BUPT International School. The system replaces spreadsheet-based administration with a modular Swing application that supports TA applicants, Module Organisers, and Admin users.
+This repository contains a stand-alone Java desktop application for managing Teaching Assistant recruitment at BUPT International School. The system replaces spreadsheet-based administration with a modular Swing application that supports TA applicants, Module Organisers, and Admin user.
 
 The implementation is aligned with the coursework direction:
 - Iteration 1: account creation, login, applicant profile, CV path storage, browse jobs
