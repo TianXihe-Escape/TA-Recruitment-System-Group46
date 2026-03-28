@@ -1,0 +1,12 @@
+[
+  {
+    "applicationId": "apply-01",
+    "applicantId": "applicant-01",
+    "jobId": "job-01",
+    "appliedAt": "2026-03-26T10:00:00",
+    "status": "ACCEPTED",
+    "reviewerNotes": "Strong fit for lab support.",
+    "matchScore": 100,
+    "missingSkills": []
+  }
+]
