@@ -1,6 +1,5 @@
 package repository;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import model.ApplicantProfile;
 
 import java.nio.file.Path;
@@ -20,8 +19,7 @@ public class ApplicantProfileRepository {
     }
 
     public List<ApplicantProfile> findAll() {
-        return dataStore.readList(filePath, new TypeReference<>() {
-        });
+        return dataStore.readList(filePath, ApplicantProfile.class);
     }
 
     public Optional<ApplicantProfile> findByUserId(String userId) {
@@ -40,7 +38,3 @@ public class ApplicantProfileRepository {
         dataStore.writeList(filePath, profiles);
     }
 }
-<<<<<<< HEAD
-=======
-
->>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21

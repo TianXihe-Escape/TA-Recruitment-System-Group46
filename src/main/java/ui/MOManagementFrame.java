@@ -25,10 +25,9 @@ import java.time.LocalDate;
  * MO dashboard for posting jobs and reviewing applicants.
  */
 public class MOManagementFrame extends JFrame {
-<<<<<<< HEAD
+    private static final String NEW_JOB_PLACEHOLDER = "AUTO-GENERATED ON SAVE";
+
     private final DataService dataService;
-=======
->>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
     private final JobService jobService;
     private final ApplicantService applicantService;
     private final ApplicationService applicationService;
@@ -54,10 +53,7 @@ public class MOManagementFrame extends JFrame {
     private final JTable applicantTable = new JTable(applicantTableModel);
 
     public MOManagementFrame(DataService dataService, User currentUser) {
-<<<<<<< HEAD
         this.dataService = dataService;
-=======
->>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
         this.currentUser = currentUser;
         this.validationService = new ValidationService();
         this.jobService = new JobService(dataService.getJobRepository(), validationService);
@@ -79,6 +75,7 @@ public class MOManagementFrame extends JFrame {
         add(splitPane);
 
         refreshJobs();
+        clearForm();
     }
 
     private JPanel buildFormPanel() {
@@ -87,6 +84,7 @@ public class MOManagementFrame extends JFrame {
 
         JPanel form = new JPanel(new GridLayout(8, 2, 8, 8));
         jobIdField.setEditable(false);
+        jobIdField.setForeground(Color.GRAY);
         matchInfoArea.setEditable(false);
         form.add(new JLabel("Job ID"));
         form.add(jobIdField);
@@ -111,7 +109,6 @@ public class MOManagementFrame extends JFrame {
         lower.add(new JScrollPane(matchInfoArea), BorderLayout.SOUTH);
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-<<<<<<< HEAD
         JButton backButton = new JButton("Back to Login");
         JButton newButton = new JButton("New Job");
         JButton saveButton = new JButton("Save Job");
@@ -120,13 +117,6 @@ public class MOManagementFrame extends JFrame {
         buttons.add(saveButton);
 
         backButton.addActionListener(event -> returnToLogin());
-=======
-        JButton newButton = new JButton("New Job");
-        JButton saveButton = new JButton("Save Job");
-        buttons.add(newButton);
-        buttons.add(saveButton);
-
->>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
         newButton.addActionListener(event -> clearForm());
         saveButton.addActionListener(event -> saveJob());
 
@@ -199,6 +189,7 @@ public class MOManagementFrame extends JFrame {
             return;
         }
         JobPosting job = jobService.getJobById(String.valueOf(jobTableModel.getValueAt(row, 0)));
+        jobIdField.setForeground(Color.BLACK);
         jobIdField.setText(job.getJobId());
         moduleCodeField.setText(job.getModuleCode());
         moduleTitleField.setText(job.getModuleTitle());
@@ -211,12 +202,10 @@ public class MOManagementFrame extends JFrame {
     }
 
     private void clearForm() {
-<<<<<<< HEAD
         jobTable.clearSelection();
         applicantTable.clearSelection();
-=======
->>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
-        jobIdField.setText("");
+        jobIdField.setForeground(Color.GRAY);
+        jobIdField.setText(NEW_JOB_PLACEHOLDER);
         moduleCodeField.setText("");
         moduleTitleField.setText("");
         hoursField.setText("");
@@ -225,17 +214,16 @@ public class MOManagementFrame extends JFrame {
         dutiesArea.setText("");
         statusBox.setSelectedItem(JobStatus.OPEN);
         matchInfoArea.setText("");
-<<<<<<< HEAD
         reviewArea.setText("");
         applicantTableModel.setRowCount(0);
-=======
->>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
+        moduleCodeField.requestFocusInWindow();
     }
 
     private void saveJob() {
         try {
             JobPosting jobPosting = new JobPosting();
-            jobPosting.setJobId(jobIdField.getText().trim());
+            String jobId = jobIdField.getText().trim();
+            jobPosting.setJobId(NEW_JOB_PLACEHOLDER.equals(jobId) ? "" : jobId);
             jobPosting.setModuleCode(moduleCodeField.getText().trim());
             jobPosting.setModuleTitle(moduleTitleField.getText().trim());
             jobPosting.setHours(Integer.parseInt(hoursField.getText().trim()));
@@ -247,6 +235,7 @@ public class MOManagementFrame extends JFrame {
             jobService.saveJob(jobPosting);
             UiMessage.info(this, "Job saved successfully.");
             refreshJobs();
+            clearForm();
         } catch (NumberFormatException ex) {
             UiMessage.error(this, "Hours must be a number.");
         } catch (Exception ex) {
@@ -319,12 +308,9 @@ public class MOManagementFrame extends JFrame {
             UiMessage.error(this, ex.getMessage());
         }
     }
-<<<<<<< HEAD
 
     private void returnToLogin() {
         new LoginFrame(dataService).setVisible(true);
         dispose();
     }
-=======
->>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
 }

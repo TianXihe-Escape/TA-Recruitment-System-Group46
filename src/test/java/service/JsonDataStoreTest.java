@@ -1,6 +1,5 @@
 package service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import model.Role;
 import model.User;
 import org.junit.jupiter.api.Test;
@@ -23,8 +22,7 @@ class JsonDataStoreTest {
         List<User> users = List.of(new User("u1", "admin@bupt.edu.cn", "admin123", Role.ADMIN));
 
         store.writeList(file, users);
-        List<User> loaded = store.readList(file, new TypeReference<>() {
-        });
+        List<User> loaded = store.readList(file, User.class);
 
         assertEquals(1, loaded.size());
         assertEquals("admin@bupt.edu.cn", loaded.get(0).getUsername());

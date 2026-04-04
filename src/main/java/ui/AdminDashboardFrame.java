@@ -60,27 +60,18 @@ public class AdminDashboardFrame extends JFrame {
         panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-<<<<<<< HEAD
         JButton backButton = new JButton("Back to Login");
-=======
->>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
         JButton refreshButton = new JButton("Refresh");
         JButton loadSampleButton = new JButton("Load Sample Data");
         JButton resetButton = new JButton("Reset Demo Data");
         JButton suggestButton = new JButton("Rebalance Suggestion");
-<<<<<<< HEAD
         buttonPanel.add(backButton);
-=======
->>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
         buttonPanel.add(refreshButton);
         buttonPanel.add(loadSampleButton);
         buttonPanel.add(resetButton);
         buttonPanel.add(suggestButton);
 
-<<<<<<< HEAD
         backButton.addActionListener(event -> returnToLogin());
-=======
->>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
         refreshButton.addActionListener(event -> refreshData());
         loadSampleButton.addActionListener(event -> {
             dataService.loadSampleData();
@@ -159,14 +150,10 @@ public class AdminDashboardFrame extends JFrame {
         suggestionArea.setText(builder.toString());
     }
 
-<<<<<<< HEAD
     private void returnToLogin() {
         new LoginFrame(dataService).setVisible(true);
         dispose();
     }
-
-=======
->>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
     private static class WorkloadRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
