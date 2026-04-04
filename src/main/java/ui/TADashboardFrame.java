@@ -22,7 +22,10 @@ import java.awt.*;
  * TA dashboard for profile editing, browsing jobs, and tracking applications.
  */
 public class TADashboardFrame extends JFrame {
+<<<<<<< HEAD
     private final DataService dataService;
+=======
+>>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
     private final ApplicantService applicantService;
     private final JobService jobService;
     private final ApplicationService applicationService;
@@ -46,7 +49,10 @@ public class TADashboardFrame extends JFrame {
     private final JTable applicationTable = new JTable(applicationTableModel);
 
     public TADashboardFrame(DataService dataService, User currentUser) {
+<<<<<<< HEAD
         this.dataService = dataService;
+=======
+>>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
         this.currentUser = currentUser;
         this.validationService = new ValidationService();
         this.applicantService = new ApplicantService(dataService.getProfileRepository(), validationService);
@@ -95,6 +101,7 @@ public class TADashboardFrame extends JFrame {
         form.add(cvPathField);
 
         JButton saveProfileButton = new JButton("Save Profile");
+<<<<<<< HEAD
         JButton backButton = new JButton("Back to Login");
         JButton refreshButton = new JButton("Refresh");
 
@@ -104,6 +111,14 @@ public class TADashboardFrame extends JFrame {
         buttons.add(saveProfileButton);
 
         backButton.addActionListener(event -> returnToLogin());
+=======
+        JButton refreshButton = new JButton("Refresh");
+
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttons.add(refreshButton);
+        buttons.add(saveProfileButton);
+
+>>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
         saveProfileButton.addActionListener(event -> saveProfile());
         refreshButton.addActionListener(event -> {
             profile = applicantService.getProfileByUserId(currentUser.getUserId());
@@ -229,9 +244,12 @@ public class TADashboardFrame extends JFrame {
             UiMessage.error(this, ex.getMessage());
         }
     }
+<<<<<<< HEAD
 
     private void returnToLogin() {
         new LoginFrame(dataService).setVisible(true);
         dispose();
     }
+=======
+>>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
 }

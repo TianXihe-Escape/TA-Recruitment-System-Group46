@@ -40,3 +40,7 @@ public class ApplicantProfileRepository {
         dataStore.writeList(filePath, profiles);
     }
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21

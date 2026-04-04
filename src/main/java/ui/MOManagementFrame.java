@@ -25,7 +25,10 @@ import java.time.LocalDate;
  * MO dashboard for posting jobs and reviewing applicants.
  */
 public class MOManagementFrame extends JFrame {
+<<<<<<< HEAD
     private final DataService dataService;
+=======
+>>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
     private final JobService jobService;
     private final ApplicantService applicantService;
     private final ApplicationService applicationService;
@@ -51,7 +54,10 @@ public class MOManagementFrame extends JFrame {
     private final JTable applicantTable = new JTable(applicantTableModel);
 
     public MOManagementFrame(DataService dataService, User currentUser) {
+<<<<<<< HEAD
         this.dataService = dataService;
+=======
+>>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
         this.currentUser = currentUser;
         this.validationService = new ValidationService();
         this.jobService = new JobService(dataService.getJobRepository(), validationService);
@@ -105,6 +111,7 @@ public class MOManagementFrame extends JFrame {
         lower.add(new JScrollPane(matchInfoArea), BorderLayout.SOUTH);
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+<<<<<<< HEAD
         JButton backButton = new JButton("Back to Login");
         JButton newButton = new JButton("New Job");
         JButton saveButton = new JButton("Save Job");
@@ -113,6 +120,13 @@ public class MOManagementFrame extends JFrame {
         buttons.add(saveButton);
 
         backButton.addActionListener(event -> returnToLogin());
+=======
+        JButton newButton = new JButton("New Job");
+        JButton saveButton = new JButton("Save Job");
+        buttons.add(newButton);
+        buttons.add(saveButton);
+
+>>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
         newButton.addActionListener(event -> clearForm());
         saveButton.addActionListener(event -> saveJob());
 
@@ -197,8 +211,11 @@ public class MOManagementFrame extends JFrame {
     }
 
     private void clearForm() {
+<<<<<<< HEAD
         jobTable.clearSelection();
         applicantTable.clearSelection();
+=======
+>>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
         jobIdField.setText("");
         moduleCodeField.setText("");
         moduleTitleField.setText("");
@@ -208,8 +225,11 @@ public class MOManagementFrame extends JFrame {
         dutiesArea.setText("");
         statusBox.setSelectedItem(JobStatus.OPEN);
         matchInfoArea.setText("");
+<<<<<<< HEAD
         reviewArea.setText("");
         applicantTableModel.setRowCount(0);
+=======
+>>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
     }
 
     private void saveJob() {
@@ -299,9 +319,12 @@ public class MOManagementFrame extends JFrame {
             UiMessage.error(this, ex.getMessage());
         }
     }
+<<<<<<< HEAD
 
     private void returnToLogin() {
         new LoginFrame(dataService).setVisible(true);
         dispose();
     }
+=======
+>>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
 }

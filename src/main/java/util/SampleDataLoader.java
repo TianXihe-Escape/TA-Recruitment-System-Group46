@@ -34,7 +34,10 @@ public class SampleDataLoader {
         List<User> users = new ArrayList<>();
         users.add(new User("user-ta-01", "ta1@bupt.edu.cn", "ta123", Role.TA));
         users.add(new User("user-ta-02", "ta2@bupt.edu.cn", "ta123", Role.TA));
+<<<<<<< HEAD
         users.add(new User("user-ta-03", "ta3@bupt.edu.cn", "ta123", Role.TA));
+=======
+>>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
         users.add(new User("user-mo-01", "mo1@bupt.edu.cn", "mo123", Role.MO));
         users.add(new User("user-admin-01", "admin@bupt.edu.cn", "admin123", Role.ADMIN));
         userRepository.saveAll(users);
@@ -61,6 +64,7 @@ public class SampleDataLoader {
         zhang.setPreferredDuties("Tutorial support");
         zhang.setCvPath("sample-cv/zhang-wei-cv.pdf");
         profiles.add(zhang);
+<<<<<<< HEAD
 
         ApplicantProfile chen = new ApplicantProfile("applicant-03", "user-ta-03");
         chen.setName("Chen Yu");
@@ -72,6 +76,8 @@ public class SampleDataLoader {
         chen.setPreferredDuties("Marking, office hours");
         chen.setCvPath("sample-cv/chen-yu-cv.pdf");
         profiles.add(chen);
+=======
+>>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
         profileRepository.saveAll(profiles);
 
         List<JobPosting> jobs = new ArrayList<>();
@@ -98,6 +104,7 @@ public class SampleDataLoader {
         dataJob.setStatus(JobStatus.OPEN);
         dataJob.setPostedBy("user-mo-01");
         jobs.add(dataJob);
+<<<<<<< HEAD
 
         JobPosting aiJob = new JobPosting();
         aiJob.setJobId("job-03");
@@ -110,6 +117,8 @@ public class SampleDataLoader {
         aiJob.setStatus(JobStatus.OPEN);
         aiJob.setPostedBy("user-mo-01");
         jobs.add(aiJob);
+=======
+>>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
         jobRepository.saveAll(jobs);
 
         List<ApplicationRecord> applications = new ArrayList<>();
@@ -121,6 +130,7 @@ public class SampleDataLoader {
         record.setStatus(ApplicationStatus.ACCEPTED);
         record.setReviewerNotes("Strong fit for lab support.");
         record.setMatchScore(100);
+<<<<<<< HEAD
         record.setMissingSkills(List.of());
         applications.add(record);
 
@@ -145,6 +155,9 @@ public class SampleDataLoader {
         thirdRecord.setMatchScore(100);
         thirdRecord.setMissingSkills(List.of());
         applications.add(thirdRecord);
+=======
+        applications.add(record);
+>>>>>>> 678f3c5fb19b56b79fa52de28f6bd1cbc0d16c21
         applicationRepository.saveAll(applications);
 
         SystemConfig config = new SystemConfig();
