@@ -59,13 +59,22 @@ public class TADashboardFrame extends JFrame {
         this.profile = applicantService.getProfileByUserId(currentUser.getUserId());
 
         setTitle("TA Dashboard - " + Constants.APP_TITLE);
-        setSize(1150, 700);
+        setSize(1320, 860);
+        setMinimumSize(new Dimension(1180, 760));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+        UiTheme.styleFrame(this);
+
+        styleComponents();
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, buildLeftPanel(), buildRightPanel());
-        splitPane.setResizeWeight(0.4);
-        add(splitPane);
+        splitPane.setResizeWeight(0.38);
+        UiTheme.styleSplitPane(splitPane);
+
+        JPanel root = UiTheme.createPagePanel();
+        root.add(UiTheme.createHeader("TA Workspace", "Complete your profile, review open modules, and track application outcomes."), BorderLayout.NORTH);
+        root.add(splitPane, BorderLayout.CENTER);
+        add(root);
 
         loadProfile();
         refreshJobs();
@@ -73,35 +82,21 @@ public class TADashboardFrame extends JFrame {
     }
 
     private JPanel buildLeftPanel() {
-        JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        JPanel panel = UiTheme.createCard("Applicant Profile", "Keep this profile current so matching and review decisions stay accurate.");
 
-        JPanel form = new JPanel(new GridLayout(8, 2, 8, 8));
-        form.add(new JLabel("Name"));
-        form.add(nameField);
-        form.add(new JLabel("Email"));
-        form.add(emailField);
-        form.add(new JLabel("Phone"));
-        form.add(phoneField);
-        form.add(new JLabel("Skills"));
-        form.add(skillsField);
-        form.add(new JLabel("Availability"));
-        form.add(availabilityField);
-        form.add(new JLabel("Preferred Duties"));
-        form.add(preferredDutiesField);
-        form.add(new JLabel("Experience Summary"));
-        form.add(new JScrollPane(experienceArea));
-        form.add(new JLabel("CV Path"));
-       form.add(cvPathField);
+        JPanel form = UiTheme.createFormGrid();
+        UiTheme.addFormRow(form, 0, "Name", nameField);
+        UiTheme.addFormRow(form, 2, "Email", emailField);
+        UiTheme.addFormRow(form, 4, "Phone", phoneField);
+        UiTheme.addFormRow(form, 6, "Skills", skillsField);
+        UiTheme.addFormRow(form, 8, "Availability", availabilityField);
+        UiTheme.addFormRow(form, 10, "Preferred Duties", preferredDutiesField);
+        UiTheme.addFormRow(form, 12, "Experience Summary", wrapArea(experienceArea));
+        UiTheme.addFormRow(form, 14, "CV Path", cvPathField);
 
-        JButton saveProfileButton = new JButton("Save Profile");
-        JButton backButton = new JButton("Back to Login");
-        JButton refreshButton = new JButton("Refresh");
-
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        buttons.add(backButton);
-        buttons.add(refreshButton);
-        buttons.add(saveProfileButton);
+        JButton saveProfileButton = UiTheme.createPrimaryButton("Save Profile");
+        JButton backButton = UiTheme.createSecondaryButton("Back to Login");
+        JButton refreshButton = UiTheme.createSecondaryButton("Refresh");
 
         backButton.addActionListener(event -> returnToLogin());
         saveProfileButton.addActionListener(event -> saveProfile());
@@ -112,23 +107,20 @@ public class TADashboardFrame extends JFrame {
             refreshApplications();
         });
 
-        panel.add(form, BorderLayout.CENTER);
-        panel.add(buttons, BorderLayout.SOUTH);
+        JPanel body = new JPanel(new BorderLayout(0, 18));
+        body.setOpaque(false);
+        body.add(form, BorderLayout.CENTER);
+        body.add(UiTheme.createButtonRow(FlowLayout.RIGHT, backButton, refreshButton, saveProfileButton), BorderLayout.SOUTH);
+        panel.add(body, BorderLayout.CENTER);
         return panel;
     }
 
     private JPanel buildRightPanel() {
-        JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        JPanel panel = UiTheme.createCard("Opportunities", "Browse available jobs and monitor the progress of your submissions.");
 
-        JButton viewDetailsButton = new JButton("View Job Details");
-        JButton applyButton = new JButton("Apply");
-        JButton refreshButton = new JButton("Refresh Tables");
-
-        JPanel topButtons = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        topButtons.add(viewDetailsButton);
-        topButtons.add(applyButton);
-        topButtons.add(refreshButton);
+        JButton viewDetailsButton = UiTheme.createSecondaryButton("View Job Details");
+        JButton applyButton = UiTheme.createPrimaryButton("Apply");
+        JButton refreshButton = UiTheme.createSecondaryButton("Refresh Tables");
 
         viewDetailsButton.addActionListener(event -> viewSelectedJob());
         applyButton.addActionListener(event -> applyForSelectedJob());
@@ -138,11 +130,15 @@ public class TADashboardFrame extends JFrame {
         });
 
         JTabbedPane tabs = new JTabbedPane();
-        tabs.addTab("Available Jobs", new JScrollPane(jobTable));
-        tabs.addTab("My Applications", new JScrollPane(applicationTable));
+        UiTheme.styleTabs(tabs);
+        tabs.addTab("Available Jobs", UiTheme.wrapTable(jobTable));
+        tabs.addTab("My Applications", UiTheme.wrapTable(applicationTable));
 
-        panel.add(topButtons, BorderLayout.NORTH);
-        panel.add(tabs, BorderLayout.CENTER);
+        JPanel body = new JPanel(new BorderLayout(0, 18));
+        body.setOpaque(false);
+        body.add(UiTheme.createButtonRow(FlowLayout.LEFT, viewDetailsButton, applyButton, refreshButton), BorderLayout.NORTH);
+        body.add(tabs, BorderLayout.CENTER);
+        panel.add(body, BorderLayout.CENTER);
         return panel;
     }
 
@@ -233,5 +229,24 @@ public class TADashboardFrame extends JFrame {
     private void returnToLogin() {
         new LoginFrame(dataService).setVisible(true);
         dispose();
+    }
+
+    private void styleComponents() {
+        UiTheme.styleTextField(nameField);
+        UiTheme.styleTextField(emailField);
+        UiTheme.styleTextField(phoneField);
+        UiTheme.styleTextField(skillsField);
+        UiTheme.styleTextField(availabilityField);
+        UiTheme.styleTextField(preferredDutiesField);
+        UiTheme.styleTextField(cvPathField);
+        UiTheme.styleTextArea(experienceArea, 5);
+        UiTheme.styleTable(jobTable);
+        UiTheme.styleTable(applicationTable);
+    }
+
+    private JScrollPane wrapArea(JTextArea area) {
+        JScrollPane scrollPane = new JScrollPane(area);
+        UiTheme.styleScrollPane(scrollPane);
+        return scrollPane;
     }
 }

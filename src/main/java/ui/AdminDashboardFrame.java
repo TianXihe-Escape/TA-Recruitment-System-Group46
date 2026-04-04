@@ -43,33 +43,34 @@ public class AdminDashboardFrame extends JFrame {
         this.matchingService = new MatchingService();
 
         setTitle("Admin Dashboard - " + Constants.APP_TITLE);
-        setSize(1200, 720);
+        setSize(1380, 860);
+        setMinimumSize(new Dimension(1200, 760));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+        UiTheme.styleFrame(this);
+        styleComponents();
 
         workloadTable.setDefaultRenderer(Object.class, new WorkloadRenderer());
         JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, buildTopPanel(), buildBottomPanel());
         splitPane.setResizeWeight(0.55);
-        add(splitPane);
+        UiTheme.styleSplitPane(splitPane);
+
+        JPanel root = UiTheme.createPagePanel();
+        root.add(UiTheme.createHeader("Admin Control Center", "Audit workloads, repopulate demo data, and rebalance staffing decisions."), BorderLayout.NORTH);
+        root.add(splitPane, BorderLayout.CENTER);
+        add(root);
 
         refreshData();
     }
 
     private JPanel buildTopPanel() {
-        JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        JPanel panel = UiTheme.createCard("Workload Monitor", "Track assigned hours across TAs and quickly reset or repopulate the demo environment.");
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JButton backButton = new JButton("Back to Login");
-        JButton refreshButton = new JButton("Refresh");
-        JButton loadSampleButton = new JButton("Load Sample Data");
-        JButton resetButton = new JButton("Reset Demo Data");
-        JButton suggestButton = new JButton("Rebalance Suggestion");
-        buttonPanel.add(backButton);
-        buttonPanel.add(refreshButton);
-        buttonPanel.add(loadSampleButton);
-        buttonPanel.add(resetButton);
-        buttonPanel.add(suggestButton);
+        JButton backButton = UiTheme.createSecondaryButton("Back to Login");
+        JButton refreshButton = UiTheme.createSecondaryButton("Refresh");
+        JButton loadSampleButton = UiTheme.createSecondaryButton("Load Demo Data");
+        JButton resetButton = UiTheme.createDangerButton("Reset Demo Data");
+        JButton suggestButton = UiTheme.createPrimaryButton("Rebalance Suggestion");
 
         backButton.addActionListener(event -> returnToLogin());
         refreshButton.addActionListener(event -> refreshData());
@@ -85,20 +86,28 @@ public class AdminDashboardFrame extends JFrame {
         });
         suggestButton.addActionListener(event -> generateSuggestions());
 
-        panel.add(buttonPanel, BorderLayout.NORTH);
-        panel.add(new JScrollPane(workloadTable), BorderLayout.CENTER);
+        JPanel body = new JPanel(new BorderLayout(0, 18));
+        body.setOpaque(false);
+        body.add(UiTheme.createButtonRow(FlowLayout.LEFT, backButton, refreshButton, loadSampleButton, resetButton, suggestButton), BorderLayout.NORTH);
+        body.add(UiTheme.wrapTable(workloadTable), BorderLayout.CENTER);
+        panel.add(body, BorderLayout.CENTER);
         return panel;
     }
 
     private JSplitPane buildBottomPanel() {
-        jobSummaryArea.setEditable(false);
-        suggestionArea.setEditable(false);
+        JPanel jobsCard = UiTheme.createCard("Jobs and Assignments", "High-level list of current postings, hours, and statuses.");
+        jobsCard.add(wrapArea(jobSummaryArea), BorderLayout.CENTER);
+
+        JPanel suggestionsCard = UiTheme.createCard("Rebalance Suggestions", "Use recommendations to route open jobs to lower-load applicants.");
+        suggestionsCard.add(wrapArea(suggestionArea), BorderLayout.CENTER);
+
         JSplitPane splitPane = new JSplitPane(
                 JSplitPane.HORIZONTAL_SPLIT,
-                new JScrollPane(jobSummaryArea),
-                new JScrollPane(suggestionArea)
+                jobsCard,
+                suggestionsCard
         );
         splitPane.setResizeWeight(0.5);
+        UiTheme.styleSplitPane(splitPane);
         return splitPane;
     }
 
@@ -154,6 +163,21 @@ public class AdminDashboardFrame extends JFrame {
         new LoginFrame(dataService).setVisible(true);
         dispose();
     }
+
+    private void styleComponents() {
+        UiTheme.styleTable(workloadTable);
+        UiTheme.styleTextArea(jobSummaryArea, 14);
+        UiTheme.styleTextArea(suggestionArea, 14);
+        jobSummaryArea.setEditable(false);
+        suggestionArea.setEditable(false);
+    }
+
+    private JScrollPane wrapArea(JTextArea area) {
+        JScrollPane scrollPane = new JScrollPane(area);
+        UiTheme.styleScrollPane(scrollPane);
+        return scrollPane;
+    }
+
     private static class WorkloadRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,

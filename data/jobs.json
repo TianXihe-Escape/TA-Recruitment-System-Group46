@@ -5,7 +5,11 @@
     "moduleTitle" : "Programming Fundamentals",
     "duties" : "Support labs, answer questions, mark exercises",
     "hours" : 6,
-    "requiredSkills" : [ "Java", "Communication", "Agile" ],
+    "requiredSkills" : [
+      "Java",
+      "Communication",
+      "Agile"
+    ],
     "applicationDeadline" : "2026-04-25",
     "status" : "CLOSED",
     "postedBy" : "user-mo-01"
@@ -16,7 +20,11 @@
     "moduleTitle" : "Data Analytics",
     "duties" : "Prepare tutorial materials and support datasets",
     "hours" : 8,
-    "requiredSkills" : [ "Python", "Data Analysis", "Communication" ],
+    "requiredSkills" : [
+      "Python",
+      "Data Analysis",
+      "Communication"
+    ],
     "applicationDeadline" : "2026-04-18",
     "status" : "OPEN",
     "postedBy" : "user-mo-01"
@@ -27,7 +35,11 @@
     "moduleTitle" : "Introduction to AI",
     "duties" : "Support seminars, prepare examples, and help with marking.",
     "hours" : 5,
-    "requiredSkills" : [ "Python", "Communication", "Marking" ],
+    "requiredSkills" : [
+      "Python",
+      "Communication",
+      "Marking"
+    ],
     "applicationDeadline" : "2026-04-14",
     "status" : "OPEN",
     "postedBy" : "user-mo-01"

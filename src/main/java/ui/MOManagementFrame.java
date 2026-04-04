@@ -66,80 +66,70 @@ public class MOManagementFrame extends JFrame {
         );
 
         setTitle("MO Management - " + Constants.APP_TITLE);
-        setSize(1250, 760);
+        setSize(1420, 880);
+        setMinimumSize(new Dimension(1240, 780));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+        UiTheme.styleFrame(this);
+        styleComponents();
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, buildFormPanel(), buildTablesPanel());
-        splitPane.setResizeWeight(0.38);
-        add(splitPane);
+        splitPane.setResizeWeight(0.4);
+        UiTheme.styleSplitPane(splitPane);
+
+        JPanel root = UiTheme.createPagePanel();
+        root.add(UiTheme.createHeader("Module Organiser Console", "Publish jobs, review applicants, and manage hiring decisions from one workspace."), BorderLayout.NORTH);
+        root.add(splitPane, BorderLayout.CENTER);
+        add(root);
 
         refreshJobs();
         clearForm();
     }
 
     private JPanel buildFormPanel() {
-        JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        JPanel panel = UiTheme.createCard("Job Posting Editor", "Select an existing job to revise it, or start a new vacancy from a clean form.");
 
-        JPanel form = new JPanel(new GridLayout(8, 2, 8, 8));
+        JPanel form = UiTheme.createFormGrid();
         jobIdField.setEditable(false);
         jobIdField.setForeground(Color.GRAY);
         matchInfoArea.setEditable(false);
-        form.add(new JLabel("Job ID"));
-        form.add(jobIdField);
-        form.add(new JLabel("Module Code"));
-        form.add(moduleCodeField);
-        form.add(new JLabel("Module Title"));
-        form.add(moduleTitleField);
-        form.add(new JLabel("Hours"));
-        form.add(hoursField);
-        form.add(new JLabel("Required Skills"));
-        form.add(skillsField);
-        form.add(new JLabel("Deadline (YYYY-MM-DD)"));
-        form.add(deadlineField);
-        form.add(new JLabel("Status"));
-        form.add(statusBox);
-        form.add(new JLabel("Duties"));
-        form.add(new JScrollPane(dutiesArea));
+        UiTheme.addFormRow(form, 0, "Job ID", jobIdField);
+        UiTheme.addFormRow(form, 2, "Module Code", moduleCodeField);
+        UiTheme.addFormRow(form, 4, "Module Title", moduleTitleField);
+        UiTheme.addFormRow(form, 6, "Hours", hoursField);
+        UiTheme.addFormRow(form, 8, "Required Skills", skillsField);
+        UiTheme.addFormRow(form, 10, "Deadline (YYYY-MM-DD)", deadlineField);
+        UiTheme.addFormRow(form, 12, "Status", statusBox);
+        UiTheme.addFormRow(form, 14, "Duties", wrapArea(dutiesArea));
 
-        JPanel lower = new JPanel(new BorderLayout(8, 8));
-        lower.add(form, BorderLayout.NORTH);
-        lower.add(new JLabel("Applicant Match Details"), BorderLayout.CENTER);
-        lower.add(new JScrollPane(matchInfoArea), BorderLayout.SOUTH);
+        JPanel lower = UiTheme.createCard("Applicant Match Details", "Review fit, missing skills, and applicant notes for the selected submission.");
+        lower.add(wrapArea(matchInfoArea), BorderLayout.CENTER);
 
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton backButton = new JButton("Back to Login");
-        JButton newButton = new JButton("New Job");
-        JButton saveButton = new JButton("Save Job");
-        buttons.add(backButton);
-        buttons.add(newButton);
-        buttons.add(saveButton);
+        JButton backButton = UiTheme.createSecondaryButton("Back to Login");
+        JButton newButton = UiTheme.createSecondaryButton("New Job");
+        JButton saveButton = UiTheme.createPrimaryButton("Save Job");
 
         backButton.addActionListener(event -> returnToLogin());
         newButton.addActionListener(event -> clearForm());
         saveButton.addActionListener(event -> saveJob());
 
-        panel.add(lower, BorderLayout.CENTER);
-        panel.add(buttons, BorderLayout.SOUTH);
+        JPanel body = new JPanel(new BorderLayout(0, 18));
+        body.setOpaque(false);
+        body.add(form, BorderLayout.NORTH);
+        body.add(lower, BorderLayout.CENTER);
+        body.add(UiTheme.createButtonRow(FlowLayout.RIGHT, backButton, newButton, saveButton), BorderLayout.SOUTH);
+        panel.add(body, BorderLayout.CENTER);
         return panel;
     }
 
     private JPanel buildTablesPanel() {
-        JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        JPanel panel = UiTheme.createCard("Review Queue", "Inspect job postings on the top table and applicant submissions below.");
 
-        JPanel topButtons = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JButton loadApplicantsButton = new JButton("Load Applicants");
-        JButton shortlistButton = new JButton("Shortlist");
-        JButton acceptButton = new JButton("Accept");
-        JButton rejectButton = new JButton("Reject");
-        JButton refreshButton = new JButton("Refresh");
-        topButtons.add(loadApplicantsButton);
-        topButtons.add(shortlistButton);
-        topButtons.add(acceptButton);
-        topButtons.add(rejectButton);
-        topButtons.add(refreshButton);
+        JButton loadApplicantsButton = UiTheme.createSecondaryButton("Load Applicants");
+        JButton shortlistButton = UiTheme.createSecondaryButton("Shortlist");
+        JButton acceptButton = UiTheme.createPrimaryButton("Accept");
+        JButton rejectButton = UiTheme.createDangerButton("Reject");
+        JButton refreshButton = UiTheme.createSecondaryButton("Refresh");
 
         loadApplicantsButton.addActionListener(event -> loadApplicantsForSelectedJob());
         shortlistButton.addActionListener(event -> updateApplicationStatus(ApplicationStatus.SHORTLISTED));
@@ -151,8 +141,9 @@ public class MOManagementFrame extends JFrame {
             reviewArea.setText("");
         });
 
-        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, new JScrollPane(jobTable), new JScrollPane(applicantTable));
+        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, UiTheme.wrapTable(jobTable), UiTheme.wrapTable(applicantTable));
         splitPane.setResizeWeight(0.5);
+        UiTheme.styleSplitPane(splitPane);
         jobTable.getSelectionModel().addListSelectionListener(event -> {
             if (!event.getValueIsAdjusting()) {
                 loadSelectedJobToForm();
@@ -164,9 +155,12 @@ public class MOManagementFrame extends JFrame {
             }
         });
 
-        panel.add(topButtons, BorderLayout.NORTH);
-        panel.add(splitPane, BorderLayout.CENTER);
-        panel.add(new JScrollPane(reviewArea), BorderLayout.SOUTH);
+        JPanel body = new JPanel(new BorderLayout(0, 18));
+        body.setOpaque(false);
+        body.add(UiTheme.createButtonRow(FlowLayout.LEFT, loadApplicantsButton, shortlistButton, acceptButton, rejectButton, refreshButton), BorderLayout.NORTH);
+        body.add(splitPane, BorderLayout.CENTER);
+        body.add(wrapArea(reviewArea), BorderLayout.SOUTH);
+        panel.add(body, BorderLayout.CENTER);
         return panel;
     }
 
@@ -312,5 +306,26 @@ public class MOManagementFrame extends JFrame {
     private void returnToLogin() {
         new LoginFrame(dataService).setVisible(true);
         dispose();
+    }
+
+    private void styleComponents() {
+        UiTheme.styleTextField(jobIdField);
+        UiTheme.styleTextField(moduleCodeField);
+        UiTheme.styleTextField(moduleTitleField);
+        UiTheme.styleTextField(hoursField);
+        UiTheme.styleTextField(skillsField);
+        UiTheme.styleTextField(deadlineField);
+        UiTheme.styleComboBox(statusBox);
+        UiTheme.styleTextArea(dutiesArea, 5);
+        UiTheme.styleTextArea(reviewArea, 4);
+        UiTheme.styleTextArea(matchInfoArea, 8);
+        UiTheme.styleTable(jobTable);
+        UiTheme.styleTable(applicantTable);
+    }
+
+    private JScrollPane wrapArea(JTextArea area) {
+        JScrollPane scrollPane = new JScrollPane(area);
+        UiTheme.styleScrollPane(scrollPane);
+        return scrollPane;
     }
 }

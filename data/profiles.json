@@ -5,7 +5,12 @@
     "name" : "Li Hua",
     "email" : "ta1@bupt.edu.cn",
     "phone" : "13800000001",
-    "skills" : [ "Java", "Communication", "Agile", "Tutoring" ],
+    "skills" : [
+      "Java",
+      "Communication",
+      "Agile",
+      "Tutoring"
+    ],
     "availability" : "Mon/Wed afternoon",
     "experienceSummary" : "Supported Java lab sessions and peer tutoring.",
     "preferredDuties" : "Lab support, marking",
@@ -17,7 +22,11 @@
     "name" : "Zhang Wei",
     "email" : "ta2@bupt.edu.cn",
     "phone" : "13800000002",
-    "skills" : [ "Python", "Data Analysis", "Communication" ],
+    "skills" : [
+      "Python",
+      "Data Analysis",
+      "Communication"
+    ],
     "availability" : "Tue/Thu full day",
     "experienceSummary" : "Assisted with data science tutorials.",
     "preferredDuties" : "Tutorial support",
@@ -29,7 +38,12 @@
     "name" : "Chen Yu",
     "email" : "ta3@bupt.edu.cn",
     "phone" : "13800000003",
-    "skills" : [ "Python", "SQL", "Marking", "Communication" ],
+    "skills" : [
+      "Python",
+      "SQL",
+      "Marking",
+      "Communication"
+    ],
     "availability" : "Fri afternoon and weekend",
     "experienceSummary" : "Helped grade quizzes and maintain course datasets.",
     "preferredDuties" : "Marking, office hours",
