@@ -5,6 +5,7 @@ import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
+import javax.swing.plaf.basic.BasicScrollBarUI;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableColumn;
 import javax.swing.text.JTextComponent;
@@ -215,6 +216,10 @@ public final class UiTheme {
         table.setSelectionForeground(TEXT);
         table.setFillsViewportHeight(true);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        table.setDefaultEditor(Object.class, null);
+        table.setRowSelectionAllowed(true);
+        table.setColumnSelectionAllowed(false);
+        table.setCellSelectionEnabled(false);
 
         JTableHeader header = table.getTableHeader();
         header.setFont(new Font("Segoe UI", Font.BOLD, 12));
@@ -238,6 +243,8 @@ public final class UiTheme {
         scrollPane.setBackground(SURFACE);
         scrollPane.getHorizontalScrollBar().setUnitIncrement(16);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        styleScrollBar(scrollPane.getHorizontalScrollBar());
+        styleScrollBar(scrollPane.getVerticalScrollBar());
     }
 
     public static void styleSplitPane(JSplitPane splitPane) {
@@ -270,6 +277,8 @@ public final class UiTheme {
         scrollPane.setBackground(BACKGROUND);
         scrollPane.getVerticalScrollBar().setUnitIncrement(18);
         scrollPane.getHorizontalScrollBar().setUnitIncrement(18);
+        styleScrollBar(scrollPane.getHorizontalScrollBar());
+        styleScrollBar(scrollPane.getVerticalScrollBar());
         return scrollPane;
     }
 
@@ -304,5 +313,90 @@ public final class UiTheme {
                 new LineBorder(BORDER, 1, true),
                 new EmptyBorder(2, 2, 2, 2)
         );
+    }
+
+    private static void styleScrollBar(JScrollBar scrollBar) {
+        scrollBar.setOpaque(false);
+        scrollBar.setPreferredSize(scrollBar.getOrientation() == Adjustable.VERTICAL
+                ? new Dimension(14, 0)
+                : new Dimension(0, 14));
+        scrollBar.setUI(new BasicScrollBarUI() {
+            @Override
+            protected void configureScrollBarColors() {
+                thumbColor = new Color(156, 177, 208);
+                thumbDarkShadowColor = thumbColor;
+                thumbHighlightColor = thumbColor;
+                thumbLightShadowColor = thumbColor;
+                trackColor = new Color(232, 238, 247);
+                trackHighlightColor = trackColor;
+            }
+
+            @Override
+            protected JButton createDecreaseButton(int orientation) {
+                return createZeroButton();
+            }
+
+            @Override
+            protected JButton createIncreaseButton(int orientation) {
+                return createZeroButton();
+            }
+
+            @Override
+            protected void paintTrack(Graphics g, JComponent c, Rectangle trackBounds) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                int x = trackBounds.x + 2;
+                int y = trackBounds.y + 2;
+                int width = Math.max(0, trackBounds.width - 4);
+                int height = Math.max(0, trackBounds.height - 4);
+
+                GradientPaint trackPaint = scrollbar.getOrientation() == Adjustable.VERTICAL
+                        ? new GradientPaint(x, y, new Color(244, 247, 252), x + width, y, new Color(226, 233, 244))
+                        : new GradientPaint(x, y, new Color(244, 247, 252), x, y + height, new Color(226, 233, 244));
+                g2.setPaint(trackPaint);
+                g2.fillRoundRect(x, y, width, height, 12, 12);
+                g2.setColor(new Color(208, 217, 231));
+                g2.drawRoundRect(x, y, Math.max(0, width - 1), Math.max(0, height - 1), 12, 12);
+                g2.setColor(new Color(255, 255, 255, 170));
+                g2.drawRoundRect(x + 1, y + 1, Math.max(0, width - 3), Math.max(0, height - 3), 11, 11);
+                g2.dispose();
+            }
+
+            @Override
+            protected void paintThumb(Graphics g, JComponent c, Rectangle thumbBounds) {
+                if (thumbBounds.isEmpty() || !scrollbar.isEnabled()) {
+                    return;
+                }
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                int x = thumbBounds.x + 2;
+                int y = thumbBounds.y + 2;
+                int width = Math.max(0, thumbBounds.width - 4);
+                int height = Math.max(0, thumbBounds.height - 4);
+
+                g2.setColor(new Color(123, 149, 188, 70));
+                g2.fillRoundRect(x + 1, y + 2, width, height, 12, 12);
+
+                GradientPaint thumbPaint = scrollbar.getOrientation() == Adjustable.VERTICAL
+                        ? new GradientPaint(x, y, new Color(189, 206, 231), x + width, y, new Color(140, 165, 201))
+                        : new GradientPaint(x, y, new Color(189, 206, 231), x, y + height, new Color(140, 165, 201));
+                g2.setPaint(thumbPaint);
+                g2.fillRoundRect(x, y, width, height, 12, 12);
+
+                g2.setColor(new Color(255, 255, 255, 175));
+                g2.drawRoundRect(x, y, Math.max(0, width - 1), Math.max(0, height - 1), 12, 12);
+                g2.setColor(new Color(117, 142, 177));
+                g2.drawRoundRect(x, y, Math.max(0, width - 1), Math.max(0, height - 1), 12, 12);
+                g2.dispose();
+            }
+
+            private JButton createZeroButton() {
+                JButton button = new JButton();
+                button.setPreferredSize(new Dimension(0, 0));
+                button.setMinimumSize(new Dimension(0, 0));
+                button.setMaximumSize(new Dimension(0, 0));
+                return button;
+            }
+        });
     }
 }

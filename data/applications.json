@@ -28,5 +28,18 @@
     "reviewerNotes" : "",
     "matchScore" : 100,
     "missingSkills" : [ ]
+  },
+  {
+    "applicationId" : "apply-04",
+    "applicantId" : "applicant-01",
+    "jobId" : "job-03",
+    "appliedAt" : "2026-04-04T15:28:43.313213300",
+    "status" : "ACCEPTED",
+    "reviewerNotes" : "",
+    "matchScore" : 33,
+    "missingSkills" : [
+      "Python",
+      "Marking"
+    ]
   }
 ]
