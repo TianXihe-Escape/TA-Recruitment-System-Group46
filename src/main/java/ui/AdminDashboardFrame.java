@@ -44,7 +44,7 @@ public class AdminDashboardFrame extends JFrame {
 
         setTitle("Admin Dashboard - " + Constants.APP_TITLE);
         setSize(1380, 860);
-        setMinimumSize(new Dimension(1200, 760));
+        setMinimumSize(new Dimension(980, 680));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         UiTheme.styleFrame(this);
@@ -58,7 +58,7 @@ public class AdminDashboardFrame extends JFrame {
         JPanel root = UiTheme.createPagePanel();
         root.add(UiTheme.createHeader("Admin Control Center", "Audit workloads, repopulate demo data, and rebalance staffing decisions."), BorderLayout.NORTH);
         root.add(splitPane, BorderLayout.CENTER);
-        add(root);
+        add(UiTheme.wrapPage(root));
 
         refreshData();
     }
@@ -168,6 +168,7 @@ public class AdminDashboardFrame extends JFrame {
         UiTheme.styleTable(workloadTable);
         UiTheme.styleTextArea(jobSummaryArea, 14);
         UiTheme.styleTextArea(suggestionArea, 14);
+        UiTheme.setColumnWidths(workloadTable, 180, 420, 120, 100);
         jobSummaryArea.setEditable(false);
         suggestionArea.setEditable(false);
     }

@@ -115,7 +115,7 @@ public class LoginFrame extends JFrame {
         });
 
         root.add(layout, BorderLayout.CENTER);
-        add(root, BorderLayout.CENTER);
+        add(UiTheme.wrapPage(root), BorderLayout.CENTER);
     }
 
     private JPanel buildHeroPanel() {

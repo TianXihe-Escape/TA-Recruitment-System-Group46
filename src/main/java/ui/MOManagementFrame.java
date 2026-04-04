@@ -67,7 +67,7 @@ public class MOManagementFrame extends JFrame {
 
         setTitle("MO Management - " + Constants.APP_TITLE);
         setSize(1420, 880);
-        setMinimumSize(new Dimension(1240, 780));
+        setMinimumSize(new Dimension(1020, 700));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         UiTheme.styleFrame(this);
@@ -80,7 +80,7 @@ public class MOManagementFrame extends JFrame {
         JPanel root = UiTheme.createPagePanel();
         root.add(UiTheme.createHeader("Module Organiser Console", "Publish jobs, review applicants, and manage hiring decisions from one workspace."), BorderLayout.NORTH);
         root.add(splitPane, BorderLayout.CENTER);
-        add(root);
+        add(UiTheme.wrapPage(root));
 
         refreshJobs();
         clearForm();
@@ -115,7 +115,7 @@ public class MOManagementFrame extends JFrame {
 
         JPanel body = new JPanel(new BorderLayout(0, 18));
         body.setOpaque(false);
-        body.add(form, BorderLayout.NORTH);
+        body.add(UiTheme.wrapPage(form), BorderLayout.NORTH);
         body.add(lower, BorderLayout.CENTER);
         body.add(UiTheme.createButtonRow(FlowLayout.RIGHT, backButton, newButton, saveButton), BorderLayout.SOUTH);
         panel.add(body, BorderLayout.CENTER);
@@ -321,6 +321,8 @@ public class MOManagementFrame extends JFrame {
         UiTheme.styleTextArea(matchInfoArea, 8);
         UiTheme.styleTable(jobTable);
         UiTheme.styleTable(applicantTable);
+        UiTheme.setColumnWidths(jobTable, 100, 300, 80, 140, 100);
+        UiTheme.setColumnWidths(applicantTable, 130, 170, 120, 90, 220);
     }
 
     private JScrollPane wrapArea(JTextArea area) {

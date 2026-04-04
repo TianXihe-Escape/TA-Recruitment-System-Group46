@@ -60,7 +60,7 @@ public class TADashboardFrame extends JFrame {
 
         setTitle("TA Dashboard - " + Constants.APP_TITLE);
         setSize(1320, 860);
-        setMinimumSize(new Dimension(1180, 760));
+        setMinimumSize(new Dimension(980, 680));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         UiTheme.styleFrame(this);
@@ -74,7 +74,7 @@ public class TADashboardFrame extends JFrame {
         JPanel root = UiTheme.createPagePanel();
         root.add(UiTheme.createHeader("TA Workspace", "Complete your profile, review open modules, and track application outcomes."), BorderLayout.NORTH);
         root.add(splitPane, BorderLayout.CENTER);
-        add(root);
+        add(UiTheme.wrapPage(root));
 
         loadProfile();
         refreshJobs();
@@ -109,7 +109,7 @@ public class TADashboardFrame extends JFrame {
 
         JPanel body = new JPanel(new BorderLayout(0, 18));
         body.setOpaque(false);
-        body.add(form, BorderLayout.CENTER);
+        body.add(UiTheme.wrapPage(form), BorderLayout.CENTER);
         body.add(UiTheme.createButtonRow(FlowLayout.RIGHT, backButton, refreshButton, saveProfileButton), BorderLayout.SOUTH);
         panel.add(body, BorderLayout.CENTER);
         return panel;
@@ -242,6 +242,8 @@ public class TADashboardFrame extends JFrame {
         UiTheme.styleTextArea(experienceArea, 5);
         UiTheme.styleTable(jobTable);
         UiTheme.styleTable(applicationTable);
+        UiTheme.setColumnWidths(jobTable, 90, 300, 80, 260, 100);
+        UiTheme.setColumnWidths(applicationTable, 120, 90, 120, 90, 260);
     }
 
     private JScrollPane wrapArea(JTextArea area) {

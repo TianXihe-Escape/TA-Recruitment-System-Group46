@@ -6,6 +6,7 @@ import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.table.JTableHeader;
+import javax.swing.table.TableColumn;
 import javax.swing.text.JTextComponent;
 import java.awt.*;
 
@@ -193,7 +194,7 @@ public final class UiTheme {
     }
 
     public static JPanel createButtonRow(int align, JButton... buttons) {
-        JPanel panel = new JPanel(new FlowLayout(align, 10, 0));
+        JPanel panel = new JPanel(new FlowLayout(align, 10, 10));
         panel.setOpaque(false);
         for (JButton button : buttons) {
             panel.add(button);
@@ -213,6 +214,7 @@ public final class UiTheme {
         table.setSelectionBackground(PRIMARY_SOFT);
         table.setSelectionForeground(TEXT);
         table.setFillsViewportHeight(true);
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 
         JTableHeader header = table.getTableHeader();
         header.setFont(new Font("Segoe UI", Font.BOLD, 12));
@@ -225,6 +227,8 @@ public final class UiTheme {
     public static JScrollPane wrapTable(JTable table) {
         JScrollPane scrollPane = new JScrollPane(table);
         styleScrollPane(scrollPane);
+        scrollPane.getHorizontalScrollBar().setUnitIncrement(16);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         return scrollPane;
     }
 
@@ -232,6 +236,8 @@ public final class UiTheme {
         scrollPane.setBorder(new LineBorder(BORDER, 1, true));
         scrollPane.getViewport().setBackground(SURFACE);
         scrollPane.setBackground(SURFACE);
+        scrollPane.getHorizontalScrollBar().setUnitIncrement(16);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
     }
 
     public static void styleSplitPane(JSplitPane splitPane) {
@@ -255,6 +261,24 @@ public final class UiTheme {
         label.setFont(new Font("Segoe UI", Font.BOLD, 12));
         label.setBorder(new EmptyBorder(6, 10, 6, 10));
         return label;
+    }
+
+    public static JScrollPane wrapPage(JComponent component) {
+        JScrollPane scrollPane = new JScrollPane(component);
+        scrollPane.setBorder(null);
+        scrollPane.getViewport().setBackground(BACKGROUND);
+        scrollPane.setBackground(BACKGROUND);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(18);
+        scrollPane.getHorizontalScrollBar().setUnitIncrement(18);
+        return scrollPane;
+    }
+
+    public static void setColumnWidths(JTable table, int... widths) {
+        for (int i = 0; i < widths.length && i < table.getColumnModel().getColumnCount(); i++) {
+            TableColumn column = table.getColumnModel().getColumn(i);
+            column.setPreferredWidth(widths[i]);
+            column.setMinWidth(Math.min(widths[i], 80));
+        }
     }
 
     private static JButton baseButton(String text) {
