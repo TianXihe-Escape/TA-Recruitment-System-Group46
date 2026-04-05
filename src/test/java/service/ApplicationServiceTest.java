@@ -81,6 +81,40 @@ class ApplicationServiceTest {
         assertEquals(ApplicationStatus.SHORTLISTED, records.get(0).getStatus());
     }
 
+    @Test
+    void shouldGenerateNextSequentialApplicationId() {
+        ApplicantProfile profile = buildProfile();
+        profile.setApplicantId("a2");
+
+        JobPosting existingJob = buildJob();
+        JobPosting nextJob = buildJob();
+        nextJob.setJobId("j2");
+        nextJob.setModuleCode("COMP1002");
+        nextJob.setModuleTitle("Data Structures");
+        jobRepository.saveAll(List.of(existingJob, nextJob));
+
+        ApplicationRecord first = new ApplicationRecord();
+        first.setApplicationId("apply-01");
+        first.setApplicantId("a1");
+        first.setJobId("j1");
+
+        ApplicationRecord second = new ApplicationRecord();
+        second.setApplicationId("apply-03");
+        second.setApplicantId("a3");
+        second.setJobId("j3");
+
+        ApplicationRecord legacy = new ApplicationRecord();
+        legacy.setApplicationId("apply-3e4142ef");
+        legacy.setApplicantId("a4");
+        legacy.setJobId("j4");
+
+        applicationRepository.saveAll(new ArrayList<>(List.of(first, second, legacy)));
+
+        ApplicationRecord created = applicationService.apply(profile, nextJob);
+
+        assertEquals("apply-04", created.getApplicationId());
+    }
+
     private ApplicantProfile buildProfile() {
         ApplicantProfile profile = new ApplicantProfile("a1", "u1");
         profile.setCvPath("cv.pdf");

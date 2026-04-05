@@ -1,32 +1,47 @@
 [
   {
-    "jobId": "job-01",
-    "moduleCode": "COMP1001",
-    "moduleTitle": "Programming Fundamentals",
-    "duties": "Support labs, answer questions, mark exercises",
-    "hours": 6,
-    "requiredSkills": [
+    "jobId" : "job-01",
+    "moduleCode" : "COMP1001",
+    "moduleTitle" : "Programming Fundamentals",
+    "duties" : "Support labs, answer questions, mark exercises",
+    "hours" : 6,
+    "requiredSkills" : [
       "Java",
       "Communication",
       "Agile"
     ],
-    "applicationDeadline": "2026-04-18",
-    "status": "CLOSED",
-    "postedBy": "user-mo-01"
+    "applicationDeadline" : "2026-04-25",
+    "status" : "CLOSED",
+    "postedBy" : "user-mo-01"
   },
   {
-    "jobId": "job-02",
-    "moduleCode": "DATA2002",
-    "moduleTitle": "Data Analytics",
-    "duties": "Prepare tutorial materials and support datasets",
-    "hours": 8,
-    "requiredSkills": [
+    "jobId" : "job-02",
+    "moduleCode" : "DATA2002",
+    "moduleTitle" : "Data Analytics",
+    "duties" : "Prepare tutorial materials and support datasets",
+    "hours" : 8,
+    "requiredSkills" : [
       "Python",
       "Data Analysis",
       "Communication"
     ],
-    "applicationDeadline": "2026-04-20",
-    "status": "OPEN",
-    "postedBy": "user-mo-01"
+    "applicationDeadline" : "2026-04-18",
+    "status" : "OPEN",
+    "postedBy" : "user-mo-01"
+  },
+  {
+    "jobId" : "job-03",
+    "moduleCode" : "COMP3003",
+    "moduleTitle" : "Introduction to AI",
+    "duties" : "Support seminars, prepare examples, and help with marking.",
+    "hours" : 5,
+    "requiredSkills" : [
+      "Python",
+      "Communication",
+      "Marking"
+    ],
+    "applicationDeadline" : "2026-04-14",
+    "status" : "CLOSED",
+    "postedBy" : "user-mo-01"
   }
 ]

@@ -1,26 +1,32 @@
 [
   {
-    "userId": "user-ta-01",
-    "username": "ta1@bupt.edu.cn",
-    "password": "ta123",
-    "role": "TA"
+    "userId" : "user-ta-01",
+    "username" : "ta1@bupt.edu.cn",
+    "password" : "ta123",
+    "role" : "TA"
   },
   {
-    "userId": "user-ta-02",
-    "username": "ta2@bupt.edu.cn",
-    "password": "ta123",
-    "role": "TA"
+    "userId" : "user-ta-02",
+    "username" : "ta2@bupt.edu.cn",
+    "password" : "ta123",
+    "role" : "TA"
   },
   {
-    "userId": "user-mo-01",
-    "username": "mo1@bupt.edu.cn",
-    "password": "mo123",
-    "role": "MO"
+    "userId" : "user-ta-03",
+    "username" : "ta3@bupt.edu.cn",
+    "password" : "ta123",
+    "role" : "TA"
   },
   {
-    "userId": "user-admin-01",
-    "username": "admin@bupt.edu.cn",
-    "password": "admin123",
-    "role": "ADMIN"
+    "userId" : "user-mo-01",
+    "username" : "mo1@bupt.edu.cn",
+    "password" : "mo123",
+    "role" : "MO"
+  },
+  {
+    "userId" : "user-admin-01",
+    "username" : "admin@bupt.edu.cn",
+    "password" : "admin123",
+    "role" : "ADMIN"
   }
 ]

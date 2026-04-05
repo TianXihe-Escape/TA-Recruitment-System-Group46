@@ -1,8 +1,5 @@
 package model;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 /**
  * Login account persisted in the file store.
  */
@@ -15,11 +12,7 @@ public class User {
     public User() {
     }
 
-    @JsonCreator
-    public User(@JsonProperty("userId") String userId,
-                @JsonProperty("username") String username,
-                @JsonProperty("password") String password,
-                @JsonProperty("role") Role role) {
+    public User(String userId, String username, String password, Role role) {
         this.userId = userId;
         this.username = username;
         this.password = password;
