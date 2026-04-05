@@ -129,12 +129,14 @@ public class MOManagementFrame extends JFrame {
         JButton loadApplicantsButton = UiTheme.createSecondaryButton("Load Applicants");
         JButton shortlistButton = UiTheme.createSecondaryButton("Shortlist");
         JButton acceptButton = UiTheme.createPrimaryButton("Accept");
+        JButton cancelAcceptanceButton = UiTheme.createSecondaryButton("Cancel Acceptance");
         JButton rejectButton = UiTheme.createDangerButton("Reject");
         JButton refreshButton = UiTheme.createSecondaryButton("Refresh");
 
         loadApplicantsButton.addActionListener(event -> loadApplicantsForSelectedJob());
         shortlistButton.addActionListener(event -> updateApplicationStatus(ApplicationStatus.SHORTLISTED));
         acceptButton.addActionListener(event -> updateApplicationStatus(ApplicationStatus.ACCEPTED));
+        cancelAcceptanceButton.addActionListener(event -> cancelAcceptedApplication());
         rejectButton.addActionListener(event -> updateApplicationStatus(ApplicationStatus.REJECTED));
         refreshButton.addActionListener(event -> {
             refreshJobs();
@@ -158,7 +160,7 @@ public class MOManagementFrame extends JFrame {
 
         JPanel body = new JPanel(new BorderLayout(0, 18));
         body.setOpaque(false);
-        body.add(UiTheme.createButtonRow(FlowLayout.LEFT, loadApplicantsButton, shortlistButton, acceptButton, rejectButton, refreshButton), BorderLayout.NORTH);
+        body.add(UiTheme.createButtonRow(FlowLayout.LEFT, loadApplicantsButton, shortlistButton, acceptButton, cancelAcceptanceButton, rejectButton, refreshButton), BorderLayout.NORTH);
         body.add(splitPane, BorderLayout.CENTER);
         body.add(wrapArea(reviewArea), BorderLayout.SOUTH);
         panel.add(body, BorderLayout.CENTER);
@@ -300,6 +302,28 @@ public class MOManagementFrame extends JFrame {
         try {
             applicationService.updateStatus(applicationId, status, reviewArea.getText().trim());
             UiMessage.info(this, "Application updated to " + status + ".");
+            refreshJobs();
+            if (selectedJobId != null) {
+                selectJobRow(selectedJobId);
+                loadApplicantsForJob(selectedJobId);
+            }
+        } catch (Exception ex) {
+            UiMessage.error(this, ex.getMessage());
+        }
+    }
+
+    private void cancelAcceptedApplication() {
+        int row = applicantTable.getSelectedRow();
+        if (row < 0) {
+            UiMessage.error(this, "Please select an applicant first.");
+            return;
+        }
+        String applicationId = String.valueOf(applicantTableModel.getValueAt(row, 0));
+        int jobRow = jobTable.getSelectedRow();
+        String selectedJobId = jobRow >= 0 ? String.valueOf(jobTableModel.getValueAt(jobRow, 0)) : null;
+        try {
+            applicationService.cancelAcceptance(applicationId, reviewArea.getText().trim());
+            UiMessage.info(this, "Accepted application cancelled and job reopened.");
             refreshJobs();
             if (selectedJobId != null) {
                 selectJobRow(selectedJobId);
