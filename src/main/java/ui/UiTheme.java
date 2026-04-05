@@ -26,6 +26,8 @@ public final class UiTheme {
     public static final Color SUCCESS = new Color(22, 163, 74);
     public static final Color WARNING = new Color(245, 158, 11);
     public static final Color DANGER = new Color(220, 38, 38);
+    private static final int SCROLL_UNIT_INCREMENT = 32;
+    private static final int SCROLL_BLOCK_INCREMENT = 96;
 
     private static final String FONT_FAMILY = resolveFontFamily();
     private static final Font TITLE_FONT = uiFont(Font.BOLD, 28);
@@ -237,8 +239,6 @@ public final class UiTheme {
     public static JScrollPane wrapTable(JTable table) {
         JScrollPane scrollPane = new JScrollPane(table);
         styleScrollPane(scrollPane);
-        scrollPane.getHorizontalScrollBar().setUnitIncrement(16);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         return scrollPane;
     }
 
@@ -246,8 +246,7 @@ public final class UiTheme {
         scrollPane.setBorder(new LineBorder(BORDER, 1, true));
         scrollPane.getViewport().setBackground(SURFACE);
         scrollPane.setBackground(SURFACE);
-        scrollPane.getHorizontalScrollBar().setUnitIncrement(16);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        applyScrollSpeed(scrollPane);
         styleScrollBar(scrollPane.getHorizontalScrollBar());
         styleScrollBar(scrollPane.getVerticalScrollBar());
     }
@@ -256,8 +255,7 @@ public final class UiTheme {
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setOpaque(false);
-        scrollPane.getHorizontalScrollBar().setUnitIncrement(16);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        applyScrollSpeed(scrollPane);
         styleDialogScrollBar(scrollPane.getVerticalScrollBar());
         styleDialogScrollBar(scrollPane.getHorizontalScrollBar());
     }
@@ -290,8 +288,7 @@ public final class UiTheme {
         scrollPane.setBorder(null);
         scrollPane.getViewport().setBackground(BACKGROUND);
         scrollPane.setBackground(BACKGROUND);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(18);
-        scrollPane.getHorizontalScrollBar().setUnitIncrement(18);
+        applyScrollSpeed(scrollPane);
         styleScrollBar(scrollPane.getHorizontalScrollBar());
         styleScrollBar(scrollPane.getVerticalScrollBar());
         return scrollPane;
@@ -352,6 +349,15 @@ public final class UiTheme {
                 new LineBorder(BORDER, 1, true),
                 new EmptyBorder(2, 2, 2, 2)
         );
+    }
+
+    private static void applyScrollSpeed(JScrollPane scrollPane) {
+        scrollPane.getHorizontalScrollBar().setUnitIncrement(SCROLL_UNIT_INCREMENT);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(SCROLL_UNIT_INCREMENT);
+        scrollPane.getHorizontalScrollBar().setBlockIncrement(SCROLL_BLOCK_INCREMENT);
+        scrollPane.getVerticalScrollBar().setBlockIncrement(SCROLL_BLOCK_INCREMENT);
+        scrollPane.getHorizontalScrollBar().setFocusable(false);
+        scrollPane.getVerticalScrollBar().setFocusable(false);
     }
 
     private static void styleScrollBar(JScrollBar scrollBar) {
