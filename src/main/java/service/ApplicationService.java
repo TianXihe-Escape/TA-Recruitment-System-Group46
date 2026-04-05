@@ -10,11 +10,15 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Handles application submission and review workflow.
  */
 public class ApplicationService {
+    private static final Pattern APPLICATION_ID_PATTERN = Pattern.compile("^apply-(\\d+)$");
+
     private final ApplicationRepository applicationRepository;
     private final JobRepository jobRepository;
     private final MatchingService matchingService;
@@ -36,7 +40,7 @@ public class ApplicationService {
 
         List<ApplicationRecord> applications = new ArrayList<>(applicationRepository.findAll());
         ApplicationRecord record = new ApplicationRecord();
-        record.setApplicationId(IdGenerator.newId("apply"));
+        record.setApplicationId(nextApplicationId(applications));
         record.setApplicantId(applicantProfile.getApplicantId());
         record.setJobId(jobPosting.getJobId());
         record.setAppliedAt(LocalDateTime.now());
@@ -106,5 +110,25 @@ public class ApplicationService {
         if (duplicate) {
             throw new IllegalStateException("Duplicate applications are not allowed.");
         }
+    }
+
+    private String nextApplicationId(List<ApplicationRecord> applications) {
+        int nextSequence = applications.stream()
+                .map(ApplicationRecord::getApplicationId)
+                .mapToInt(this::extractApplicationSequence)
+                .max()
+                .orElse(0) + 1;
+        return String.format("apply-%02d", nextSequence);
+    }
+
+    private int extractApplicationSequence(String applicationId) {
+        if (applicationId == null) {
+            return 0;
+        }
+        Matcher matcher = APPLICATION_ID_PATTERN.matcher(applicationId.trim());
+        if (!matcher.matches()) {
+            return 0;
+        }
+        return Integer.parseInt(matcher.group(1));
     }
 }

@@ -1,35 +1,52 @@
 [
   {
-    "applicantId": "applicant-01",
-    "userId": "user-ta-01",
-    "name": "Li Hua",
-    "email": "ta1@bupt.edu.cn",
-    "phone": "13800000001",
-    "skills": [
+    "applicantId" : "applicant-01",
+    "userId" : "user-ta-01",
+    "name" : "Li Hua",
+    "email" : "ta1@bupt.edu.cn",
+    "phone" : "13800000001",
+    "skills" : [
       "Java",
       "Communication",
       "Agile",
       "Tutoring"
     ],
-    "availability": "Mon/Wed afternoon",
-    "experienceSummary": "Supported Java lab sessions and peer tutoring.",
-    "preferredDuties": "Lab support, marking",
-    "cvPath": "sample-cv/li-hua-cv.pdf"
+    "availability" : "Mon/Wed afternoon",
+    "experienceSummary" : "Supported Java lab sessions and peer tutoring.",
+    "preferredDuties" : "Lab support, marking",
+    "cvPath" : "sample-cv/li-hua-cv.pdf"
   },
   {
-    "applicantId": "applicant-02",
-    "userId": "user-ta-02",
-    "name": "Zhang Wei",
-    "email": "ta2@bupt.edu.cn",
-    "phone": "13800000002",
-    "skills": [
+    "applicantId" : "applicant-02",
+    "userId" : "user-ta-02",
+    "name" : "Zhang Wei",
+    "email" : "ta2@bupt.edu.cn",
+    "phone" : "13800000002",
+    "skills" : [
       "Python",
       "Data Analysis",
       "Communication"
     ],
-    "availability": "Tue/Thu full day",
-    "experienceSummary": "Assisted with data science tutorials.",
-    "preferredDuties": "Tutorial support",
-    "cvPath": "sample-cv/zhang-wei-cv.pdf"
+    "availability" : "Tue/Thu full day",
+    "experienceSummary" : "Assisted with data science tutorials.",
+    "preferredDuties" : "Tutorial support",
+    "cvPath" : "sample-cv/zhang-wei-cv.pdf"
+  },
+  {
+    "applicantId" : "applicant-03",
+    "userId" : "user-ta-03",
+    "name" : "Chen Yu",
+    "email" : "ta3@bupt.edu.cn",
+    "phone" : "13800000003",
+    "skills" : [
+      "Python",
+      "SQL",
+      "Marking",
+      "Communication"
+    ],
+    "availability" : "Fri afternoon and weekend",
+    "experienceSummary" : "Helped grade quizzes and maintain course datasets.",
+    "preferredDuties" : "Marking, office hours",
+    "cvPath" : "sample-cv/chen-yu-cv.pdf"
   }
 ]
