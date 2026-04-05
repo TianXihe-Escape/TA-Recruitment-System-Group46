@@ -10,6 +10,7 @@ import javax.swing.table.JTableHeader;
 import javax.swing.table.TableColumn;
 import javax.swing.text.JTextComponent;
 import java.awt.*;
+import java.awt.event.MouseWheelEvent;
 
 /**
  * Shared visual system for the Swing UI.
@@ -291,6 +292,7 @@ public final class UiTheme {
         applyScrollSpeed(scrollPane);
         styleScrollBar(scrollPane.getHorizontalScrollBar());
         styleScrollBar(scrollPane.getVerticalScrollBar());
+        installWheelForwarding(component);
         return scrollPane;
     }
 
@@ -358,6 +360,67 @@ public final class UiTheme {
         scrollPane.getVerticalScrollBar().setBlockIncrement(SCROLL_BLOCK_INCREMENT);
         scrollPane.getHorizontalScrollBar().setFocusable(false);
         scrollPane.getVerticalScrollBar().setFocusable(false);
+    }
+
+    private static void installWheelForwarding(Component component) {
+        if (shouldForwardWheel(component)) {
+            component.addMouseWheelListener(UiTheme::forwardWheelToNearestScrollPane);
+        }
+        if (component instanceof Container container) {
+            for (Component child : container.getComponents()) {
+                installWheelForwarding(child);
+            }
+        }
+    }
+
+    private static boolean shouldForwardWheel(Component component) {
+        return !(component instanceof JScrollPane
+                || component instanceof JScrollBar
+                || component instanceof JTable
+                || component instanceof JTextArea
+                || component instanceof JList<?>
+                || component instanceof JTree);
+    }
+
+    private static void forwardWheelToNearestScrollPane(MouseWheelEvent event) {
+        if (event.isConsumed() || event.getWheelRotation() == 0) {
+            return;
+        }
+        Component source = event.getComponent();
+        JScrollPane scrollPane = findScrollableAncestor(source);
+        if (scrollPane == null) {
+            return;
+        }
+
+        JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
+        if (verticalBar == null || !verticalBar.isVisible() || !verticalBar.isEnabled()) {
+            return;
+        }
+
+        int direction = event.getWheelRotation();
+        int delta = event.getUnitsToScroll() * Math.max(1, verticalBar.getUnitIncrement(direction));
+        int maxValue = verticalBar.getMaximum() - verticalBar.getVisibleAmount();
+        int nextValue = Math.max(verticalBar.getMinimum(), Math.min(maxValue, verticalBar.getValue() + delta));
+        verticalBar.setValue(nextValue);
+        event.consume();
+    }
+
+    private static JScrollPane findScrollableAncestor(Component source) {
+        Component current = source;
+        while (current != null) {
+            if (current instanceof JViewport viewport) {
+                Container parent = viewport.getParent();
+                if (parent instanceof JScrollPane scrollPane) {
+                    JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
+                    if (verticalBar != null && verticalBar.isVisible() && verticalBar.isEnabled()
+                            && verticalBar.getMaximum() > verticalBar.getVisibleAmount()) {
+                        return scrollPane;
+                    }
+                }
+            }
+            current = current.getParent();
+        }
+        return null;
     }
 
     private static void styleScrollBar(JScrollBar scrollBar) {
