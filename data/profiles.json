@@ -52,13 +52,15 @@
   {
     "applicantId" : "applicant-57e7d242",
     "userId" : "user-64b92970",
-    "name" : null,
+    "name" : "aaa",
     "email" : "ta4@bupt.edu.cn",
-    "phone" : null,
-    "skills" : [ ],
-    "availability" : null,
-    "experienceSummary" : null,
-    "preferredDuties" : null,
-    "cvPath" : null
+    "phone" : "11111111111",
+    "skills" : [
+      "python"
+    ],
+    "availability" : "",
+    "experienceSummary" : "",
+    "preferredDuties" : "",
+    "cvPath" : ""
   }
 ]

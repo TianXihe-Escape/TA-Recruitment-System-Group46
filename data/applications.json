@@ -24,7 +24,7 @@
     "applicantId" : "applicant-03",
     "jobId" : "job-03",
     "appliedAt" : "2026-04-05T05:58:56.351877600",
-    "status" : "SUBMITTED",
+    "status" : "ACCEPTED",
     "reviewerNotes" : "",
     "matchScore" : 100,
     "missingSkills" : [ ]
