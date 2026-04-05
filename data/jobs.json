@@ -4,7 +4,7 @@
     "moduleCode" : "COMP1001",
     "moduleTitle" : "Programming Fundamentals",
     "duties" : "Support labs, answer questions, mark exercises",
-    "hours" : 6,
+    "hours" : 5,
     "requiredSkills" : [
       "Java",
       "Communication",
@@ -41,7 +41,7 @@
       "Marking"
     ],
     "applicationDeadline" : "2026-04-15",
-    "status" : "OPEN",
+    "status" : "CLOSED",
     "postedBy" : "user-mo-01"
   }
 ]
