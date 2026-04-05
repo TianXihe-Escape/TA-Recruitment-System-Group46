@@ -2,7 +2,6 @@ package service;
 
 import model.ApplicantProfile;
 import model.Role;
-import model.User;
 import repository.ApplicantProfileRepository;
 import repository.UserRepository;
 import util.IdGenerator;

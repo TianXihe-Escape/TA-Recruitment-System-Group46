@@ -3,7 +3,6 @@ package service;
 import model.*;
 import repository.ApplicationRepository;
 import repository.JobRepository;
-import util.IdGenerator;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;

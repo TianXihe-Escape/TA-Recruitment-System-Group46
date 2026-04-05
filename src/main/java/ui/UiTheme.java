@@ -247,6 +247,16 @@ public final class UiTheme {
         styleScrollBar(scrollPane.getVerticalScrollBar());
     }
 
+    public static void styleDialogScrollPane(JScrollPane scrollPane) {
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
+        scrollPane.getHorizontalScrollBar().setUnitIncrement(16);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        styleDialogScrollBar(scrollPane.getVerticalScrollBar());
+        styleDialogScrollBar(scrollPane.getHorizontalScrollBar());
+    }
+
     public static void styleSplitPane(JSplitPane splitPane) {
         splitPane.setOpaque(false);
         splitPane.setBorder(null);
@@ -387,6 +397,68 @@ public final class UiTheme {
                 g2.drawRoundRect(x, y, Math.max(0, width - 1), Math.max(0, height - 1), 12, 12);
                 g2.setColor(new Color(117, 142, 177));
                 g2.drawRoundRect(x, y, Math.max(0, width - 1), Math.max(0, height - 1), 12, 12);
+                g2.dispose();
+            }
+
+            private JButton createZeroButton() {
+                JButton button = new JButton();
+                button.setPreferredSize(new Dimension(0, 0));
+                button.setMinimumSize(new Dimension(0, 0));
+                button.setMaximumSize(new Dimension(0, 0));
+                return button;
+            }
+        });
+    }
+
+    private static void styleDialogScrollBar(JScrollBar scrollBar) {
+        scrollBar.setOpaque(false);
+        scrollBar.setPreferredSize(scrollBar.getOrientation() == Adjustable.VERTICAL
+                ? new Dimension(10, 0)
+                : new Dimension(0, 10));
+        scrollBar.setUI(new BasicScrollBarUI() {
+            @Override
+            protected void configureScrollBarColors() {
+                thumbColor = new Color(108, 108, 108);
+                thumbDarkShadowColor = thumbColor;
+                thumbHighlightColor = thumbColor;
+                thumbLightShadowColor = thumbColor;
+                trackColor = new Color(243, 246, 251);
+                trackHighlightColor = trackColor;
+            }
+
+            @Override
+            protected JButton createDecreaseButton(int orientation) {
+                return createZeroButton();
+            }
+
+            @Override
+            protected JButton createIncreaseButton(int orientation) {
+                return createZeroButton();
+            }
+
+            @Override
+            protected void paintTrack(Graphics g, JComponent c, Rectangle trackBounds) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(243, 246, 251));
+                g2.fillRect(trackBounds.x, trackBounds.y, trackBounds.width, trackBounds.height);
+                g2.dispose();
+            }
+
+            @Override
+            protected void paintThumb(Graphics g, JComponent c, Rectangle thumbBounds) {
+                if (thumbBounds.isEmpty() || !scrollbar.isEnabled()) {
+                    return;
+                }
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                int x = thumbBounds.x + 1;
+                int y = thumbBounds.y + 2;
+                int width = Math.max(0, thumbBounds.width - 2);
+                int height = Math.max(22, thumbBounds.height - 4);
+
+                g2.setColor(new Color(96, 96, 96));
+                g2.fillRoundRect(x, y, width, height, 8, 8);
                 g2.dispose();
             }
 
