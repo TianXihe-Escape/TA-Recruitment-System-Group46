@@ -5,7 +5,7 @@
     "jobId" : "job-01",
     "appliedAt" : "2026-04-03T17:58:56.351877600",
     "status" : "ACCEPTED",
-    "reviewerNotes" : "Strong fit for lab support.",
+    "reviewerNotes" : "",
     "matchScore" : 100,
     "missingSkills" : [ ]
   },
@@ -15,7 +15,7 @@
     "jobId" : "job-02",
     "appliedAt" : "2026-04-04T17:58:56.351877600",
     "status" : "SHORTLISTED",
-    "reviewerNotes" : "Good analytics background.",
+    "reviewerNotes" : "Acceptance cleared because the job was reopened.",
     "matchScore" : 100,
     "missingSkills" : [ ]
   },
@@ -24,8 +24,8 @@
     "applicantId" : "applicant-03",
     "jobId" : "job-03",
     "appliedAt" : "2026-04-05T05:58:56.351877600",
-    "status" : "ACCEPTED",
-    "reviewerNotes" : "",
+    "status" : "SHORTLISTED",
+    "reviewerNotes" : "Acceptance cleared because the job was reopened.",
     "matchScore" : 100,
     "missingSkills" : [ ]
   },
@@ -34,8 +34,8 @@
     "applicantId" : "applicant-57e7d242",
     "jobId" : "job-02",
     "appliedAt" : "2026-04-05T18:22:52.252243400",
-    "status" : "ACCEPTED",
-    "reviewerNotes" : "",
+    "status" : "SHORTLISTED",
+    "reviewerNotes" : "Acceptance cleared because the job was reopened.",
     "matchScore" : 33,
     "missingSkills" : [
       "Data Analysis",
