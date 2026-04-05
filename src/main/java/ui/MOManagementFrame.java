@@ -19,6 +19,7 @@ import util.Constants;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.time.format.DateTimeParseException;
 import java.time.LocalDate;
 
 /**
@@ -241,6 +242,8 @@ public class MOManagementFrame extends JFrame {
             clearForm();
         } catch (NumberFormatException ex) {
             UiMessage.error(this, "Hours must be a number.");
+        } catch (DateTimeParseException ex) {
+            UiMessage.error(this, "Deadline must use the format YYYY-MM-DD.");
         } catch (Exception ex) {
             UiMessage.error(this, ex.getMessage());
         }

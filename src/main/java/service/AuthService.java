@@ -27,19 +27,21 @@ public class AuthService {
     }
 
     public model.User login(String username, String password, Role role) {
-        List<String> errors = validationService.validateLogin(username, password);
+        String normalizedUsername = validationService.normalizeEmail(username);
+        List<String> errors = validationService.validateLogin(normalizedUsername, password);
         if (!errors.isEmpty()) {
             throw new IllegalArgumentException(String.join("\n", errors));
         }
 
-        return userRepository.findByUsername(username.trim())
+        return userRepository.findByUsername(normalizedUsername)
                 .filter(user -> user.getPassword().equals(password) && user.getRole() == role)
                 .orElseThrow(() -> new IllegalArgumentException("Wrong username, password, or role."));
     }
 
     public model.User registerTa(String username, String password, String confirmPassword) {
-        List<String> errors = validationService.validateRegistration(username, password, confirmPassword);
-        Optional<model.User> existing = userRepository.findByUsername(username.trim());
+        String normalizedUsername = validationService.normalizeEmail(username);
+        List<String> errors = validationService.validateRegistration(normalizedUsername, password, confirmPassword);
+        Optional<model.User> existing = userRepository.findByUsername(normalizedUsername);
         if (existing.isPresent()) {
             errors.add("This username is already registered.");
         }
@@ -48,13 +50,13 @@ public class AuthService {
         }
 
         List<model.User> users = new ArrayList<>(userRepository.findAll());
-        model.User user = new model.User(IdGenerator.newId("user"), username.trim(), password, Role.TA);
+        model.User user = new model.User(IdGenerator.newId("user"), normalizedUsername, password, Role.TA);
         users.add(user);
         userRepository.saveAll(users);
 
         List<ApplicantProfile> profiles = new ArrayList<>(profileRepository.findAll());
         ApplicantProfile profile = new ApplicantProfile(IdGenerator.newId("applicant"), user.getUserId());
-        profile.setEmail(username.trim());
+        profile.setEmail(normalizedUsername);
         profiles.add(profile);
         profileRepository.saveAll(profiles);
         return user;

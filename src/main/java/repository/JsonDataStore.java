@@ -11,6 +11,7 @@ import model.User;
 import util.JsonUtil;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -27,7 +28,7 @@ public class JsonDataStore {
     public <T> List<T> readList(Path path, Class<T> itemClass) {
         initializeListFile(path);
         try {
-            String json = Files.readString(path);
+            String json = Files.readString(path, StandardCharsets.UTF_8);
             Object parsed = JsonUtil.parse(json);
             if (!(parsed instanceof List<?> items)) {
                 throw new IllegalStateException("Expected JSON array in " + path);
@@ -54,7 +55,7 @@ public class JsonDataStore {
             for (T value : values) {
                 serialized.add(serialize(value));
             }
-            Files.writeString(path, JsonUtil.toPrettyJson(serialized));
+            Files.writeString(path, JsonUtil.toPrettyJson(serialized), StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to write data to " + path, e);
         }
@@ -63,7 +64,7 @@ public class JsonDataStore {
     public <T> T readObject(Path path, Class<T> clazz, T defaultValue) {
         initializeObjectFile(path, defaultValue);
         try {
-            String json = Files.readString(path);
+            String json = Files.readString(path, StandardCharsets.UTF_8);
             Object parsed = JsonUtil.parse(json);
             if (!(parsed instanceof Map<?, ?> rawMap)) {
                 throw new IllegalStateException("Expected JSON object in " + path);
@@ -79,7 +80,7 @@ public class JsonDataStore {
     public <T> void writeObject(Path path, T value) {
         ensureParent(path);
         try {
-            Files.writeString(path, JsonUtil.toPrettyJson(serialize(value)));
+            Files.writeString(path, JsonUtil.toPrettyJson(serialize(value)), StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to write config to " + path, e);
         }

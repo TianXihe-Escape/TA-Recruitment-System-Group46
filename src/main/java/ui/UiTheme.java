@@ -27,11 +27,12 @@ public final class UiTheme {
     public static final Color WARNING = new Color(245, 158, 11);
     public static final Color DANGER = new Color(220, 38, 38);
 
-    private static final Font TITLE_FONT = new Font("Segoe UI", Font.BOLD, 28);
-    private static final Font SECTION_FONT = new Font("Segoe UI", Font.BOLD, 18);
-    private static final Font BODY_FONT = new Font("Segoe UI", Font.PLAIN, 14);
-    private static final Font SMALL_FONT = new Font("Segoe UI", Font.PLAIN, 12);
-    private static final Font BUTTON_FONT = new Font("Segoe UI", Font.BOLD, 13);
+    private static final String FONT_FAMILY = resolveFontFamily();
+    private static final Font TITLE_FONT = uiFont(Font.BOLD, 28);
+    private static final Font SECTION_FONT = uiFont(Font.BOLD, 18);
+    private static final Font BODY_FONT = uiFont(Font.PLAIN, 14);
+    private static final Font SMALL_FONT = uiFont(Font.PLAIN, 12);
+    private static final Font BUTTON_FONT = uiFont(Font.BOLD, 13);
 
     private UiTheme() {
     }
@@ -64,6 +65,10 @@ public final class UiTheme {
 
     public static void styleFrame(JFrame frame) {
         frame.getContentPane().setBackground(BACKGROUND);
+    }
+
+    public static Font uiFont(int style, int size) {
+        return new Font(FONT_FAMILY, style, size);
     }
 
     public static JPanel createPagePanel() {
@@ -222,7 +227,7 @@ public final class UiTheme {
         table.setCellSelectionEnabled(false);
 
         JTableHeader header = table.getTableHeader();
-        header.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        header.setFont(uiFont(Font.BOLD, 12));
         header.setBackground(SURFACE_ALT);
         header.setForeground(MUTED_TEXT);
         header.setBorder(new LineBorder(BORDER, 1, true));
@@ -275,7 +280,7 @@ public final class UiTheme {
         label.setOpaque(true);
         label.setBackground(background);
         label.setForeground(foreground);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        label.setFont(uiFont(Font.BOLD, 12));
         label.setBorder(new EmptyBorder(6, 10, 6, 10));
         return label;
     }
@@ -316,6 +321,30 @@ public final class UiTheme {
         button.setForeground(Color.WHITE);
         button.setBorder(new EmptyBorder(10, 16, 10, 16));
         return button;
+    }
+
+    private static String resolveFontFamily() {
+        String[] preferredFonts = {
+                "Microsoft YaHei UI",
+                "Microsoft YaHei",
+                "PingFang SC",
+                "Hiragino Sans GB",
+                "Noto Sans CJK SC",
+                "WenQuanYi Micro Hei",
+                "SimHei",
+                "Arial Unicode MS",
+                "Segoe UI",
+                Font.DIALOG
+        };
+        String[] availableFonts = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
+        for (String preferredFont : preferredFonts) {
+            for (String availableFont : availableFonts) {
+                if (availableFont.equalsIgnoreCase(preferredFont)) {
+                    return availableFont;
+                }
+            }
+        }
+        return Font.DIALOG;
     }
 
     private static Border inputBorder() {

@@ -32,7 +32,7 @@ public final class UiMessage {
         area.setWrapStyleWord(false);
         area.setLineWrap(false);
         area.setForeground(UiTheme.TEXT);
-        area.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        area.setFont(UiTheme.uiFont(Font.PLAIN, 14));
         area.setBorder(BorderFactory.createEmptyBorder(6, 0, 0, 0));
         area.setColumns(preferredColumns(message));
         area.setRows(preferredRows(message));
