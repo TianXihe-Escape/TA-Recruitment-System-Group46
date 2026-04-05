@@ -48,5 +48,17 @@
     "experienceSummary" : "Helped grade quizzes and maintain course datasets.",
     "preferredDuties" : "Marking, office hours",
     "cvPath" : "sample-cv/chen-yu-cv.pdf"
+  },
+  {
+    "applicantId" : "applicant-57e7d242",
+    "userId" : "user-64b92970",
+    "name" : null,
+    "email" : "ta4@bupt.edu.cn",
+    "phone" : null,
+    "skills" : [ ],
+    "availability" : null,
+    "experienceSummary" : null,
+    "preferredDuties" : null,
+    "cvPath" : null
   }
 ]
