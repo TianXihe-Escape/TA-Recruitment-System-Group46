@@ -115,6 +115,48 @@ class ApplicationServiceTest {
         assertEquals("apply-04", created.getApplicationId());
     }
 
+    @Test
+    void shouldReopenJobByClearingAcceptedApplication() {
+        ApplicationRecord record = new ApplicationRecord();
+        record.setApplicationId("x1");
+        record.setApplicantId("a1");
+        record.setJobId("j1");
+        record.setStatus(ApplicationStatus.ACCEPTED);
+        applicationRepository.saveAll(new ArrayList<>(List.of(record)));
+
+        applicationService.reopenJob("j1");
+
+        List<ApplicationRecord> records = applicationRepository.findAll();
+        assertEquals(ApplicationStatus.SHORTLISTED, records.get(0).getStatus());
+    }
+
+    @Test
+    void shouldKeepOnlyOneAcceptedApplicationPerJob() {
+        ApplicationRecord first = new ApplicationRecord();
+        first.setApplicationId("x1");
+        first.setApplicantId("a1");
+        first.setJobId("j1");
+        first.setStatus(ApplicationStatus.ACCEPTED);
+
+        ApplicationRecord second = new ApplicationRecord();
+        second.setApplicationId("x2");
+        second.setApplicantId("a2");
+        second.setJobId("j1");
+        second.setStatus(ApplicationStatus.SHORTLISTED);
+
+        applicationRepository.saveAll(new ArrayList<>(List.of(first, second)));
+        jobRepository.saveAll(List.of(buildJob()));
+
+        applicationService.updateStatus("x2", ApplicationStatus.ACCEPTED, "replacement");
+
+        List<ApplicationRecord> records = applicationRepository.findAll();
+        ApplicationRecord updatedFirst = records.stream().filter(record -> record.getApplicationId().equals("x1")).findFirst().orElseThrow();
+        ApplicationRecord updatedSecond = records.stream().filter(record -> record.getApplicationId().equals("x2")).findFirst().orElseThrow();
+
+        assertEquals(ApplicationStatus.SHORTLISTED, updatedFirst.getStatus());
+        assertEquals(ApplicationStatus.ACCEPTED, updatedSecond.getStatus());
+    }
+
     private ApplicantProfile buildProfile() {
         ApplicantProfile profile = new ApplicantProfile("a1", "u1");
         profile.setCvPath("cv.pdf");

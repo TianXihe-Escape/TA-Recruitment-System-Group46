@@ -34,8 +34,8 @@
     "applicantId" : "applicant-57e7d242",
     "jobId" : "job-02",
     "appliedAt" : "2026-04-05T18:22:52.252243400",
-    "status" : "SUBMITTED",
-    "reviewerNotes" : null,
+    "status" : "ACCEPTED",
+    "reviewerNotes" : "",
     "matchScore" : 33,
     "missingSkills" : [
       "Data Analysis",

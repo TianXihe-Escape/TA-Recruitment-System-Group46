@@ -76,9 +76,9 @@ public class ApplicationService {
 
         record.setStatus(status);
         record.setReviewerNotes(reviewerNotes);
-        applicationRepository.saveAll(applications);
 
         if (status == ApplicationStatus.ACCEPTED) {
+            clearOtherAcceptedApplications(record, applications);
             JobPosting job = jobRepository.findById(record.getJobId()).orElse(null);
             if (job != null) {
                 job.setStatus(JobStatus.CLOSED);
@@ -91,6 +91,26 @@ public class ApplicationService {
                 }
                 jobRepository.saveAll(jobs);
             }
+        }
+
+        applicationRepository.saveAll(applications);
+    }
+
+    public void reopenJob(String jobId) {
+        List<ApplicationRecord> applications = new ArrayList<>(applicationRepository.findAll());
+        boolean updated = false;
+        for (ApplicationRecord application : applications) {
+            if (jobId.equals(application.getJobId()) && application.getStatus() == ApplicationStatus.ACCEPTED) {
+                application.setStatus(ApplicationStatus.SHORTLISTED);
+                application.setReviewerNotes(appendNote(
+                        application.getReviewerNotes(),
+                        "Acceptance cleared because the job was reopened."
+                ));
+                updated = true;
+            }
+        }
+        if (updated) {
+            applicationRepository.saveAll(applications);
         }
     }
 
@@ -129,5 +149,29 @@ public class ApplicationService {
             return 0;
         }
         return Integer.parseInt(matcher.group(1));
+    }
+
+    private void clearOtherAcceptedApplications(ApplicationRecord selectedRecord, List<ApplicationRecord> applications) {
+        for (ApplicationRecord application : applications) {
+            if (!application.getApplicationId().equals(selectedRecord.getApplicationId())
+                    && application.getJobId().equals(selectedRecord.getJobId())
+                    && application.getStatus() == ApplicationStatus.ACCEPTED) {
+                application.setStatus(ApplicationStatus.SHORTLISTED);
+                application.setReviewerNotes(appendNote(
+                        application.getReviewerNotes(),
+                        "Acceptance cleared because another applicant was accepted."
+                ));
+            }
+        }
+    }
+
+    private String appendNote(String existingNotes, String note) {
+        if (existingNotes == null || existingNotes.isBlank()) {
+            return note;
+        }
+        if (existingNotes.contains(note)) {
+            return existingNotes;
+        }
+        return existingNotes + "\n" + note;
     }
 }
