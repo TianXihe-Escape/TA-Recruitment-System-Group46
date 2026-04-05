@@ -10,7 +10,7 @@
       "Communication",
       "Agile"
     ],
-    "applicationDeadline" : "2026-04-25",
+    "applicationDeadline" : "2026-04-26",
     "status" : "CLOSED",
     "postedBy" : "user-mo-01"
   },
@@ -25,7 +25,7 @@
       "Data Analysis",
       "Communication"
     ],
-    "applicationDeadline" : "2026-04-18",
+    "applicationDeadline" : "2026-04-19",
     "status" : "OPEN",
     "postedBy" : "user-mo-01"
   },
@@ -40,8 +40,8 @@
       "Communication",
       "Marking"
     ],
-    "applicationDeadline" : "2026-04-14",
-    "status" : "CLOSED",
+    "applicationDeadline" : "2026-04-15",
+    "status" : "OPEN",
     "postedBy" : "user-mo-01"
   }
 ]

@@ -17,6 +17,7 @@ import util.Constants;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.io.File;
 
 /**
  * TA dashboard for profile editing, browsing jobs, and tracking applications.
@@ -38,6 +39,7 @@ public class TADashboardFrame extends JFrame {
     private final JTextField preferredDutiesField = new JTextField();
     private final JTextArea experienceArea = new JTextArea(3, 20);
     private final JTextField cvPathField = new JTextField();
+    private final JButton chooseCvButton = UiTheme.createSecondaryButton("Choose File");
     private final DefaultTableModel jobTableModel = new DefaultTableModel(
             new Object[]{"Job ID", "Module", "Hours", "Skills", "Status"}, 0);
     private final JTable jobTable = new JTable(jobTableModel);
@@ -92,7 +94,7 @@ public class TADashboardFrame extends JFrame {
         UiTheme.addFormRow(form, 8, "Availability", availabilityField);
         UiTheme.addFormRow(form, 10, "Preferred Duties", preferredDutiesField);
         UiTheme.addFormRow(form, 12, "Experience Summary", wrapArea(experienceArea));
-        UiTheme.addFormRow(form, 14, "CV Path", cvPathField);
+        UiTheme.addFormRow(form, 14, "CV Path", buildCvPathPicker());
 
         JButton saveProfileButton = UiTheme.createPrimaryButton("Save Profile");
         JButton backButton = UiTheme.createSecondaryButton("Back to Login");
@@ -100,6 +102,7 @@ public class TADashboardFrame extends JFrame {
 
         backButton.addActionListener(event -> returnToLogin());
         saveProfileButton.addActionListener(event -> saveProfile());
+        chooseCvButton.addActionListener(event -> chooseCvFile());
         refreshButton.addActionListener(event -> {
             profile = applicantService.getProfileByUserId(currentUser.getUserId());
             loadProfile();
@@ -231,6 +234,33 @@ public class TADashboardFrame extends JFrame {
         dispose();
     }
 
+    private JPanel buildCvPathPicker() {
+        JPanel panel = new JPanel(new BorderLayout(8, 0));
+        panel.setOpaque(false);
+        panel.add(cvPathField, BorderLayout.CENTER);
+        panel.add(chooseCvButton, BorderLayout.EAST);
+        return panel;
+    }
+
+    private void chooseCvFile() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Select CV File");
+        chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+
+        String existingPath = cvPathField.getText().trim();
+        if (!existingPath.isBlank()) {
+            File existingFile = new File(existingPath);
+            if (existingFile.exists()) {
+                chooser.setSelectedFile(existingFile);
+            }
+        }
+
+        int result = chooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION && chooser.getSelectedFile() != null) {
+            cvPathField.setText(chooser.getSelectedFile().getAbsolutePath());
+        }
+    }
+
     private void styleComponents() {
         UiTheme.styleTextField(nameField);
         UiTheme.styleTextField(emailField);
@@ -239,6 +269,8 @@ public class TADashboardFrame extends JFrame {
         UiTheme.styleTextField(availabilityField);
         UiTheme.styleTextField(preferredDutiesField);
         UiTheme.styleTextField(cvPathField);
+        cvPathField.setEditable(false);
+        cvPathField.setToolTipText("Choose your CV file to fill this path automatically.");
         UiTheme.styleTextArea(experienceArea, 5);
         UiTheme.styleTable(jobTable);
         UiTheme.styleTable(applicationTable);
