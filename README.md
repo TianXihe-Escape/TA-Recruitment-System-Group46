@@ -1,40 +1,40 @@
-<<<<<<< HEAD
-# ISTA-Recruitment-System
-
-A lightweight Java-based system developed using Agile methods to streamline the recruitment and management of Teaching Assistants for the BUPT International School.
-
----
-
-## 📋 Group Name-list
-
-- TianXihe-Escape：231222877（Leader）
-- wyx1216：231221434（Member）
-- OLITE1：231222040（Member）
-- RBKcrazywind：231220530（Member）
-- ang666by：231221010（Member）
-- wuyanze-zyy：231222291（Member）
-=======
 # BUPT International School TA Recruitment System
 
 ## Project Overview
-This repository contains a stand-alone Java desktop application for managing Teaching Assistant recruitment at BUPT International School. The system replaces spreadsheet-based administration with a modular Swing application that supports TA applicants, Module Organisers, and Admin user.
+This repository contains a stand-alone Java desktop application for managing Teaching Assistant recruitment at BUPT International School. The system replaces spreadsheet-based administration with a modular Swing application that supports TA applicants, Module Organisers, and Admin users.
 
 The implementation is aligned with the coursework direction:
 - Iteration 1: account creation, login, applicant profile, CV path storage, browse jobs
 - Iteration 2: application workflow, MO review actions, admin workload monitor, explainable skill matching
 - Iteration 3 ready: richer matching and reporting extensions can be added without changing the persistence approach
 
+## Group Members
+- TianXihe-Escape: 31222877 (Leader)
+- wyx1216: 31221434 (Member)
+- OLITE1: 31222040 (Member)
+- RBKcrazywind: 31220530 (Member)
+- ang666by: 31221010 (Member)
+- wuyanze-zyy: 31222291 (Member)
+
 ## Key Features By Role
-- `TA Applicant`: register, log in, edit profile, store CV path, browse jobs, view job details, apply, track application status
-- `Module Organiser`: create and edit jobs, view applicants per job, inspect match score and missing skills, shortlist, accept, reject
+- `TA Applicant`: register, log in, edit profile, choose a local CV file, browse jobs, view job details, apply, and track application status
+- `Module Organiser`: create and edit jobs, reopen closed jobs, view applicants per job, inspect match score and missing skills, shortlist, accept, reject, and safely replace an accepted TA when reopening a post
 - `Admin`: monitor workloads, highlight overload, inspect all jobs, load/reset sample data, view simple rebalance suggestions
 
+## Reliability Improvements
+- Stronger validation for TA registration and profile editing, including normalized email input, phone number checks, Chinese-name-friendly validation, and cleaner text handling
+- More tolerant skill parsing that supports English and Chinese separators such as `,` `，` `;` `；` and `、`
+- Safer MO review workflow so refreshing tables after shortlist/accept/reject does not trigger false errors
+- Reopening a job now clears the previous accepted application state so a new TA can be selected correctly
+- UTF-8 data persistence and Chinese-friendly UI fonts to reduce encoding and display issues on Windows
+- Faster global scroll behavior, including form-area mouse-wheel scrolling on page containers
+
 ## Technology Stack
-- Java 17
-- Maven
+- Java 17+
 - Java Swing
-- Jackson for JSON persistence
+- JSON file persistence
 - JUnit 5 for unit tests
+- Maven project structure for dependency and build management
 
 ## Coursework Constraints
 - Stand-alone Java application
@@ -44,15 +44,28 @@ The implementation is aligned with the coursework direction:
 - Explainable AI-like logic only
 
 ## How To Run
-1. Install Java 17 and Maven.
-2. Run:
+1. Install Java 17 or later.
+2. Open a terminal in the project root.
+3. If the project has already been compiled, you can run it directly:
 
 ```bash
-mvn clean test
+java -cp target/classes app.Main
+```
+
+4. Or double-click:
+
+```text
+run.bat
+```
+
+5. If you want Maven to compile and launch the app:
+
+```bash
+mvn test
 mvn exec:java
 ```
 
-3. In the login screen, click `Load Sample Data` for a ready-to-demo dataset.
+6. In the login screen, click `Load Sample Data` for a ready-to-demo dataset.
 
 ## Default Demo Accounts
 - `TA`: `ta1@bupt.edu.cn` / `ta123`
@@ -80,8 +93,15 @@ docs/
 ```
 
 ## Testing
-- Automated tests: `mvn test`
-- Manual test cases: [docs/test-cases.md](/d:/CODE/Test/docs/test-cases.md)
+- Quick launch: `run.bat`
+- Manual launch from compiled classes: `java -cp target/classes app.Main`
+- Compile and run tests with Maven: `mvn test`
+- Launch through Maven: `mvn exec:java`
+
+## Notes
+- Applicant and job data are stored in the `data/` folder as JSON files.
+- TA applicants must save a profile and choose a CV file before applying.
+- When a job is reopened, previously accepted applications for that job are moved back to a reviewable state.
 
 ## Screenshots
 - Add login screen screenshot
@@ -92,5 +112,3 @@ docs/
 ## Contribution
 - Use feature branches per module or role flow
 - Keep pull requests focused on one iteration milestone
-- See [docs/team-task-split.md](/d:/CODE/Test/docs/team-task-split.md)
->>>>>>> 13bb6c0 (11)

@@ -9,6 +9,11 @@ import java.awt.*;
  * Small wrapper around Swing message dialogs for consistent UI feedback.
  */
 public final class UiMessage {
+    private static final int MIN_COLUMNS = 28;
+    private static final int MAX_COLUMNS = 52;
+    private static final int MIN_ROWS = 3;
+    private static final int MAX_ROWS = 3;
+
     private UiMessage() {
     }
 
@@ -24,11 +29,33 @@ public final class UiMessage {
         JTextArea area = new JTextArea(message);
         area.setEditable(false);
         area.setOpaque(false);
-        area.setWrapStyleWord(true);
-        area.setLineWrap(true);
+        area.setWrapStyleWord(false);
+        area.setLineWrap(false);
         area.setForeground(UiTheme.TEXT);
-        area.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        area.setFont(UiTheme.uiFont(Font.PLAIN, 14));
         area.setBorder(BorderFactory.createEmptyBorder(6, 0, 0, 0));
-        JOptionPane.showMessageDialog(parent, area, title, type);
+        area.setColumns(preferredColumns(message));
+        area.setRows(preferredRows(message));
+
+        JScrollPane scrollPane = new JScrollPane(area);
+        scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+        scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setPreferredSize(area.getPreferredSize());
+        UiTheme.styleDialogScrollPane(scrollPane);
+
+        JOptionPane.showMessageDialog(parent, scrollPane, title, type);
+    }
+
+    private static int preferredColumns(String message) {
+        int longestLine = 0;
+        for (String line : message.split("\\R", -1)) {
+            longestLine = Math.max(longestLine, line.length());
+        }
+        return Math.max(MIN_COLUMNS, Math.min(MAX_COLUMNS, longestLine + 2));
+    }
+
+    private static int preferredRows(String message) {
+        int lineCount = message.split("\\R", -1).length;
+        return Math.max(MIN_ROWS, Math.min(MAX_ROWS, lineCount));
     }
 }

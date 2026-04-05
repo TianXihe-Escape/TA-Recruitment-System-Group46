@@ -58,7 +58,7 @@ public class LoginFrame extends JFrame {
         supportPanel.setLayout(new BoxLayout(supportPanel, BoxLayout.Y_AXIS));
         JLabel supportTitle = new JLabel("Demo Accounts");
         supportTitle.setForeground(UiTheme.TEXT);
-        supportTitle.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        supportTitle.setFont(UiTheme.uiFont(Font.BOLD, 13));
         supportTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
         JTextArea accountArea = new JTextArea(
                 "TA: ta1@bupt.edu.cn / ta123\n" +
@@ -68,7 +68,7 @@ public class LoginFrame extends JFrame {
         accountArea.setEditable(false);
         accountArea.setOpaque(false);
         accountArea.setForeground(UiTheme.MUTED_TEXT);
-        accountArea.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        accountArea.setFont(UiTheme.uiFont(Font.PLAIN, 13));
         accountArea.setAlignmentX(Component.CENTER_ALIGNMENT);
         accountArea.setMaximumSize(new Dimension(Integer.MAX_VALUE, 96));
         supportPanel.add(supportTitle);
@@ -135,12 +135,12 @@ public class LoginFrame extends JFrame {
 
         JLabel title = new JLabel("<html><div style='width:260px;'>TA Recruitment<br>Management System</div></html>");
         title.setForeground(Color.WHITE);
-        title.setFont(new Font("Segoe UI", Font.BOLD, 30));
+        title.setFont(UiTheme.uiFont(Font.BOLD, 30));
         title.setBorder(BorderFactory.createEmptyBorder(18, 0, 14, 0));
 
         JLabel summary = new JLabel("<html><div style='width:320px;'>Manage teaching assistant applications, publish module jobs, and balance workloads from one desktop system.</div></html>");
         summary.setForeground(new Color(229, 236, 247));
-        summary.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        summary.setFont(UiTheme.uiFont(Font.PLAIN, 16));
 
         top.add(eyebrow);
         top.add(title);
@@ -167,11 +167,11 @@ public class LoginFrame extends JFrame {
 
         JLabel valueLabel = new JLabel(value);
         valueLabel.setForeground(Color.WHITE);
-        valueLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        valueLabel.setFont(UiTheme.uiFont(Font.BOLD, 24));
 
         JLabel labelLabel = new JLabel(label);
         labelLabel.setForeground(new Color(224, 232, 245));
-        labelLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        labelLabel.setFont(UiTheme.uiFont(Font.PLAIN, 12));
 
         panel.add(valueLabel, BorderLayout.CENTER);
         panel.add(labelLabel, BorderLayout.SOUTH);

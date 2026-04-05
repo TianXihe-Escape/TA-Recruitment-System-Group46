@@ -3,9 +3,9 @@
     "applicationId" : "apply-01",
     "applicantId" : "applicant-01",
     "jobId" : "job-01",
-    "appliedAt" : "2026-04-02T14:55:56.025978400",
+    "appliedAt" : "2026-04-03T17:58:56.351877600",
     "status" : "ACCEPTED",
-    "reviewerNotes" : "Strong fit for lab support.",
+    "reviewerNotes" : "",
     "matchScore" : 100,
     "missingSkills" : [ ]
   },
@@ -13,9 +13,9 @@
     "applicationId" : "apply-02",
     "applicantId" : "applicant-02",
     "jobId" : "job-02",
-    "appliedAt" : "2026-04-03T14:55:56.025978400",
+    "appliedAt" : "2026-04-04T17:58:56.351877600",
     "status" : "SHORTLISTED",
-    "reviewerNotes" : "Good analytics background.",
+    "reviewerNotes" : "Acceptance cleared because the job was reopened.",
     "matchScore" : 100,
     "missingSkills" : [ ]
   },
@@ -23,23 +23,23 @@
     "applicationId" : "apply-03",
     "applicantId" : "applicant-03",
     "jobId" : "job-03",
-    "appliedAt" : "2026-04-04T02:55:56.025978400",
-    "status" : "SUBMITTED",
-    "reviewerNotes" : "",
+    "appliedAt" : "2026-04-05T05:58:56.351877600",
+    "status" : "SHORTLISTED",
+    "reviewerNotes" : "Acceptance cleared because the job was reopened.",
     "matchScore" : 100,
     "missingSkills" : [ ]
   },
   {
     "applicationId" : "apply-04",
-    "applicantId" : "applicant-01",
-    "jobId" : "job-03",
-    "appliedAt" : "2026-04-04T15:28:43.313213300",
-    "status" : "ACCEPTED",
-    "reviewerNotes" : "",
+    "applicantId" : "applicant-57e7d242",
+    "jobId" : "job-02",
+    "appliedAt" : "2026-04-05T18:22:52.252243400",
+    "status" : "SHORTLISTED",
+    "reviewerNotes" : "Acceptance cleared because the job was reopened.",
     "matchScore" : 33,
     "missingSkills" : [
-      "Python",
-      "Marking"
+      "Data Analysis",
+      "Communication"
     ]
   }
 ]

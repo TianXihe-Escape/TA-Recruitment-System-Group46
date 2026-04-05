@@ -19,6 +19,7 @@ import util.Constants;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.time.format.DateTimeParseException;
 import java.time.LocalDate;
 
 /**
@@ -215,8 +216,12 @@ public class MOManagementFrame extends JFrame {
 
     private void saveJob() {
         try {
-            JobPosting jobPosting = new JobPosting();
             String jobId = jobIdField.getText().trim();
+            JobPosting existingJob = NEW_JOB_PLACEHOLDER.equals(jobId) || jobId.isBlank()
+                    ? null
+                    : jobService.getJobById(jobId);
+
+            JobPosting jobPosting = new JobPosting();
             jobPosting.setJobId(NEW_JOB_PLACEHOLDER.equals(jobId) ? "" : jobId);
             jobPosting.setModuleCode(moduleCodeField.getText().trim());
             jobPosting.setModuleTitle(moduleTitleField.getText().trim());
@@ -227,11 +232,18 @@ public class MOManagementFrame extends JFrame {
             jobPosting.setDuties(dutiesArea.getText().trim());
             jobPosting.setPostedBy(currentUser.getUserId());
             jobService.saveJob(jobPosting);
+            if (existingJob != null
+                    && existingJob.getStatus() == JobStatus.CLOSED
+                    && jobPosting.getStatus() == JobStatus.OPEN) {
+                applicationService.reopenJob(jobPosting.getJobId());
+            }
             UiMessage.info(this, "Job saved successfully.");
             refreshJobs();
             clearForm();
         } catch (NumberFormatException ex) {
             UiMessage.error(this, "Hours must be a number.");
+        } catch (DateTimeParseException ex) {
+            UiMessage.error(this, "Deadline must use the format YYYY-MM-DD.");
         } catch (Exception ex) {
             UiMessage.error(this, ex.getMessage());
         }
@@ -243,18 +255,8 @@ public class MOManagementFrame extends JFrame {
             UiMessage.error(this, "Please select a job first.");
             return;
         }
-        applicantTableModel.setRowCount(0);
         String jobId = String.valueOf(jobTableModel.getValueAt(row, 0));
-        for (ApplicationRecord application : applicationService.getApplicationsForJob(jobId)) {
-            ApplicantProfile applicant = applicantService.getProfileByApplicantId(application.getApplicantId());
-            applicantTableModel.addRow(new Object[]{
-                    application.getApplicationId(),
-                    applicant.getName(),
-                    application.getStatus(),
-                    application.getMatchScore(),
-                    String.join(", ", application.getMissingSkills())
-            });
-        }
+        loadApplicantsForJob(jobId);
     }
 
     private void showSelectedApplicantMatch() {
@@ -293,14 +295,43 @@ public class MOManagementFrame extends JFrame {
             return;
         }
         String applicationId = String.valueOf(applicantTableModel.getValueAt(row, 0));
+        int jobRow = jobTable.getSelectedRow();
+        String selectedJobId = jobRow >= 0 ? String.valueOf(jobTableModel.getValueAt(jobRow, 0)) : null;
         try {
             applicationService.updateStatus(applicationId, status, reviewArea.getText().trim());
             UiMessage.info(this, "Application updated to " + status + ".");
             refreshJobs();
-            loadApplicantsForSelectedJob();
+            if (selectedJobId != null) {
+                selectJobRow(selectedJobId);
+                loadApplicantsForJob(selectedJobId);
+            }
         } catch (Exception ex) {
             UiMessage.error(this, ex.getMessage());
         }
+    }
+
+    private void loadApplicantsForJob(String jobId) {
+        applicantTableModel.setRowCount(0);
+        for (ApplicationRecord application : applicationService.getApplicationsForJob(jobId)) {
+            ApplicantProfile applicant = applicantService.getProfileByApplicantId(application.getApplicantId());
+            applicantTableModel.addRow(new Object[]{
+                    application.getApplicationId(),
+                    applicant.getName(),
+                    application.getStatus(),
+                    application.getMatchScore(),
+                    String.join(", ", application.getMissingSkills())
+            });
+        }
+    }
+
+    private void selectJobRow(String jobId) {
+        for (int i = 0; i < jobTableModel.getRowCount(); i++) {
+            if (jobId.equals(String.valueOf(jobTableModel.getValueAt(i, 0)))) {
+                jobTable.setRowSelectionInterval(i, i);
+                return;
+            }
+        }
+        jobTable.clearSelection();
     }
 
     private void returnToLogin() {

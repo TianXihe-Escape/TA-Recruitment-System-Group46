@@ -43,7 +43,7 @@ public class RegisterFrame extends JFrame {
         note.setWrapStyleWord(true);
         note.setLineWrap(true);
         note.setForeground(UiTheme.MUTED_TEXT);
-        note.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        note.setFont(UiTheme.uiFont(Font.PLAIN, 13));
 
         JPanel body = new JPanel(new BorderLayout(0, 18));
         body.setOpaque(false);

@@ -10,6 +10,7 @@ import javax.swing.table.JTableHeader;
 import javax.swing.table.TableColumn;
 import javax.swing.text.JTextComponent;
 import java.awt.*;
+import java.awt.event.MouseWheelEvent;
 
 /**
  * Shared visual system for the Swing UI.
@@ -26,12 +27,15 @@ public final class UiTheme {
     public static final Color SUCCESS = new Color(22, 163, 74);
     public static final Color WARNING = new Color(245, 158, 11);
     public static final Color DANGER = new Color(220, 38, 38);
+    private static final int SCROLL_UNIT_INCREMENT = 32;
+    private static final int SCROLL_BLOCK_INCREMENT = 96;
 
-    private static final Font TITLE_FONT = new Font("Segoe UI", Font.BOLD, 28);
-    private static final Font SECTION_FONT = new Font("Segoe UI", Font.BOLD, 18);
-    private static final Font BODY_FONT = new Font("Segoe UI", Font.PLAIN, 14);
-    private static final Font SMALL_FONT = new Font("Segoe UI", Font.PLAIN, 12);
-    private static final Font BUTTON_FONT = new Font("Segoe UI", Font.BOLD, 13);
+    private static final String FONT_FAMILY = resolveFontFamily();
+    private static final Font TITLE_FONT = uiFont(Font.BOLD, 28);
+    private static final Font SECTION_FONT = uiFont(Font.BOLD, 18);
+    private static final Font BODY_FONT = uiFont(Font.PLAIN, 14);
+    private static final Font SMALL_FONT = uiFont(Font.PLAIN, 12);
+    private static final Font BUTTON_FONT = uiFont(Font.BOLD, 13);
 
     private UiTheme() {
     }
@@ -64,6 +68,10 @@ public final class UiTheme {
 
     public static void styleFrame(JFrame frame) {
         frame.getContentPane().setBackground(BACKGROUND);
+    }
+
+    public static Font uiFont(int style, int size) {
+        return new Font(FONT_FAMILY, style, size);
     }
 
     public static JPanel createPagePanel() {
@@ -222,7 +230,7 @@ public final class UiTheme {
         table.setCellSelectionEnabled(false);
 
         JTableHeader header = table.getTableHeader();
-        header.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        header.setFont(uiFont(Font.BOLD, 12));
         header.setBackground(SURFACE_ALT);
         header.setForeground(MUTED_TEXT);
         header.setBorder(new LineBorder(BORDER, 1, true));
@@ -232,8 +240,6 @@ public final class UiTheme {
     public static JScrollPane wrapTable(JTable table) {
         JScrollPane scrollPane = new JScrollPane(table);
         styleScrollPane(scrollPane);
-        scrollPane.getHorizontalScrollBar().setUnitIncrement(16);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         return scrollPane;
     }
 
@@ -241,10 +247,18 @@ public final class UiTheme {
         scrollPane.setBorder(new LineBorder(BORDER, 1, true));
         scrollPane.getViewport().setBackground(SURFACE);
         scrollPane.setBackground(SURFACE);
-        scrollPane.getHorizontalScrollBar().setUnitIncrement(16);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        applyScrollSpeed(scrollPane);
         styleScrollBar(scrollPane.getHorizontalScrollBar());
         styleScrollBar(scrollPane.getVerticalScrollBar());
+    }
+
+    public static void styleDialogScrollPane(JScrollPane scrollPane) {
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
+        applyScrollSpeed(scrollPane);
+        styleDialogScrollBar(scrollPane.getVerticalScrollBar());
+        styleDialogScrollBar(scrollPane.getHorizontalScrollBar());
     }
 
     public static void styleSplitPane(JSplitPane splitPane) {
@@ -265,7 +279,7 @@ public final class UiTheme {
         label.setOpaque(true);
         label.setBackground(background);
         label.setForeground(foreground);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        label.setFont(uiFont(Font.BOLD, 12));
         label.setBorder(new EmptyBorder(6, 10, 6, 10));
         return label;
     }
@@ -275,10 +289,10 @@ public final class UiTheme {
         scrollPane.setBorder(null);
         scrollPane.getViewport().setBackground(BACKGROUND);
         scrollPane.setBackground(BACKGROUND);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(18);
-        scrollPane.getHorizontalScrollBar().setUnitIncrement(18);
+        applyScrollSpeed(scrollPane);
         styleScrollBar(scrollPane.getHorizontalScrollBar());
         styleScrollBar(scrollPane.getVerticalScrollBar());
+        installWheelForwarding(component);
         return scrollPane;
     }
 
@@ -308,11 +322,105 @@ public final class UiTheme {
         return button;
     }
 
+    private static String resolveFontFamily() {
+        String[] preferredFonts = {
+                "Microsoft YaHei UI",
+                "Microsoft YaHei",
+                "PingFang SC",
+                "Hiragino Sans GB",
+                "Noto Sans CJK SC",
+                "WenQuanYi Micro Hei",
+                "SimHei",
+                "Arial Unicode MS",
+                "Segoe UI",
+                Font.DIALOG
+        };
+        String[] availableFonts = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
+        for (String preferredFont : preferredFonts) {
+            for (String availableFont : availableFonts) {
+                if (availableFont.equalsIgnoreCase(preferredFont)) {
+                    return availableFont;
+                }
+            }
+        }
+        return Font.DIALOG;
+    }
+
     private static Border inputBorder() {
         return new CompoundBorder(
                 new LineBorder(BORDER, 1, true),
                 new EmptyBorder(2, 2, 2, 2)
         );
+    }
+
+    private static void applyScrollSpeed(JScrollPane scrollPane) {
+        scrollPane.getHorizontalScrollBar().setUnitIncrement(SCROLL_UNIT_INCREMENT);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(SCROLL_UNIT_INCREMENT);
+        scrollPane.getHorizontalScrollBar().setBlockIncrement(SCROLL_BLOCK_INCREMENT);
+        scrollPane.getVerticalScrollBar().setBlockIncrement(SCROLL_BLOCK_INCREMENT);
+        scrollPane.getHorizontalScrollBar().setFocusable(false);
+        scrollPane.getVerticalScrollBar().setFocusable(false);
+    }
+
+    private static void installWheelForwarding(Component component) {
+        if (shouldForwardWheel(component)) {
+            component.addMouseWheelListener(UiTheme::forwardWheelToNearestScrollPane);
+        }
+        if (component instanceof Container container) {
+            for (Component child : container.getComponents()) {
+                installWheelForwarding(child);
+            }
+        }
+    }
+
+    private static boolean shouldForwardWheel(Component component) {
+        return !(component instanceof JScrollPane
+                || component instanceof JScrollBar
+                || component instanceof JTable
+                || component instanceof JTextArea
+                || component instanceof JList<?>
+                || component instanceof JTree);
+    }
+
+    private static void forwardWheelToNearestScrollPane(MouseWheelEvent event) {
+        if (event.isConsumed() || event.getWheelRotation() == 0) {
+            return;
+        }
+        Component source = event.getComponent();
+        JScrollPane scrollPane = findScrollableAncestor(source);
+        if (scrollPane == null) {
+            return;
+        }
+
+        JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
+        if (verticalBar == null || !verticalBar.isVisible() || !verticalBar.isEnabled()) {
+            return;
+        }
+
+        int direction = event.getWheelRotation();
+        int delta = event.getUnitsToScroll() * Math.max(1, verticalBar.getUnitIncrement(direction));
+        int maxValue = verticalBar.getMaximum() - verticalBar.getVisibleAmount();
+        int nextValue = Math.max(verticalBar.getMinimum(), Math.min(maxValue, verticalBar.getValue() + delta));
+        verticalBar.setValue(nextValue);
+        event.consume();
+    }
+
+    private static JScrollPane findScrollableAncestor(Component source) {
+        Component current = source;
+        while (current != null) {
+            if (current instanceof JViewport viewport) {
+                Container parent = viewport.getParent();
+                if (parent instanceof JScrollPane scrollPane) {
+                    JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
+                    if (verticalBar != null && verticalBar.isVisible() && verticalBar.isEnabled()
+                            && verticalBar.getMaximum() > verticalBar.getVisibleAmount()) {
+                        return scrollPane;
+                    }
+                }
+            }
+            current = current.getParent();
+        }
+        return null;
     }
 
     private static void styleScrollBar(JScrollBar scrollBar) {
@@ -387,6 +495,68 @@ public final class UiTheme {
                 g2.drawRoundRect(x, y, Math.max(0, width - 1), Math.max(0, height - 1), 12, 12);
                 g2.setColor(new Color(117, 142, 177));
                 g2.drawRoundRect(x, y, Math.max(0, width - 1), Math.max(0, height - 1), 12, 12);
+                g2.dispose();
+            }
+
+            private JButton createZeroButton() {
+                JButton button = new JButton();
+                button.setPreferredSize(new Dimension(0, 0));
+                button.setMinimumSize(new Dimension(0, 0));
+                button.setMaximumSize(new Dimension(0, 0));
+                return button;
+            }
+        });
+    }
+
+    private static void styleDialogScrollBar(JScrollBar scrollBar) {
+        scrollBar.setOpaque(false);
+        scrollBar.setPreferredSize(scrollBar.getOrientation() == Adjustable.VERTICAL
+                ? new Dimension(10, 0)
+                : new Dimension(0, 10));
+        scrollBar.setUI(new BasicScrollBarUI() {
+            @Override
+            protected void configureScrollBarColors() {
+                thumbColor = new Color(108, 108, 108);
+                thumbDarkShadowColor = thumbColor;
+                thumbHighlightColor = thumbColor;
+                thumbLightShadowColor = thumbColor;
+                trackColor = new Color(243, 246, 251);
+                trackHighlightColor = trackColor;
+            }
+
+            @Override
+            protected JButton createDecreaseButton(int orientation) {
+                return createZeroButton();
+            }
+
+            @Override
+            protected JButton createIncreaseButton(int orientation) {
+                return createZeroButton();
+            }
+
+            @Override
+            protected void paintTrack(Graphics g, JComponent c, Rectangle trackBounds) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(243, 246, 251));
+                g2.fillRect(trackBounds.x, trackBounds.y, trackBounds.width, trackBounds.height);
+                g2.dispose();
+            }
+
+            @Override
+            protected void paintThumb(Graphics g, JComponent c, Rectangle thumbBounds) {
+                if (thumbBounds.isEmpty() || !scrollbar.isEnabled()) {
+                    return;
+                }
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                int x = thumbBounds.x + 1;
+                int y = thumbBounds.y + 2;
+                int width = Math.max(0, thumbBounds.width - 2);
+                int height = Math.max(22, thumbBounds.height - 4);
+
+                g2.setColor(new Color(96, 96, 96));
+                g2.fillRoundRect(x, y, width, height, 8, 8);
                 g2.dispose();
             }
 

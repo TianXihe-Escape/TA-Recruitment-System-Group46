@@ -28,5 +28,11 @@
     "username" : "admin@bupt.edu.cn",
     "password" : "admin123",
     "role" : "ADMIN"
+  },
+  {
+    "userId" : "user-64b92970",
+    "username" : "ta4@bupt.edu.cn",
+    "password" : "ta456",
+    "role" : "TA"
   }
 ]
