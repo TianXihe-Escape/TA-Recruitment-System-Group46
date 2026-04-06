@@ -139,6 +139,8 @@ public class JsonDataStore {
             job.setModuleTitle(stringValue(map.get("moduleTitle")));
             job.setDuties(stringValue(map.get("duties")));
             job.setHours(intValue(map.get("hours")));
+            Object requiredTaCount = map.get("requiredTaCount");
+            job.setRequiredTaCount(requiredTaCount == null ? 1 : intValue(requiredTaCount));
             job.setRequiredSkills(stringList(map.get("requiredSkills")));
             String deadline = stringValue(map.get("applicationDeadline"));
             job.setApplicationDeadline(deadline == null || deadline.isBlank() ? null : LocalDate.parse(deadline));
@@ -200,6 +202,7 @@ public class JsonDataStore {
             map.put("moduleTitle", job.getModuleTitle());
             map.put("duties", job.getDuties());
             map.put("hours", job.getHours());
+            map.put("requiredTaCount", job.getRequiredTaCount());
             map.put("requiredSkills", new ArrayList<>(job.getRequiredSkills()));
             map.put("applicationDeadline", job.getApplicationDeadline() == null ? null : job.getApplicationDeadline().toString());
             map.put("status", job.getStatus() == null ? null : job.getStatus().name());

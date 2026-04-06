@@ -130,10 +130,20 @@ public class AdminDashboardFrame extends JFrame {
 
         StringBuilder builder = new StringBuilder("Jobs and Assignments\n\n");
         for (JobPosting job : jobs) {
+            long applicationCount = applications.stream()
+                    .filter(application -> job.getJobId().equals(application.getJobId()))
+                    .count();
+            long acceptedCount = applications.stream()
+                    .filter(application -> job.getJobId().equals(application.getJobId()))
+                    .filter(application -> application.getStatus() == model.ApplicationStatus.ACCEPTED)
+                    .count();
             builder.append(job.getJobId()).append(" | ")
                     .append(job.getModuleCode()).append(" ").append(job.getModuleTitle())
                     .append(" | ").append(job.getStatus())
-                    .append(" | ").append(job.getHours()).append("h\n");
+                    .append(" | ").append(job.getHours()).append("h")
+                    .append(" | applicants ").append(applicationCount).append("/").append(job.getRequiredTaCount())
+                    .append(" | accepted ").append(acceptedCount).append("/").append(job.getRequiredTaCount())
+                    .append("\n");
         }
         jobSummaryArea.setText(builder.toString());
         suggestionArea.setText("Click 'Rebalance Suggestion' to recommend lower-load TAs for open jobs.");

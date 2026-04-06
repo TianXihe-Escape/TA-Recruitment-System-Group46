@@ -40,6 +40,7 @@ public class MOManagementFrame extends JFrame {
     private final JTextField moduleCodeField = new JTextField();
     private final JTextField moduleTitleField = new JTextField();
     private final JTextField hoursField = new JTextField();
+    private final JTextField requiredTaCountField = new JTextField();
     private final JTextField skillsField = new JTextField();
     private final JTextField deadlineField = new JTextField();
     private final JComboBox<JobStatus> statusBox = new JComboBox<>(JobStatus.values());
@@ -47,7 +48,7 @@ public class MOManagementFrame extends JFrame {
     private final JTextArea reviewArea = new JTextArea(4, 20);
     private final JTextArea matchInfoArea = new JTextArea(6, 20);
     private final DefaultTableModel jobTableModel = new DefaultTableModel(
-            new Object[]{"Job ID", "Module", "Hours", "Deadline", "Status"}, 0);
+            new Object[]{"Job ID", "Module", "Hours", "TA Demand", "Deadline", "Status"}, 0);
     private final JTable jobTable = new JTable(jobTableModel);
     private final DefaultTableModel applicantTableModel = new DefaultTableModel(
             new Object[]{"Application ID", "Applicant", "Status", "Match %", "Missing"}, 0);
@@ -98,10 +99,11 @@ public class MOManagementFrame extends JFrame {
         UiTheme.addFormRow(form, 2, "Module Code", moduleCodeField);
         UiTheme.addFormRow(form, 4, "Module Title", moduleTitleField);
         UiTheme.addFormRow(form, 6, "Hours", hoursField);
-        UiTheme.addFormRow(form, 8, "Required Skills", skillsField);
-        UiTheme.addFormRow(form, 10, "Deadline (YYYY-MM-DD)", deadlineField);
-        UiTheme.addFormRow(form, 12, "Status", statusBox);
-        UiTheme.addFormRow(form, 14, "Duties", wrapArea(dutiesArea));
+        UiTheme.addFormRow(form, 8, "TA Needed", requiredTaCountField);
+        UiTheme.addFormRow(form, 10, "Required Skills", skillsField);
+        UiTheme.addFormRow(form, 12, "Deadline (YYYY-MM-DD)", deadlineField);
+        UiTheme.addFormRow(form, 14, "Status", statusBox);
+        UiTheme.addFormRow(form, 16, "Duties", wrapArea(dutiesArea));
 
         JPanel lower = UiTheme.createCard("Applicant Match Details", "Review fit, missing skills, and applicant notes for the selected submission.");
         lower.add(wrapArea(matchInfoArea), BorderLayout.CENTER);
@@ -174,6 +176,7 @@ public class MOManagementFrame extends JFrame {
                     job.getJobId(),
                     job.getModuleCode() + " - " + job.getModuleTitle(),
                     job.getHours(),
+                    applicationService.getApplicationCountForJob(job.getJobId()) + "/" + job.getRequiredTaCount(),
                     job.getApplicationDeadline(),
                     job.getStatus()
             });
@@ -191,6 +194,7 @@ public class MOManagementFrame extends JFrame {
         moduleCodeField.setText(job.getModuleCode());
         moduleTitleField.setText(job.getModuleTitle());
         hoursField.setText(String.valueOf(job.getHours()));
+        requiredTaCountField.setText(String.valueOf(job.getRequiredTaCount()));
         skillsField.setText(String.join(", ", job.getRequiredSkills()));
         deadlineField.setText(String.valueOf(job.getApplicationDeadline()));
         statusBox.setSelectedItem(job.getStatus());
@@ -206,6 +210,7 @@ public class MOManagementFrame extends JFrame {
         moduleCodeField.setText("");
         moduleTitleField.setText("");
         hoursField.setText("");
+        requiredTaCountField.setText("1");
         skillsField.setText("");
         deadlineField.setText("");
         dutiesArea.setText("");
@@ -228,22 +233,21 @@ public class MOManagementFrame extends JFrame {
             jobPosting.setModuleCode(moduleCodeField.getText().trim());
             jobPosting.setModuleTitle(moduleTitleField.getText().trim());
             jobPosting.setHours(Integer.parseInt(hoursField.getText().trim()));
+            jobPosting.setRequiredTaCount(Integer.parseInt(requiredTaCountField.getText().trim()));
             jobPosting.setRequiredSkills(validationService.parseSkills(skillsField.getText()));
             jobPosting.setApplicationDeadline(LocalDate.parse(deadlineField.getText().trim()));
             jobPosting.setStatus((JobStatus) statusBox.getSelectedItem());
             jobPosting.setDuties(dutiesArea.getText().trim());
             jobPosting.setPostedBy(currentUser.getUserId());
             jobService.saveJob(jobPosting);
-            if (existingJob != null
-                    && existingJob.getStatus() == JobStatus.CLOSED
-                    && jobPosting.getStatus() == JobStatus.OPEN) {
+            if (jobPosting.getStatus() == JobStatus.OPEN) {
                 applicationService.reopenJob(jobPosting.getJobId());
             }
             UiMessage.info(this, "Job saved successfully.");
             refreshJobs();
             clearForm();
         } catch (NumberFormatException ex) {
-            UiMessage.error(this, "Hours must be a number.");
+            UiMessage.error(this, "Hours and required TA count must be numbers.");
         } catch (DateTimeParseException ex) {
             UiMessage.error(this, "Deadline must use the format YYYY-MM-DD.");
         } catch (Exception ex) {
@@ -368,6 +372,7 @@ public class MOManagementFrame extends JFrame {
         UiTheme.styleTextField(moduleCodeField);
         UiTheme.styleTextField(moduleTitleField);
         UiTheme.styleTextField(hoursField);
+        UiTheme.styleTextField(requiredTaCountField);
         UiTheme.styleTextField(skillsField);
         UiTheme.styleTextField(deadlineField);
         UiTheme.styleComboBox(statusBox);
@@ -376,7 +381,7 @@ public class MOManagementFrame extends JFrame {
         UiTheme.styleTextArea(matchInfoArea, 8);
         UiTheme.styleTable(jobTable);
         UiTheme.styleTable(applicantTable);
-        UiTheme.setColumnWidths(jobTable, 100, 300, 80, 140, 100);
+        UiTheme.setColumnWidths(jobTable, 100, 300, 80, 110, 140, 100);
         UiTheme.setColumnWidths(applicantTable, 130, 170, 120, 90, 220);
     }
 

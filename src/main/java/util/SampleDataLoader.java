@@ -81,6 +81,7 @@ public class SampleDataLoader {
         javaJob.setModuleTitle("Programming Fundamentals");
         javaJob.setDuties("Support labs, answer questions, mark exercises");
         javaJob.setHours(6);
+        javaJob.setRequiredTaCount(1);
         javaJob.setRequiredSkills(List.of("Java", "Communication", "Agile"));
         javaJob.setApplicationDeadline(LocalDate.now().plusDays(21));
         javaJob.setStatus(JobStatus.CLOSED);
@@ -93,6 +94,7 @@ public class SampleDataLoader {
         dataJob.setModuleTitle("Data Analytics");
         dataJob.setDuties("Prepare tutorial materials and support datasets");
         dataJob.setHours(8);
+        dataJob.setRequiredTaCount(3);
         dataJob.setRequiredSkills(List.of("Python", "Data Analysis", "Communication"));
         dataJob.setApplicationDeadline(LocalDate.now().plusDays(14));
         dataJob.setStatus(JobStatus.OPEN);
@@ -105,6 +107,7 @@ public class SampleDataLoader {
         aiJob.setModuleTitle("Introduction to AI");
         aiJob.setDuties("Support seminars, prepare examples, and help with marking.");
         aiJob.setHours(5);
+        aiJob.setRequiredTaCount(2);
         aiJob.setRequiredSkills(List.of("Python", "Communication", "Marking"));
         aiJob.setApplicationDeadline(LocalDate.now().plusDays(10));
         aiJob.setStatus(JobStatus.OPEN);
