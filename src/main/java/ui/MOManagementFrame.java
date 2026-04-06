@@ -19,8 +19,10 @@ import util.Constants;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.time.format.DateTimeParseException;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * MO dashboard for posting jobs and reviewing applicants.
@@ -35,9 +37,10 @@ public class MOManagementFrame extends JFrame {
     private final MatchingService matchingService;
     private final ValidationService validationService;
     private final User currentUser;
+    private final List<String> managedModuleCodes;
 
     private final JTextField jobIdField = new JTextField();
-    private final JTextField moduleCodeField = new JTextField();
+    private final JComboBox<String> moduleCodeBox = new JComboBox<>();
     private final JTextField moduleTitleField = new JTextField();
     private final JTextField hoursField = new JTextField();
     private final JTextField requiredTaCountField = new JTextField();
@@ -66,6 +69,7 @@ public class MOManagementFrame extends JFrame {
                 dataService.getJobRepository(),
                 matchingService
         );
+        this.managedModuleCodes = currentUser.getManagedModuleCodes();
 
         setTitle("MO Management - " + Constants.APP_TITLE);
         setSize(1420, 880);
@@ -80,7 +84,10 @@ public class MOManagementFrame extends JFrame {
         UiTheme.styleSplitPane(splitPane);
 
         JPanel root = UiTheme.createPagePanel();
-        root.add(UiTheme.createHeader("Module Organiser Console", "Publish jobs, review applicants, and manage hiring decisions from one workspace."), BorderLayout.NORTH);
+        root.add(UiTheme.createHeader(
+                "Module Organiser Console",
+                buildScopeSummary()
+        ), BorderLayout.NORTH);
         root.add(splitPane, BorderLayout.CENTER);
         add(UiTheme.wrapPage(root));
 
@@ -95,8 +102,9 @@ public class MOManagementFrame extends JFrame {
         jobIdField.setEditable(false);
         jobIdField.setForeground(Color.GRAY);
         matchInfoArea.setEditable(false);
+        populateManagedModules();
         UiTheme.addFormRow(form, 0, "Job ID", jobIdField);
-        UiTheme.addFormRow(form, 2, "Module Code", moduleCodeField);
+        UiTheme.addFormRow(form, 2, "Module Code", moduleCodeBox);
         UiTheme.addFormRow(form, 4, "Module Title", moduleTitleField);
         UiTheme.addFormRow(form, 6, "Hours", hoursField);
         UiTheme.addFormRow(form, 8, "TA Needed", requiredTaCountField);
@@ -111,6 +119,11 @@ public class MOManagementFrame extends JFrame {
         JButton backButton = UiTheme.createSecondaryButton("Back to Login");
         JButton newButton = UiTheme.createSecondaryButton("New Job");
         JButton saveButton = UiTheme.createPrimaryButton("Save Job");
+
+        boolean hasManagedModules = !managedModuleCodes.isEmpty();
+        newButton.setEnabled(hasManagedModules);
+        saveButton.setEnabled(hasManagedModules);
+        moduleCodeBox.setEnabled(hasManagedModules);
 
         backButton.addActionListener(event -> returnToLogin());
         newButton.addActionListener(event -> clearForm());
@@ -171,7 +184,7 @@ public class MOManagementFrame extends JFrame {
 
     private void refreshJobs() {
         jobTableModel.setRowCount(0);
-        for (JobPosting job : jobService.getAllJobs()) {
+        for (JobPosting job : getScopedJobs()) {
             jobTableModel.addRow(new Object[]{
                     job.getJobId(),
                     job.getModuleCode() + " - " + job.getModuleTitle(),
@@ -191,7 +204,7 @@ public class MOManagementFrame extends JFrame {
         JobPosting job = jobService.getJobById(String.valueOf(jobTableModel.getValueAt(row, 0)));
         jobIdField.setForeground(Color.BLACK);
         jobIdField.setText(job.getJobId());
-        moduleCodeField.setText(job.getModuleCode());
+        moduleCodeBox.setSelectedItem(job.getModuleCode());
         moduleTitleField.setText(job.getModuleTitle());
         hoursField.setText(String.valueOf(job.getHours()));
         requiredTaCountField.setText(String.valueOf(job.getRequiredTaCount()));
@@ -207,7 +220,11 @@ public class MOManagementFrame extends JFrame {
         applicantTable.clearSelection();
         jobIdField.setForeground(Color.GRAY);
         jobIdField.setText(NEW_JOB_PLACEHOLDER);
-        moduleCodeField.setText("");
+        if (moduleCodeBox.getItemCount() > 0) {
+            moduleCodeBox.setSelectedIndex(0);
+        } else {
+            moduleCodeBox.setSelectedItem(null);
+        }
         moduleTitleField.setText("");
         hoursField.setText("");
         requiredTaCountField.setText("1");
@@ -218,19 +235,30 @@ public class MOManagementFrame extends JFrame {
         matchInfoArea.setText("");
         reviewArea.setText("");
         applicantTableModel.setRowCount(0);
-        moduleCodeField.requestFocusInWindow();
+        moduleCodeBox.requestFocusInWindow();
     }
 
     private void saveJob() {
         try {
+            if (managedModuleCodes.isEmpty()) {
+                UiMessage.error(this, "This MO is not assigned to any modules yet.");
+                return;
+            }
             String jobId = jobIdField.getText().trim();
             JobPosting existingJob = NEW_JOB_PLACEHOLDER.equals(jobId) || jobId.isBlank()
                     ? null
                     : jobService.getJobById(jobId);
+            String moduleCode = String.valueOf(moduleCodeBox.getSelectedItem()).trim();
+            if (!currentUser.managesModule(moduleCode)) {
+                throw new IllegalArgumentException("You can only manage TA hiring for your assigned modules.");
+            }
+            if (existingJob != null && !currentUser.managesModule(existingJob.getModuleCode())) {
+                throw new IllegalArgumentException("You can only edit jobs for your assigned modules.");
+            }
 
             JobPosting jobPosting = new JobPosting();
             jobPosting.setJobId(NEW_JOB_PLACEHOLDER.equals(jobId) ? "" : jobId);
-            jobPosting.setModuleCode(moduleCodeField.getText().trim());
+            jobPosting.setModuleCode(moduleCode);
             jobPosting.setModuleTitle(moduleTitleField.getText().trim());
             jobPosting.setHours(Integer.parseInt(hoursField.getText().trim()));
             jobPosting.setRequiredTaCount(Integer.parseInt(requiredTaCountField.getText().trim()));
@@ -339,6 +367,11 @@ public class MOManagementFrame extends JFrame {
     }
 
     private void loadApplicantsForJob(String jobId) {
+        JobPosting job = jobService.getJobById(jobId);
+        if (!currentUser.managesModule(job.getModuleCode())) {
+            UiMessage.error(this, "You can only review applicants for your assigned modules.");
+            return;
+        }
         applicantTableModel.setRowCount(0);
         for (ApplicationRecord application : applicationService.getApplicationsForJob(jobId)) {
             ApplicantProfile applicant = applicantService.getProfileByApplicantId(application.getApplicantId());
@@ -369,7 +402,7 @@ public class MOManagementFrame extends JFrame {
 
     private void styleComponents() {
         UiTheme.styleTextField(jobIdField);
-        UiTheme.styleTextField(moduleCodeField);
+        UiTheme.styleComboBox(moduleCodeBox);
         UiTheme.styleTextField(moduleTitleField);
         UiTheme.styleTextField(hoursField);
         UiTheme.styleTextField(requiredTaCountField);
@@ -389,5 +422,27 @@ public class MOManagementFrame extends JFrame {
         JScrollPane scrollPane = new JScrollPane(area);
         UiTheme.styleScrollPane(scrollPane);
         return scrollPane;
+    }
+
+    private List<JobPosting> getScopedJobs() {
+        return jobService.getAllJobs().stream()
+                .filter(job -> currentUser.managesModule(job.getModuleCode()))
+                .collect(Collectors.toList());
+    }
+
+    private String buildScopeSummary() {
+        if (managedModuleCodes.isEmpty()) {
+            return "This MO account is not assigned to any modules yet. Ask the admin to bind modules before posting jobs.";
+        }
+        return "Publish jobs, review applicants, and manage hiring decisions for: "
+                + String.join(", ", managedModuleCodes) + ".";
+    }
+
+    private void populateManagedModules() {
+        DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
+        for (String moduleCode : managedModuleCodes) {
+            model.addElement(moduleCode);
+        }
+        moduleCodeBox.setModel(model);
     }
 }

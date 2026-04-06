@@ -116,6 +116,7 @@ public class JsonDataStore {
             user.setUsername(stringValue(map.get("username")));
             user.setPassword(stringValue(map.get("password")));
             user.setRole(enumValue(Role.class, map.get("role")));
+            user.setManagedModuleCodes(stringList(map.get("managedModuleCodes")));
             return (T) user;
         }
         if (clazz == ApplicantProfile.class) {
@@ -179,6 +180,7 @@ public class JsonDataStore {
             map.put("username", user.getUsername());
             map.put("password", user.getPassword());
             map.put("role", user.getRole() == null ? null : user.getRole().name());
+            map.put("managedModuleCodes", new ArrayList<>(user.getManagedModuleCodes()));
             return map;
         }
         if (value instanceof ApplicantProfile profile) {

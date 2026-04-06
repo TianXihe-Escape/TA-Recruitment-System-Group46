@@ -35,7 +35,8 @@ public class SampleDataLoader {
         users.add(new User("user-ta-01", "ta1@bupt.edu.cn", "ta123", Role.TA));
         users.add(new User("user-ta-02", "ta2@bupt.edu.cn", "ta123", Role.TA));
         users.add(new User("user-ta-03", "ta3@bupt.edu.cn", "ta123", Role.TA));
-        users.add(new User("user-mo-01", "mo1@bupt.edu.cn", "mo123", Role.MO));
+        users.add(new User("user-mo-01", "mo1@bupt.edu.cn", "mo123", Role.MO, List.of("COMP1001", "DATA2002")));
+        users.add(new User("user-mo-02", "mo2@bupt.edu.cn", "mo123", Role.MO, List.of("COMP3003")));
         users.add(new User("user-admin-01", "admin@bupt.edu.cn", "admin123", Role.ADMIN));
         userRepository.saveAll(users);
 
@@ -111,7 +112,7 @@ public class SampleDataLoader {
         aiJob.setRequiredSkills(List.of("Python", "Communication", "Marking"));
         aiJob.setApplicationDeadline(LocalDate.now().plusDays(10));
         aiJob.setStatus(JobStatus.OPEN);
-        aiJob.setPostedBy("user-mo-01");
+        aiJob.setPostedBy("user-mo-02");
         jobs.add(aiJob);
         jobRepository.saveAll(jobs);
 

@@ -62,7 +62,8 @@ public class LoginFrame extends JFrame {
         supportTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
         JTextArea accountArea = new JTextArea(
                 "TA: ta1@bupt.edu.cn / ta123\n" +
-                        "MO: mo1@bupt.edu.cn / mo123\n" +
+                        "MO 1: mo1@bupt.edu.cn / mo123\n" +
+                        "MO 2: mo2@bupt.edu.cn / mo123\n" +
                         "Admin: admin@bupt.edu.cn / admin123"
         );
         accountArea.setEditable(false);
@@ -111,7 +112,7 @@ public class LoginFrame extends JFrame {
         registerButton.addActionListener(event -> new RegisterFrame(authService).setVisible(true));
         loadSampleButton.addActionListener(event -> {
             dataService.loadSampleData();
-            UiMessage.info(this, "Sample data loaded.\nTA: ta1@bupt.edu.cn / ta123\nMO: mo1@bupt.edu.cn / mo123\nAdmin: admin@bupt.edu.cn / admin123");
+            UiMessage.info(this, "Sample data loaded.\nTA: ta1@bupt.edu.cn / ta123\nMO 1: mo1@bupt.edu.cn / mo123\nMO 2: mo2@bupt.edu.cn / mo123\nAdmin: admin@bupt.edu.cn / admin123");
         });
 
         root.add(layout, BorderLayout.CENTER);
