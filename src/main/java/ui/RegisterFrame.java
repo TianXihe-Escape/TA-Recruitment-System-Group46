@@ -23,12 +23,16 @@ public class RegisterFrame extends JFrame {
         JTextField usernameField = new JTextField();
         JPasswordField passwordField = new JPasswordField();
         JPasswordField confirmField = new JPasswordField();
+        char passwordEchoChar = passwordField.getEchoChar();
+        char confirmEchoChar = confirmField.getEchoChar();
         JButton registerButton = UiTheme.createPrimaryButton("Register TA Account");
         JButton closeButton = UiTheme.createSecondaryButton("Cancel");
+        JCheckBox showPasswordsBox = new JCheckBox("Show Passwords");
 
         UiTheme.styleTextField(usernameField);
         UiTheme.styleTextField(passwordField);
         UiTheme.styleTextField(confirmField);
+        UiTheme.styleCheckBox(showPasswordsBox);
 
         JPanel root = UiTheme.createPagePanel();
         JPanel card = UiTheme.createCard("Create TA Account", "This creates a TA login and an empty applicant profile.");
@@ -36,6 +40,7 @@ public class RegisterFrame extends JFrame {
         UiTheme.addFormRow(form, 0, "Email", usernameField);
         UiTheme.addFormRow(form, 2, "Password", passwordField);
         UiTheme.addFormRow(form, 4, "Confirm Password", confirmField);
+        UiTheme.addFormRow(form, 6, "", showPasswordsBox);
 
         JTextArea note = new JTextArea("After registration, sign in as TA and complete your profile before applying to jobs.");
         note.setEditable(false);
@@ -64,6 +69,11 @@ public class RegisterFrame extends JFrame {
             } catch (Exception ex) {
                 UiMessage.error(this, ex.getMessage());
             }
+        });
+        showPasswordsBox.addActionListener(event -> {
+            boolean showPasswords = showPasswordsBox.isSelected();
+            passwordField.setEchoChar(showPasswords ? (char) 0 : passwordEchoChar);
+            confirmField.setEchoChar(showPasswords ? (char) 0 : confirmEchoChar);
         });
         closeButton.addActionListener(event -> dispose());
 

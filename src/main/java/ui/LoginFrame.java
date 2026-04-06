@@ -35,14 +35,17 @@ public class LoginFrame extends JFrame {
 
         JTextField usernameField = new JTextField();
         JPasswordField passwordField = new JPasswordField();
+        char passwordEchoChar = passwordField.getEchoChar();
         JComboBox<Role> roleBox = new JComboBox<>(Role.values());
         JButton loginButton = UiTheme.createPrimaryButton("Login");
         JButton registerButton = UiTheme.createSecondaryButton("Create TA Account");
         JButton loadSampleButton = UiTheme.createSecondaryButton("Load Demo Data");
+        JCheckBox showPasswordBox = new JCheckBox("Show Password");
 
         UiTheme.styleTextField(usernameField);
         UiTheme.styleTextField(passwordField);
         UiTheme.styleComboBox(roleBox);
+        UiTheme.styleCheckBox(showPasswordBox);
 
         JPanel root = UiTheme.createPagePanel();
         JPanel hero = buildHeroPanel();
@@ -51,7 +54,8 @@ public class LoginFrame extends JFrame {
         JPanel form = UiTheme.createFormGrid();
         UiTheme.addFormRow(form, 0, "Username / Email", usernameField);
         UiTheme.addFormRow(form, 2, "Password", passwordField);
-        UiTheme.addFormRow(form, 4, "Role", roleBox);
+        UiTheme.addFormRow(form, 4, "", showPasswordBox);
+        UiTheme.addFormRow(form, 6, "Role", roleBox);
 
         JPanel supportPanel = new JPanel();
         supportPanel.setOpaque(false);
@@ -108,6 +112,8 @@ public class LoginFrame extends JFrame {
                 UiMessage.error(this, ex.getMessage());
             }
         });
+        showPasswordBox.addActionListener(event ->
+                passwordField.setEchoChar(showPasswordBox.isSelected() ? (char) 0 : passwordEchoChar));
 
         registerButton.addActionListener(event -> new RegisterFrame(authService).setVisible(true));
         loadSampleButton.addActionListener(event -> {
