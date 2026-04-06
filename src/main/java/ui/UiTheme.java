@@ -178,6 +178,13 @@ public final class UiTheme {
         comboBox.setFocusable(true);
     }
 
+    public static void styleCheckBox(JCheckBox checkBox) {
+        checkBox.setFont(BODY_FONT);
+        checkBox.setForeground(MUTED_TEXT);
+        checkBox.setOpaque(false);
+        checkBox.setFocusPainted(false);
+    }
+
     public static void styleTextArea(JTextArea area, int rows) {
         area.setFont(BODY_FONT);
         area.setForeground(TEXT);

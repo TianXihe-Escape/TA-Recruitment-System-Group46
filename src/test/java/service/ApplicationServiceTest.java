@@ -153,11 +153,16 @@ class ApplicationServiceTest {
         record.setJobId("j1");
         record.setStatus(ApplicationStatus.ACCEPTED);
         applicationRepository.saveAll(new ArrayList<>(List.of(record)));
+        jobRepository.saveAll(List.of(buildJob()));
 
         applicationService.reopenJob("j1");
 
         List<ApplicationRecord> records = applicationRepository.findAll();
-        assertEquals(ApplicationStatus.ACCEPTED, records.get(0).getStatus());
+        JobPosting updatedJob = jobRepository.findById("j1").orElseThrow();
+
+        assertEquals(ApplicationStatus.SHORTLISTED, records.get(0).getStatus());
+        assertTrue(records.get(0).getReviewerNotes().contains("job was reopened"));
+        assertEquals(JobStatus.OPEN, updatedJob.getStatus());
     }
 
     @Test
