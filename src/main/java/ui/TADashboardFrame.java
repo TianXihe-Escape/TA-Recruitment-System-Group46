@@ -47,7 +47,7 @@ public class TADashboardFrame extends JFrame {
             new Object[]{"Job ID", "Module", "Hours", "TA Demand", "Skills", "Status"}, 0);
     private final JTable jobTable = new JTable(jobTableModel);
     private final DefaultTableModel applicationTableModel = new DefaultTableModel(
-            new Object[]{"Application ID", "Job ID", "Status", "Match %", "Missing Skills"}, 0);
+            new Object[]{"Application ID", "Job ID", "Status", "Match %", "Missing Skills", "Reviewer Notes"}, 0);
     private final JTable applicationTable = new JTable(applicationTableModel);
 
     public TADashboardFrame(DataService dataService, User currentUser) {
@@ -199,7 +199,8 @@ public class TADashboardFrame extends JFrame {
                     record.getJobId(),
                     record.getStatus(),
                     record.getMatchScore(),
-                    String.join(", ", record.getMissingSkills())
+                    String.join(", ", record.getMissingSkills()),
+                    valueOrDash(record.getReviewerNotes())
             });
         }
     }
@@ -293,7 +294,11 @@ public class TADashboardFrame extends JFrame {
         UiTheme.styleTable(jobTable);
         UiTheme.styleTable(applicationTable);
         UiTheme.setColumnWidths(jobTable, 90, 300, 80, 110, 260, 100);
-        UiTheme.setColumnWidths(applicationTable, 120, 90, 120, 90, 260);
+        UiTheme.setColumnWidths(applicationTable, 120, 90, 120, 90, 220, 280);
+    }
+
+    private String valueOrDash(String value) {
+        return value == null || value.isBlank() ? "-" : value;
     }
 
     private JScrollPane wrapArea(JTextArea area) {
