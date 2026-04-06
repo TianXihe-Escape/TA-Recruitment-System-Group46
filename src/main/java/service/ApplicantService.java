@@ -41,6 +41,7 @@ public class ApplicantService {
                 updatedProfile.getEmail(),
                 updatedProfile.getPhone()
         );
+        errors.addAll(validationService.validateCvPath(updatedProfile.getCvPath()));
         if (!errors.isEmpty()) {
             throw new IllegalArgumentException(String.join("\n", errors));
         }

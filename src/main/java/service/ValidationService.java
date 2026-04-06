@@ -3,6 +3,7 @@ package service;
 import model.JobPosting;
 import util.FileUtil;
 
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,6 +26,8 @@ public class ValidationService {
     private static final int MAX_MODULE_CODE_LENGTH = 20;
     private static final int MAX_MODULE_TITLE_LENGTH = 80;
     private static final int MAX_DUTIES_LENGTH = 300;
+    private static final int MAX_REQUIRED_TA_COUNT = 20;
+    private static final List<String> ALLOWED_CV_EXTENSIONS = List.of("pdf", "doc", "docx", "rtf", "txt");
 
     public List<String> validateRegistration(String username, String password, String confirmPassword) {
         List<String> errors = new ArrayList<>();
@@ -83,6 +86,29 @@ public class ValidationService {
         return errors;
     }
 
+    public List<String> validateCvPath(String cvPath) {
+        List<String> errors = new ArrayList<>();
+        String normalizedPath = normalizeText(cvPath);
+        if (FileUtil.isBlank(normalizedPath)) {
+            return errors;
+        }
+
+        String fileName = Path.of(normalizedPath).getFileName() == null
+                ? normalizedPath
+                : Path.of(normalizedPath).getFileName().toString();
+        int extensionIndex = fileName.lastIndexOf('.');
+        if (extensionIndex < 0) {
+            errors.add("CV file must use a common resume format: PDF, DOC, DOCX, RTF, or TXT.");
+            return errors;
+        }
+
+        String extension = fileName.substring(extensionIndex + 1).toLowerCase(Locale.ROOT);
+        if (!ALLOWED_CV_EXTENSIONS.contains(extension)) {
+            errors.add("CV file must use a common resume format: PDF, DOC, DOCX, RTF, or TXT.");
+        }
+        return errors;
+    }
+
     public List<String> validateJobPosting(JobPosting jobPosting) {
         List<String> errors = new ArrayList<>();
         String moduleCode = normalizeModuleCode(jobPosting.getModuleCode());
@@ -104,6 +130,11 @@ public class ValidationService {
             errors.add("Hours must be greater than 0.");
         } else if (jobPosting.getHours() > 40) {
             errors.add("Hours must be 40 or fewer.");
+        }
+        if (jobPosting.getRequiredTaCount() <= 0) {
+            errors.add("Required TA count must be greater than 0.");
+        } else if (jobPosting.getRequiredTaCount() > MAX_REQUIRED_TA_COUNT) {
+            errors.add("Required TA count must be 20 or fewer.");
         }
         if (jobPosting.getApplicationDeadline() == null) {
             errors.add("Application deadline is required.");

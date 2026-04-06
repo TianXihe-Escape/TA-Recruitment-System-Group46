@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -38,15 +39,19 @@ public class ApplicationService {
         );
 
         List<ApplicationRecord> applications = new ArrayList<>(applicationRepository.findAll());
-        ApplicationRecord record = new ApplicationRecord();
-        record.setApplicationId(nextApplicationId(applications));
-        record.setApplicantId(applicantProfile.getApplicantId());
-        record.setJobId(jobPosting.getJobId());
+        ApplicationRecord record = findRejectedApplication(applications, applicantProfile.getApplicantId(), jobPosting.getJobId())
+                .orElseGet(ApplicationRecord::new);
+        if (record.getApplicationId() == null || record.getApplicationId().isBlank()) {
+            record.setApplicationId(nextApplicationId(applications));
+            record.setApplicantId(applicantProfile.getApplicantId());
+            record.setJobId(jobPosting.getJobId());
+            applications.add(record);
+        }
         record.setAppliedAt(LocalDateTime.now());
         record.setStatus(ApplicationStatus.SUBMITTED);
         record.setMatchScore(matchResult.getScorePercentage());
         record.setMissingSkills(matchResult.getMissingSkills());
-        applications.add(record);
+        record.setReviewerNotes(null);
         applicationRepository.saveAll(applications);
         return record;
     }
@@ -61,6 +66,16 @@ public class ApplicationService {
         return applicationRepository.findByJobId(jobId).stream()
                 .sorted(Comparator.comparing(ApplicationRecord::getMatchScore).reversed())
                 .toList();
+    }
+
+    public int getApplicationCountForJob(String jobId) {
+        return applicationRepository.findByJobId(jobId).size();
+    }
+
+    public int getAcceptedCountForJob(String jobId) {
+        return (int) applicationRepository.findByJobId(jobId).stream()
+                .filter(application -> application.getStatus() == ApplicationStatus.ACCEPTED)
+                .count();
     }
 
     public void updateStatus(String applicationId, ApplicationStatus status, String reviewerNotes) {
@@ -78,19 +93,7 @@ public class ApplicationService {
         record.setReviewerNotes(reviewerNotes);
 
         if (status == ApplicationStatus.ACCEPTED) {
-            clearOtherAcceptedApplications(record, applications);
-            JobPosting job = jobRepository.findById(record.getJobId()).orElse(null);
-            if (job != null) {
-                job.setStatus(JobStatus.CLOSED);
-                List<JobPosting> jobs = new ArrayList<>(jobRepository.findAll());
-                for (int i = 0; i < jobs.size(); i++) {
-                    if (jobs.get(i).getJobId().equals(job.getJobId())) {
-                        jobs.set(i, job);
-                        break;
-                    }
-                }
-                jobRepository.saveAll(jobs);
-            }
+            syncJobStatus(record.getJobId(), applications);
         }
 
         applicationRepository.saveAll(applications);
@@ -98,20 +101,28 @@ public class ApplicationService {
 
     public void reopenJob(String jobId) {
         List<ApplicationRecord> applications = new ArrayList<>(applicationRepository.findAll());
-        boolean updated = false;
-        for (ApplicationRecord application : applications) {
-            if (jobId.equals(application.getJobId()) && application.getStatus() == ApplicationStatus.ACCEPTED) {
-                application.setStatus(ApplicationStatus.SHORTLISTED);
-                application.setReviewerNotes(appendNote(
-                        application.getReviewerNotes(),
-                        "Acceptance cleared because the job was reopened."
-                ));
-                updated = true;
-            }
+        syncJobStatus(jobId, applications);
+    }
+
+    public void cancelAcceptance(String applicationId, String reviewerNotes) {
+        List<ApplicationRecord> applications = new ArrayList<>(applicationRepository.findAll());
+        ApplicationRecord record = applications.stream()
+                .filter(item -> item.getApplicationId().equals(applicationId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Application not found."));
+
+        if (record.getStatus() != ApplicationStatus.ACCEPTED) {
+            throw new IllegalStateException("Only accepted applications can be cancelled.");
         }
-        if (updated) {
-            applicationRepository.saveAll(applications);
-        }
+
+        record.setStatus(ApplicationStatus.SHORTLISTED);
+        record.setReviewerNotes(appendNote(
+                reviewerNotes,
+                "Acceptance cancelled and the job was reopened."
+        ));
+
+        applicationRepository.saveAll(applications);
+        syncJobStatus(record.getJobId(), applications);
     }
 
     private void validateApplication(ApplicantProfile applicantProfile, JobPosting jobPosting) {
@@ -125,7 +136,8 @@ public class ApplicationService {
             throw new IllegalStateException("Please provide a CV path before applying.");
         }
         boolean duplicate = applicationRepository.findByApplicantId(applicantProfile.getApplicantId()).stream()
-                .anyMatch(existing -> existing.getJobId().equals(jobPosting.getJobId()));
+                .anyMatch(existing -> existing.getJobId().equals(jobPosting.getJobId())
+                        && existing.getStatus() != ApplicationStatus.REJECTED);
         if (duplicate) {
             throw new IllegalStateException("Duplicate applications are not allowed.");
         }
@@ -151,18 +163,37 @@ public class ApplicationService {
         return Integer.parseInt(matcher.group(1));
     }
 
-    private void clearOtherAcceptedApplications(ApplicationRecord selectedRecord, List<ApplicationRecord> applications) {
-        for (ApplicationRecord application : applications) {
-            if (!application.getApplicationId().equals(selectedRecord.getApplicationId())
-                    && application.getJobId().equals(selectedRecord.getJobId())
-                    && application.getStatus() == ApplicationStatus.ACCEPTED) {
-                application.setStatus(ApplicationStatus.SHORTLISTED);
-                application.setReviewerNotes(appendNote(
-                        application.getReviewerNotes(),
-                        "Acceptance cleared because another applicant was accepted."
-                ));
+    private Optional<ApplicationRecord> findRejectedApplication(List<ApplicationRecord> applications,
+                                                                String applicantId,
+                                                                String jobId) {
+        return applications.stream()
+                .filter(existing -> applicantId.equals(existing.getApplicantId())
+                        && jobId.equals(existing.getJobId())
+                        && existing.getStatus() == ApplicationStatus.REJECTED)
+                .findFirst();
+    }
+
+    private void syncJobStatus(String jobId, List<ApplicationRecord> applications) {
+        JobPosting job = jobRepository.findById(jobId).orElse(null);
+        if (job == null) {
+            return;
+        }
+
+        long acceptedCount = applications.stream()
+                .filter(application -> jobId.equals(application.getJobId()))
+                .filter(application -> application.getStatus() == ApplicationStatus.ACCEPTED)
+                .count();
+
+        job.setStatus(acceptedCount >= job.getRequiredTaCount() ? JobStatus.CLOSED : JobStatus.OPEN);
+
+        List<JobPosting> jobs = new ArrayList<>(jobRepository.findAll());
+        for (int i = 0; i < jobs.size(); i++) {
+            if (jobs.get(i).getJobId().equals(job.getJobId())) {
+                jobs.set(i, job);
+                break;
             }
         }
+        jobRepository.saveAll(jobs);
     }
 
     private String appendNote(String existingNotes, String note) {

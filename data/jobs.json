@@ -4,7 +4,8 @@
     "moduleCode" : "COMP1001",
     "moduleTitle" : "Programming Fundamentals",
     "duties" : "Support labs, answer questions, mark exercises",
-    "hours" : 6,
+    "hours" : 5,
+    "requiredTaCount" : 1,
     "requiredSkills" : [
       "Java",
       "Communication",
@@ -20,6 +21,7 @@
     "moduleTitle" : "Data Analytics",
     "duties" : "Prepare tutorial materials and support datasets",
     "hours" : 8,
+    "requiredTaCount" : 3,
     "requiredSkills" : [
       "Python",
       "Data Analysis",
@@ -35,6 +37,7 @@
     "moduleTitle" : "Introduction to AI",
     "duties" : "Support seminars, prepare examples, and help with marking.",
     "hours" : 5,
+    "requiredTaCount" : 2,
     "requiredSkills" : [
       "Python",
       "Communication",
@@ -42,6 +45,6 @@
     ],
     "applicationDeadline" : "2026-04-15",
     "status" : "OPEN",
-    "postedBy" : "user-mo-01"
+    "postedBy" : "user-mo-02"
   }
 ]

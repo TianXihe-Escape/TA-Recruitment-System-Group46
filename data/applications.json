@@ -3,7 +3,7 @@
     "applicationId" : "apply-01",
     "applicantId" : "applicant-01",
     "jobId" : "job-01",
-    "appliedAt" : "2026-04-03T17:58:56.351877600",
+    "appliedAt" : "2026-04-05T21:07:30.857725500",
     "status" : "ACCEPTED",
     "reviewerNotes" : "",
     "matchScore" : 100,
@@ -40,6 +40,19 @@
     "missingSkills" : [
       "Data Analysis",
       "Communication"
+    ]
+  },
+  {
+    "applicationId" : "apply-05",
+    "applicantId" : "applicant-01",
+    "jobId" : "job-03",
+    "appliedAt" : "2026-04-05T20:21:19.292912300",
+    "status" : "ACCEPTED",
+    "reviewerNotes" : "",
+    "matchScore" : 33,
+    "missingSkills" : [
+      "Python",
+      "Marking"
     ]
   }
 ]

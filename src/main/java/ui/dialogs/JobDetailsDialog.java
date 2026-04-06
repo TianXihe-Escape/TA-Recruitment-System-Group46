@@ -11,6 +11,10 @@ import java.awt.*;
  */
 public class JobDetailsDialog extends JDialog {
     public JobDetailsDialog(Frame owner, JobPosting jobPosting) {
+        this(owner, jobPosting, null);
+    }
+
+    public JobDetailsDialog(Frame owner, JobPosting jobPosting, String taDemandSummary) {
         super(owner, "Job Details", true);
         getContentPane().setBackground(UiTheme.BACKGROUND);
 
@@ -22,6 +26,8 @@ public class JobDetailsDialog extends JDialog {
                         "Module: " + jobPosting.getModuleCode() + " - " + jobPosting.getModuleTitle() + "\n" +
                         "Duties: " + jobPosting.getDuties() + "\n" +
                         "Hours: " + jobPosting.getHours() + "\n" +
+                        "TA Needed: " + jobPosting.getRequiredTaCount() + "\n" +
+                        (taDemandSummary == null || taDemandSummary.isBlank() ? "" : "Applications / Needed: " + taDemandSummary + "\n") +
                         "Required Skills: " + String.join(", ", jobPosting.getRequiredSkills()) + "\n" +
                         "Deadline: " + jobPosting.getApplicationDeadline() + "\n" +
                         "Status: " + jobPosting.getStatus()

@@ -296,6 +296,11 @@ public final class UiTheme {
         return scrollPane;
     }
 
+    public static void styleFileChooser(JFileChooser chooser) {
+        SwingUtilities.updateComponentTreeUI(chooser);
+        styleComponentTree(chooser);
+    }
+
     public static void setColumnWidths(JTable table, int... widths) {
         for (int i = 0; i < widths.length && i < table.getColumnModel().getColumnCount(); i++) {
             TableColumn column = table.getColumnModel().getColumn(i);
@@ -568,5 +573,21 @@ public final class UiTheme {
                 return button;
             }
         });
+    }
+
+    private static void styleComponentTree(Component component) {
+        if (component instanceof JScrollPane scrollPane) {
+            styleScrollPane(scrollPane);
+        } else if (component instanceof JPanel panel) {
+            panel.setBackground(BACKGROUND);
+        } else if (component instanceof JTable table) {
+            styleTable(table);
+        }
+
+        if (component instanceof Container container) {
+            for (Component child : container.getComponents()) {
+                styleComponentTree(child);
+            }
+        }
     }
 }

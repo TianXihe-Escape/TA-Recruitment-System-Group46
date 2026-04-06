@@ -18,11 +18,14 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.io.File;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 /**
  * TA dashboard for profile editing, browsing jobs, and tracking applications.
  */
 public class TADashboardFrame extends JFrame {
+    private static final String CV_FILE_DESCRIPTION = "CV Files (*.pdf, *.doc, *.docx, *.rtf, *.txt)";
+
     private final DataService dataService;
     private final ApplicantService applicantService;
     private final JobService jobService;
@@ -41,7 +44,7 @@ public class TADashboardFrame extends JFrame {
     private final JTextField cvPathField = new JTextField();
     private final JButton chooseCvButton = UiTheme.createSecondaryButton("Choose File");
     private final DefaultTableModel jobTableModel = new DefaultTableModel(
-            new Object[]{"Job ID", "Module", "Hours", "Skills", "Status"}, 0);
+            new Object[]{"Job ID", "Module", "Hours", "TA Demand", "Skills", "Status"}, 0);
     private final JTable jobTable = new JTable(jobTableModel);
     private final DefaultTableModel applicationTableModel = new DefaultTableModel(
             new Object[]{"Application ID", "Job ID", "Status", "Match %", "Missing Skills"}, 0);
@@ -181,6 +184,7 @@ public class TADashboardFrame extends JFrame {
                     job.getJobId(),
                     job.getModuleCode() + " - " + job.getModuleTitle(),
                     job.getHours(),
+                    applicationService.getApplicationCountForJob(job.getJobId()) + "/" + job.getRequiredTaCount(),
                     String.join(", ", job.getRequiredSkills()),
                     job.getStatus()
             });
@@ -207,7 +211,9 @@ public class TADashboardFrame extends JFrame {
             return;
         }
         String jobId = String.valueOf(jobTableModel.getValueAt(row, 0));
-        new JobDetailsDialog(this, jobService.getJobById(jobId)).setVisible(true);
+        JobPosting job = jobService.getJobById(jobId);
+        String taDemandSummary = applicationService.getApplicationCountForJob(jobId) + "/" + job.getRequiredTaCount();
+        new JobDetailsDialog(this, job, taDemandSummary).setVisible(true);
     }
 
     private void applyForSelectedJob() {
@@ -246,6 +252,12 @@ public class TADashboardFrame extends JFrame {
         JFileChooser chooser = new JFileChooser();
         chooser.setDialogTitle("Select CV File");
         chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        chooser.setAcceptAllFileFilterUsed(false);
+        chooser.setFileFilter(new FileNameExtensionFilter(
+                CV_FILE_DESCRIPTION,
+                "pdf", "doc", "docx", "rtf", "txt"
+        ));
+        UiTheme.styleFileChooser(chooser);
 
         String existingPath = cvPathField.getText().trim();
         if (!existingPath.isBlank()) {
@@ -257,7 +269,13 @@ public class TADashboardFrame extends JFrame {
 
         int result = chooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION && chooser.getSelectedFile() != null) {
-            cvPathField.setText(chooser.getSelectedFile().getAbsolutePath());
+            File selectedFile = chooser.getSelectedFile();
+            String selectedPath = selectedFile.getAbsolutePath();
+            if (!validationService.validateCvPath(selectedPath).isEmpty()) {
+                UiMessage.error(this, "Please choose a CV in PDF, DOC, DOCX, RTF, or TXT format.");
+                return;
+            }
+            cvPathField.setText(selectedPath);
         }
     }
 
@@ -274,7 +292,7 @@ public class TADashboardFrame extends JFrame {
         UiTheme.styleTextArea(experienceArea, 5);
         UiTheme.styleTable(jobTable);
         UiTheme.styleTable(applicationTable);
-        UiTheme.setColumnWidths(jobTable, 90, 300, 80, 260, 100);
+        UiTheme.setColumnWidths(jobTable, 90, 300, 80, 110, 260, 100);
         UiTheme.setColumnWidths(applicationTable, 120, 90, 120, 90, 260);
     }
 
