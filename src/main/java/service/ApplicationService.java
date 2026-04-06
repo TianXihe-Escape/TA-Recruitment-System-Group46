@@ -101,6 +101,20 @@ public class ApplicationService {
 
     public void reopenJob(String jobId) {
         List<ApplicationRecord> applications = new ArrayList<>(applicationRepository.findAll());
+        boolean updated = false;
+        for (ApplicationRecord application : applications) {
+            if (jobId.equals(application.getJobId()) && application.getStatus() == ApplicationStatus.ACCEPTED) {
+                application.setStatus(ApplicationStatus.SHORTLISTED);
+                application.setReviewerNotes(appendNote(
+                        application.getReviewerNotes(),
+                        "Acceptance cleared because the job was reopened."
+                ));
+                updated = true;
+            }
+        }
+        if (updated) {
+            applicationRepository.saveAll(applications);
+        }
         syncJobStatus(jobId, applications);
     }
 

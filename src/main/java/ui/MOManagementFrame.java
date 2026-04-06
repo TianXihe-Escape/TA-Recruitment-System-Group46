@@ -22,6 +22,7 @@ import java.awt.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -38,6 +39,7 @@ public class MOManagementFrame extends JFrame {
     private final ValidationService validationService;
     private final User currentUser;
     private final List<String> managedModuleCodes;
+    private boolean syncingForm;
 
     private final JTextField jobIdField = new JTextField();
     private final JComboBox<String> moduleCodeBox = new JComboBox<>();
@@ -49,6 +51,7 @@ public class MOManagementFrame extends JFrame {
     private final JComboBox<JobStatus> statusBox = new JComboBox<>(JobStatus.values());
     private final JTextArea dutiesArea = new JTextArea(3, 20);
     private final JTextArea reviewArea = new JTextArea(4, 20);
+    private final JTextArea applicantSummaryArea = new JTextArea(4, 20);
     private final JTextArea matchInfoArea = new JTextArea(6, 20);
     private final DefaultTableModel jobTableModel = new DefaultTableModel(
             new Object[]{"Job ID", "Module", "Hours", "TA Demand", "Deadline", "Status"}, 0);
@@ -93,6 +96,7 @@ public class MOManagementFrame extends JFrame {
 
         refreshJobs();
         clearForm();
+        bindFormSync();
     }
 
     private JPanel buildFormPanel() {
@@ -157,6 +161,7 @@ public class MOManagementFrame extends JFrame {
             refreshJobs();
             applicantTableModel.setRowCount(0);
             reviewArea.setText("");
+            applicantSummaryArea.setText("");
         });
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, UiTheme.wrapTable(jobTable), UiTheme.wrapTable(applicantTable));
@@ -177,7 +182,7 @@ public class MOManagementFrame extends JFrame {
         body.setOpaque(false);
         body.add(UiTheme.createButtonRow(FlowLayout.LEFT, loadApplicantsButton, shortlistButton, acceptButton, cancelAcceptanceButton, rejectButton, refreshButton), BorderLayout.NORTH);
         body.add(splitPane, BorderLayout.CENTER);
-        body.add(wrapArea(reviewArea), BorderLayout.SOUTH);
+        body.add(buildReviewBottomPanel(), BorderLayout.SOUTH);
         panel.add(body, BorderLayout.CENTER);
         return panel;
     }
@@ -189,7 +194,7 @@ public class MOManagementFrame extends JFrame {
                     job.getJobId(),
                     job.getModuleCode() + " - " + job.getModuleTitle(),
                     job.getHours(),
-                    applicationService.getApplicationCountForJob(job.getJobId()) + "/" + job.getRequiredTaCount(),
+                    buildTaDemandText(job),
                     job.getApplicationDeadline(),
                     job.getStatus()
             });
@@ -201,21 +206,11 @@ public class MOManagementFrame extends JFrame {
         if (row < 0) {
             return;
         }
-        JobPosting job = jobService.getJobById(String.valueOf(jobTableModel.getValueAt(row, 0)));
-        jobIdField.setForeground(Color.BLACK);
-        jobIdField.setText(job.getJobId());
-        moduleCodeBox.setSelectedItem(job.getModuleCode());
-        moduleTitleField.setText(job.getModuleTitle());
-        hoursField.setText(String.valueOf(job.getHours()));
-        requiredTaCountField.setText(String.valueOf(job.getRequiredTaCount()));
-        skillsField.setText(String.join(", ", job.getRequiredSkills()));
-        deadlineField.setText(String.valueOf(job.getApplicationDeadline()));
-        statusBox.setSelectedItem(job.getStatus());
-        dutiesArea.setText(job.getDuties());
-        matchInfoArea.setText("");
+        applyJobToForm(jobService.getJobById(String.valueOf(jobTableModel.getValueAt(row, 0))));
     }
 
     private void clearForm() {
+        syncingForm = true;
         jobTable.clearSelection();
         applicantTable.clearSelection();
         jobIdField.setForeground(Color.GRAY);
@@ -234,8 +229,10 @@ public class MOManagementFrame extends JFrame {
         statusBox.setSelectedItem(JobStatus.OPEN);
         matchInfoArea.setText("");
         reviewArea.setText("");
+        applicantSummaryArea.setText("");
         applicantTableModel.setRowCount(0);
         moduleCodeBox.requestFocusInWindow();
+        syncingForm = false;
     }
 
     private void saveJob() {
@@ -267,9 +264,15 @@ public class MOManagementFrame extends JFrame {
             jobPosting.setStatus((JobStatus) statusBox.getSelectedItem());
             jobPosting.setDuties(dutiesArea.getText().trim());
             jobPosting.setPostedBy(currentUser.getUserId());
-            jobService.saveJob(jobPosting);
-            if (jobPosting.getStatus() == JobStatus.OPEN) {
-                applicationService.reopenJob(jobPosting.getJobId());
+
+            if (jobPosting.getStatus() == JobStatus.CLOSED) {
+                if (!handleClosingJob(jobPosting, existingJob)) {
+                    return;
+                }
+            } else {
+                if (!handleOpeningJob(jobPosting, existingJob)) {
+                    return;
+                }
             }
             UiMessage.info(this, "Job saved successfully.");
             refreshJobs();
@@ -320,6 +323,7 @@ public class MOManagementFrame extends JFrame {
                         "Missing: " + String.join(", ", matchResult.getMissingSkills()) + "\n" +
                         matchResult.getExplanation()
         );
+        applicantSummaryArea.setText(buildApplicantSummary(applicant, application, job));
     }
 
     private void updateApplicationStatus(ApplicationStatus status) {
@@ -400,6 +404,39 @@ public class MOManagementFrame extends JFrame {
         dispose();
     }
 
+    private JPanel buildReviewBottomPanel() {
+        JPanel panel = new JPanel(new GridLayout(1, 2, 16, 0));
+        panel.setOpaque(false);
+
+        JPanel summaryCard = UiTheme.createCard("Applicant Summary", "Quick reference for the selected applicant.");
+        summaryCard.add(wrapArea(applicantSummaryArea), BorderLayout.CENTER);
+
+        JPanel notesCard = UiTheme.createCard("Reviewer Notes", "Add notes before shortlisting, accepting, rejecting, or cancelling acceptance.");
+        notesCard.add(wrapArea(reviewArea), BorderLayout.CENTER);
+
+        panel.add(summaryCard);
+        panel.add(notesCard);
+        return panel;
+    }
+
+    private String buildApplicantSummary(ApplicantProfile applicant, ApplicationRecord application, JobPosting job) {
+        return "Name: " + valueOrDash(applicant.getName()) + "\n" +
+                "Email: " + valueOrDash(applicant.getEmail()) + "\n" +
+                "Phone: " + valueOrDash(applicant.getPhone()) + "\n" +
+                "Availability: " + valueOrDash(applicant.getAvailability()) + "\n" +
+                "Preferred Duties: " + valueOrDash(applicant.getPreferredDuties()) + "\n" +
+                "Application Status: " + application.getStatus() + "\n" +
+                "Match Score: " + application.getMatchScore() + "%\n" +
+                "Missing Skills: " + valueOrDash(String.join(", ", application.getMissingSkills())) + "\n" +
+                "CV Path: " + valueOrDash(applicant.getCvPath()) + "\n" +
+                "For Job: " + job.getModuleCode() + " - " + job.getModuleTitle() + "\n\n" +
+                "Experience Summary:\n" + valueOrDash(applicant.getExperienceSummary());
+    }
+
+    private String valueOrDash(String value) {
+        return value == null || value.isBlank() ? "-" : value;
+    }
+
     private void styleComponents() {
         UiTheme.styleTextField(jobIdField);
         UiTheme.styleComboBox(moduleCodeBox);
@@ -411,11 +448,13 @@ public class MOManagementFrame extends JFrame {
         UiTheme.styleComboBox(statusBox);
         UiTheme.styleTextArea(dutiesArea, 5);
         UiTheme.styleTextArea(reviewArea, 4);
+        UiTheme.styleTextArea(applicantSummaryArea, 8);
         UiTheme.styleTextArea(matchInfoArea, 8);
         UiTheme.styleTable(jobTable);
         UiTheme.styleTable(applicantTable);
         UiTheme.setColumnWidths(jobTable, 100, 300, 80, 110, 140, 100);
         UiTheme.setColumnWidths(applicantTable, 130, 170, 120, 90, 220);
+        applicantSummaryArea.setEditable(false);
     }
 
     private JScrollPane wrapArea(JTextArea area) {
@@ -444,5 +483,271 @@ public class MOManagementFrame extends JFrame {
             model.addElement(moduleCode);
         }
         moduleCodeBox.setModel(model);
+    }
+
+    private void bindFormSync() {
+        moduleCodeBox.addActionListener(event -> {
+            if (!syncingForm) {
+                syncFormToSelectedModule();
+            }
+        });
+    }
+
+    private void syncFormToSelectedModule() {
+        String moduleCode = String.valueOf(moduleCodeBox.getSelectedItem()).trim();
+        if (moduleCode.isBlank()) {
+            return;
+        }
+
+        Optional<JobPosting> existingJob = getScopedJobs().stream()
+                .filter(job -> moduleCode.equals(job.getModuleCode()))
+                .findFirst();
+
+        if (existingJob.isPresent()) {
+            applyJobToForm(existingJob.get());
+            selectJobRow(existingJob.get().getJobId());
+            return;
+        }
+
+        syncingForm = true;
+        jobTable.clearSelection();
+        applicantTable.clearSelection();
+        jobIdField.setForeground(Color.GRAY);
+        jobIdField.setText(NEW_JOB_PLACEHOLDER);
+        statusBox.setSelectedItem(JobStatus.OPEN);
+        reviewArea.setText("");
+        applicantSummaryArea.setText("");
+        matchInfoArea.setText("");
+        applicantTableModel.setRowCount(0);
+        syncingForm = false;
+    }
+
+    private void applyJobToForm(JobPosting job) {
+        syncingForm = true;
+        jobIdField.setForeground(Color.BLACK);
+        jobIdField.setText(job.getJobId());
+        moduleCodeBox.setSelectedItem(job.getModuleCode());
+        moduleTitleField.setText(job.getModuleTitle());
+        hoursField.setText(String.valueOf(job.getHours()));
+        requiredTaCountField.setText(String.valueOf(job.getRequiredTaCount()));
+        skillsField.setText(String.join(", ", job.getRequiredSkills()));
+        deadlineField.setText(String.valueOf(job.getApplicationDeadline()));
+        statusBox.setSelectedItem(job.getStatus());
+        dutiesArea.setText(job.getDuties());
+        matchInfoArea.setText("");
+        applicantSummaryArea.setText("");
+        syncingForm = false;
+    }
+
+    private boolean handleOpeningJob(JobPosting jobPosting, JobPosting existingJob) {
+        if (existingJob == null || existingJob.getStatus() != JobStatus.CLOSED) {
+            jobService.saveJob(jobPosting);
+            return true;
+        }
+
+        List<ApplicationRecord> acceptedApplications = applicationService.getApplicationsForJob(existingJob.getJobId()).stream()
+                .filter(application -> application.getStatus() == ApplicationStatus.ACCEPTED)
+                .collect(Collectors.toList());
+        int minimumToCancel = Math.max(0, acceptedApplications.size() - jobPosting.getRequiredTaCount() + 1);
+
+        if (minimumToCancel == 0) {
+            jobService.saveJob(jobPosting);
+            return true;
+        }
+
+        List<ApplicationRecord> selectedApplicants = promptForAcceptedTaRemoval(jobPosting, acceptedApplications, minimumToCancel);
+        if (selectedApplicants == null) {
+            return false;
+        }
+
+        jobService.saveJob(jobPosting);
+        String reviewerNotes = reviewArea.getText().trim();
+        for (ApplicationRecord application : selectedApplicants) {
+            applicationService.cancelAcceptance(application.getApplicationId(), reviewerNotes);
+        }
+        return true;
+    }
+
+    private boolean handleClosingJob(JobPosting jobPosting, JobPosting existingJob) {
+        if (existingJob == null) {
+            UiMessage.error(this, "Save the job as OPEN first, then select TAs before closing it.");
+            return false;
+        }
+
+        List<ApplicationRecord> applications = applicationService.getApplicationsForJob(existingJob.getJobId());
+        int acceptedCount = (int) applications.stream()
+                .filter(application -> application.getStatus() == ApplicationStatus.ACCEPTED)
+                .count();
+        int additionalNeeded = Math.max(0, jobPosting.getRequiredTaCount() - acceptedCount);
+
+        if (additionalNeeded > 0) {
+            List<ApplicationRecord> selectedApplicants = promptForTaSelection(jobPosting, applications, additionalNeeded);
+            if (selectedApplicants == null) {
+                return false;
+            }
+
+            jobPosting.setStatus(JobStatus.OPEN);
+            jobService.saveJob(jobPosting);
+
+            String reviewerNotes = reviewArea.getText().trim();
+            for (ApplicationRecord application : selectedApplicants) {
+                applicationService.updateStatus(application.getApplicationId(), ApplicationStatus.ACCEPTED, reviewerNotes);
+            }
+            return true;
+        }
+
+        jobService.saveJob(jobPosting);
+        return true;
+    }
+
+    private List<ApplicationRecord> promptForAcceptedTaRemoval(JobPosting jobPosting,
+                                                               List<ApplicationRecord> acceptedApplications,
+                                                               int minimumSelectionCount) {
+        while (true) {
+            JList<ApplicantSelectionItem> selectionList = buildApplicantSelectionList(
+                    acceptedApplications.stream()
+                            .map(this::toApplicantSelectionItem)
+                            .collect(Collectors.toList())
+            );
+
+            JTextArea helperText = new JTextArea(
+                    "Select at least " + minimumSelectionCount + " accepted TA(s) to remove before reopening "
+                            + jobPosting.getModuleCode() + " - " + jobPosting.getModuleTitle() + "."
+            );
+            helperText.setEditable(false);
+            helperText.setOpaque(false);
+            helperText.setLineWrap(true);
+            helperText.setWrapStyleWord(true);
+            helperText.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
+
+            JScrollPane selectionScrollPane = new JScrollPane(selectionList);
+            UiTheme.styleScrollPane(selectionScrollPane);
+
+            JPanel content = new JPanel(new BorderLayout(0, 8));
+            content.add(helperText, BorderLayout.NORTH);
+            content.add(selectionScrollPane, BorderLayout.CENTER);
+
+            int result = JOptionPane.showConfirmDialog(
+                    this,
+                    content,
+                    "Select TA to Remove",
+                    JOptionPane.OK_CANCEL_OPTION,
+                    JOptionPane.PLAIN_MESSAGE
+            );
+
+            if (result != JOptionPane.OK_OPTION) {
+                return null;
+            }
+
+            List<ApplicantSelectionItem> selectedValues = selectionList.getSelectedValuesList();
+            if (selectedValues.size() < minimumSelectionCount) {
+                UiMessage.error(this, "Please select at least " + minimumSelectionCount + " accepted TA(s) to reopen this job.");
+                continue;
+            }
+
+            return selectedValues.stream()
+                    .map(ApplicantSelectionItem::application)
+                    .collect(Collectors.toList());
+        }
+    }
+
+    private List<ApplicationRecord> promptForTaSelection(JobPosting jobPosting,
+                                                         List<ApplicationRecord> applications,
+                                                         int additionalNeeded) {
+        List<ApplicantSelectionItem> candidates = applications.stream()
+                .filter(application -> application.getStatus() != ApplicationStatus.REJECTED)
+                .filter(application -> application.getStatus() != ApplicationStatus.ACCEPTED)
+                .map(this::toApplicantSelectionItem)
+                .collect(Collectors.toList());
+
+        if (candidates.size() < additionalNeeded) {
+            UiMessage.error(this, "Not enough available applicants to close this job. Please shortlist more TAs first.");
+            return null;
+        }
+
+        while (true) {
+            JList<ApplicantSelectionItem> selectionList = buildApplicantSelectionList(candidates);
+
+            JTextArea helperText = new JTextArea(
+                    "Select exactly " + additionalNeeded + " TA(s) to close "
+                            + jobPosting.getModuleCode() + " - " + jobPosting.getModuleTitle() + "."
+            );
+            helperText.setEditable(false);
+            helperText.setOpaque(false);
+            helperText.setLineWrap(true);
+            helperText.setWrapStyleWord(true);
+            helperText.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
+
+            JScrollPane selectionScrollPane = new JScrollPane(selectionList);
+            UiTheme.styleScrollPane(selectionScrollPane);
+
+            JPanel content = new JPanel(new BorderLayout(0, 8));
+            content.add(helperText, BorderLayout.NORTH);
+            content.add(selectionScrollPane, BorderLayout.CENTER);
+
+            int result = JOptionPane.showConfirmDialog(
+                    this,
+                    content,
+                    "Select TA for Closing Job",
+                    JOptionPane.OK_CANCEL_OPTION,
+                    JOptionPane.PLAIN_MESSAGE
+            );
+
+            if (result != JOptionPane.OK_OPTION) {
+                return null;
+            }
+
+            List<ApplicantSelectionItem> selectedValues = selectionList.getSelectedValuesList();
+            if (selectedValues.size() != additionalNeeded) {
+                UiMessage.error(this, "Please select exactly " + additionalNeeded + " TA(s).");
+                continue;
+            }
+
+            return selectedValues.stream()
+                    .map(ApplicantSelectionItem::application)
+                    .collect(Collectors.toList());
+        }
+    }
+
+    private ApplicantSelectionItem toApplicantSelectionItem(ApplicationRecord application) {
+        ApplicantProfile applicant = applicantService.getProfileByApplicantId(application.getApplicantId());
+        String label = applicant.getName()
+                + " | " + applicant.getEmail()
+                + " | " + application.getStatus()
+                + " | Match " + application.getMatchScore() + "%";
+        return new ApplicantSelectionItem(application, label);
+    }
+
+    private JList<ApplicantSelectionItem> buildApplicantSelectionList(List<ApplicantSelectionItem> items) {
+        DefaultListModel<ApplicantSelectionItem> model = new DefaultListModel<>();
+        for (ApplicantSelectionItem item : items) {
+            model.addElement(item);
+        }
+        JList<ApplicantSelectionItem> selectionList = new JList<>(model);
+        selectionList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        selectionList.setVisibleRowCount(Math.min(8, Math.max(4, items.size())));
+        selectionList.setCellRenderer(new DefaultListCellRenderer());
+        return selectionList;
+    }
+
+    private String buildTaDemandText(JobPosting job) {
+        int acceptedCount = applicationService.getAcceptedCountForJob(job.getJobId());
+        return Math.min(acceptedCount, job.getRequiredTaCount()) + "/" + job.getRequiredTaCount();
+    }
+
+    private int findJobRow(String jobId) {
+        for (int i = 0; i < jobTableModel.getRowCount(); i++) {
+            if (jobId.equals(String.valueOf(jobTableModel.getValueAt(i, 0)))) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private record ApplicantSelectionItem(ApplicationRecord application, String label) {
+        @Override
+        public String toString() {
+            return label;
+        }
     }
 }
