@@ -17,15 +17,19 @@ The implementation is aligned with the coursework direction:
 - wuyanze-zyy: 31222291 (Member)
 
 ## Key Features By Role
-- `TA Applicant`: register, log in, edit profile, choose a local CV file, browse jobs, view job details, apply, and track application status
-- `Module Organiser`: create and edit jobs, reopen closed jobs, view applicants per job, inspect match score and missing skills, shortlist, accept, reject, and safely replace an accepted TA when reopening a post
+- `TA Applicant`: register, log in, edit profile, choose a local CV file, browse jobs, view job details, apply, track application status, and read reviewer notes in `My Applications`
+- `Module Organiser`: create and edit jobs, reopen closed jobs, view applicants per job, inspect match score and missing skills, shortlist, accept, reject, add reviewer notes, and safely adjust accepted TAs when reopening a post
 - `Admin`: monitor workloads, highlight overload, inspect all jobs, load/reset sample data, view simple rebalance suggestions
 
 ## Reliability Improvements
 - Stronger validation for TA registration and profile editing, including normalized email input, phone number checks, Chinese-name-friendly validation, and cleaner text handling
 - More tolerant skill parsing that supports English and Chinese separators such as `,` `，` `;` `；` and `、`
-- Safer MO review workflow so refreshing tables after shortlist/accept/reject does not trigger false errors
-- Reopening a job now clears the previous accepted application state so a new TA can be selected correctly
+- Safer MO review workflow so refreshing tables after shortlist, accept, reject, or cancel acceptance does not trigger false errors
+- MO status changes now use guarded selection flows:
+- changing `OPEN -> CLOSED` requires selecting the TA(s) to accept first
+- changing `CLOSED -> OPEN` requires choosing which accepted TA(s) to remove before recruitment can continue
+- Reviewer notes are visible to TAs in `My Applications`, and notes are refreshed per selected application to avoid accidental carry-over
+- TA demand is shown consistently across MO and TA views as `accepted / required`
 - UTF-8 data persistence and Chinese-friendly UI fonts to reduce encoding and display issues on Windows
 - Faster global scroll behavior, including form-area mouse-wheel scrolling on page containers
 
@@ -101,7 +105,10 @@ docs/
 ## Notes
 - Applicant and job data are stored in the `data/` folder as JSON files.
 - TA applicants must save a profile and choose a CV file before applying.
-- When a job is reopened, previously accepted applications for that job are moved back to a reviewable state.
+- `Reviewer Notes` are stored in `applications.json` and shown to TA users in `My Applications`.
+- A job marked `OPEN` can continue recruiting TAs, while a job marked `CLOSED` cannot accept new applications.
+- When reopening a closed job, the MO must choose which accepted TA records move back to a reviewable state.
+- When closing an open job, the MO must choose which applicants become accepted before the status change is saved.
 
 ## Screenshots
 - Add login screen screenshot

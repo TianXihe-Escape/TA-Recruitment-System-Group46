@@ -324,6 +324,7 @@ public class MOManagementFrame extends JFrame {
                         matchResult.getExplanation()
         );
         applicantSummaryArea.setText(buildApplicantSummary(applicant, application, job));
+        reviewArea.setText(application.getReviewerNotes() == null ? "" : application.getReviewerNotes());
     }
 
     private void updateApplicationStatus(ApplicationStatus status) {
@@ -377,6 +378,9 @@ public class MOManagementFrame extends JFrame {
             return;
         }
         applicantTableModel.setRowCount(0);
+        reviewArea.setText("");
+        applicantSummaryArea.setText("");
+        matchInfoArea.setText("");
         for (ApplicationRecord application : applicationService.getApplicationsForJob(jobId)) {
             ApplicantProfile applicant = applicantService.getProfileByApplicantId(application.getApplicantId());
             applicantTableModel.addRow(new Object[]{
@@ -536,6 +540,7 @@ public class MOManagementFrame extends JFrame {
         dutiesArea.setText(job.getDuties());
         matchInfoArea.setText("");
         applicantSummaryArea.setText("");
+        reviewArea.setText("");
         syncingForm = false;
     }
 

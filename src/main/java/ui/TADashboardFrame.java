@@ -184,7 +184,7 @@ public class TADashboardFrame extends JFrame {
                     job.getJobId(),
                     job.getModuleCode() + " - " + job.getModuleTitle(),
                     job.getHours(),
-                    applicationService.getApplicationCountForJob(job.getJobId()) + "/" + job.getRequiredTaCount(),
+                    buildTaDemandText(job),
                     String.join(", ", job.getRequiredSkills()),
                     job.getStatus()
             });
@@ -213,7 +213,7 @@ public class TADashboardFrame extends JFrame {
         }
         String jobId = String.valueOf(jobTableModel.getValueAt(row, 0));
         JobPosting job = jobService.getJobById(jobId);
-        String taDemandSummary = applicationService.getApplicationCountForJob(jobId) + "/" + job.getRequiredTaCount();
+        String taDemandSummary = buildTaDemandText(job);
         new JobDetailsDialog(this, job, taDemandSummary).setVisible(true);
     }
 
@@ -299,6 +299,11 @@ public class TADashboardFrame extends JFrame {
 
     private String valueOrDash(String value) {
         return value == null || value.isBlank() ? "-" : value;
+    }
+
+    private String buildTaDemandText(JobPosting job) {
+        int acceptedCount = applicationService.getAcceptedCountForJob(job.getJobId());
+        return Math.min(acceptedCount, job.getRequiredTaCount()) + "/" + job.getRequiredTaCount();
     }
 
     private JScrollPane wrapArea(JTextArea area) {
