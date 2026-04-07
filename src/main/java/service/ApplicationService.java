@@ -39,6 +39,7 @@ public class ApplicationService {
         );
 
         List<ApplicationRecord> applications = new ArrayList<>(applicationRepository.findAll());
+        // Reuse a previously rejected record so the same TA/job pair keeps a single audit trail.
         ApplicationRecord record = findRejectedApplication(applications, applicantProfile.getApplicantId(), jobPosting.getJobId())
                 .orElseGet(ApplicationRecord::new);
         if (record.getApplicationId() == null || record.getApplicationId().isBlank()) {
@@ -104,6 +105,7 @@ public class ApplicationService {
         boolean updated = false;
         for (ApplicationRecord application : applications) {
             if (jobId.equals(application.getJobId()) && application.getStatus() == ApplicationStatus.ACCEPTED) {
+                // Reopening puts accepted applicants back into the reviewable pool instead of deleting history.
                 application.setStatus(ApplicationStatus.SHORTLISTED);
                 application.setReviewerNotes(appendNote(
                         application.getReviewerNotes(),
@@ -193,6 +195,7 @@ public class ApplicationService {
             return;
         }
 
+        // The job stays OPEN until enough applicants are in ACCEPTED to satisfy the requested TA count.
         long acceptedCount = applications.stream()
                 .filter(application -> jobId.equals(application.getJobId()))
                 .filter(application -> application.getStatus() == ApplicationStatus.ACCEPTED)

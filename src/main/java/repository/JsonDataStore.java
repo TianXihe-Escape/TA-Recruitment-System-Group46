@@ -110,6 +110,7 @@ public class JsonDataStore {
 
     @SuppressWarnings("unchecked")
     private <T> T convertMap(Class<T> clazz, Map<String, Object> map) {
+        // This central mapping keeps the on-disk JSON schema explicit and easy to evolve.
         if (clazz == User.class) {
             User user = new User();
             user.setUserId(stringValue(map.get("userId")));
@@ -174,6 +175,7 @@ public class JsonDataStore {
     }
 
     private Object serialize(Object value) {
+        // Use LinkedHashMap so exported JSON keeps a stable field order for easier manual inspection.
         if (value instanceof User user) {
             Map<String, Object> map = new LinkedHashMap<>();
             map.put("userId", user.getUserId());

@@ -596,6 +596,7 @@ public class MOManagementFrame extends JFrame {
         List<ApplicationRecord> acceptedApplications = applicationService.getApplicationsForJob(existingJob.getJobId()).stream()
                 .filter(application -> application.getStatus() == ApplicationStatus.ACCEPTED)
                 .collect(Collectors.toList());
+        // Reopening only needs enough accepted TAs removed to create at least one open slot again.
         int minimumToCancel = Math.max(0, acceptedApplications.size() - jobPosting.getRequiredTaCount() + 1);
 
         if (minimumToCancel == 0) {
@@ -626,6 +627,7 @@ public class MOManagementFrame extends JFrame {
         int acceptedCount = (int) applications.stream()
                 .filter(application -> application.getStatus() == ApplicationStatus.ACCEPTED)
                 .count();
+        // Closing fills only the remaining vacancies; already accepted TAs stay accepted.
         int additionalNeeded = Math.max(0, jobPosting.getRequiredTaCount() - acceptedCount);
 
         if (additionalNeeded > 0) {
@@ -810,6 +812,7 @@ public class MOManagementFrame extends JFrame {
                                                        boolean hasFocus, int row, int column) {
             Component component = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
             if (!isSelected && value instanceof LocalDate deadline) {
+                // The warning colors are intentionally simple: red for overdue, yellow for the last 3 days.
                 long daysRemaining = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), deadline);
                 if (deadline.isBefore(LocalDate.now())) {
                     component.setBackground(new Color(255, 224, 224));
