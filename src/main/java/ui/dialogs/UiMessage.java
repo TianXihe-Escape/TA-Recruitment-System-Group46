@@ -26,6 +26,7 @@ public final class UiMessage {
     }
 
     public static boolean confirm(Component parent, String message, String title) {
+        // Reuse the same scrollable message layout for confirmations so long warnings behave like info/error dialogs.
         return JOptionPane.showConfirmDialog(
                 parent,
                 buildMessagePane(message),
@@ -54,6 +55,7 @@ public final class UiMessage {
         JScrollPane scrollPane = new JScrollPane(area);
         scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
         scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        // Size the pane from the content so short confirmations stay compact and multi-line messages remain readable.
         scrollPane.setPreferredSize(area.getPreferredSize());
         UiTheme.styleDialogScrollPane(scrollPane);
         return scrollPane;

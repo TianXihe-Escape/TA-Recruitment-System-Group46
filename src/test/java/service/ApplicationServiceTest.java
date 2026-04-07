@@ -82,6 +82,26 @@ class ApplicationServiceTest {
     }
 
     @Test
+    void shouldAllowReapplyByOverwritingWithdrawnApplication() {
+        ApplicantProfile profile = buildProfile();
+        JobPosting job = buildJob();
+        jobRepository.saveAll(List.of(job));
+
+        ApplicationRecord withdrawn = new ApplicationRecord();
+        withdrawn.setApplicationId("apply-01");
+        withdrawn.setApplicantId("a1");
+        withdrawn.setJobId("j1");
+        withdrawn.setStatus(ApplicationStatus.WITHDRAWN);
+        withdrawn.setReviewerNotes("Withdrawn by applicant.");
+        applicationRepository.saveAll(new ArrayList<>(List.of(withdrawn)));
+
+        ApplicationRecord reapplied = applicationService.apply(profile, job);
+
+        assertEquals("apply-01", reapplied.getApplicationId());
+        assertEquals(ApplicationStatus.SUBMITTED, applicationRepository.findAll().get(0).getStatus());
+    }
+
+    @Test
     void shouldRejectFinalizedStatusChange() {
         ApplicationRecord record = new ApplicationRecord();
         record.setApplicationId("x1");
@@ -187,6 +207,7 @@ class ApplicationServiceTest {
         applicationService.updateStatus("x2", ApplicationStatus.ACCEPTED, "first accepted");
 
         JobPosting updatedJob = jobRepository.findById("j1").orElseThrow();
+        // With a requirement of 2 TAs, the first acceptance should not close the job yet.
         assertEquals(JobStatus.OPEN, updatedJob.getStatus());
     }
 
@@ -214,6 +235,7 @@ class ApplicationServiceTest {
         applicationService.updateStatus("x2", ApplicationStatus.ACCEPTED, "second accepted");
 
         JobPosting updatedJob = jobRepository.findById("j1").orElseThrow();
+        // The second acceptance fills the final vacancy, so the job should become closed automatically.
         assertEquals(JobStatus.CLOSED, updatedJob.getStatus());
     }
 
@@ -239,6 +261,22 @@ class ApplicationServiceTest {
         assertEquals(ApplicationStatus.SHORTLISTED, updatedRecord.getStatus());
         assertTrue(updatedRecord.getReviewerNotes().contains("MO cancelled the offer"));
         assertEquals(JobStatus.OPEN, updatedJob.getStatus());
+    }
+
+    @Test
+    void shouldWithdrawNonFinalizedApplication() {
+        ApplicationRecord record = new ApplicationRecord();
+        record.setApplicationId("x1");
+        record.setApplicantId("a1");
+        record.setJobId("j1");
+        record.setStatus(ApplicationStatus.SUBMITTED);
+        applicationRepository.saveAll(new ArrayList<>(List.of(record)));
+
+        applicationService.withdrawApplication("x1");
+
+        ApplicationRecord updated = applicationRepository.findAll().get(0);
+        assertEquals(ApplicationStatus.WITHDRAWN, updated.getStatus());
+        assertTrue(updated.getReviewerNotes().contains("Withdrawn by applicant"));
     }
 
     private ApplicantProfile buildProfile() {

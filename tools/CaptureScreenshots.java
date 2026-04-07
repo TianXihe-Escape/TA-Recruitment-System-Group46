@@ -27,6 +27,7 @@ public class CaptureScreenshots {
         dataService.ensureDataFiles();
         Files.createDirectories(OUTPUT_DIR);
 
+        // Reuse the demo accounts so documentation screenshots always match the sample data described in README.
         User taUser = dataService.getUserRepository()
                 .findByUsername("ta1@bupt.edu.cn")
                 .orElseThrow(() -> new IllegalStateException("TA demo user not found."));
@@ -50,6 +51,7 @@ public class CaptureScreenshots {
             frame.repaint();
         });
 
+        // Give Swing a brief moment to finish layout and painting before capturing the frame buffer.
         Thread.sleep(300);
 
         SwingUtilities.invokeAndWait(() -> {

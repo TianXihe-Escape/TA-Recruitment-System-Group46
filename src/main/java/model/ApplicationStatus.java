@@ -6,6 +6,7 @@ package model;
 public enum ApplicationStatus {
     SUBMITTED,
     SHORTLISTED,
+    WITHDRAWN,
     REJECTED,
     ACCEPTED
 }
