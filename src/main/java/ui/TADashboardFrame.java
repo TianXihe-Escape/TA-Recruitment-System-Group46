@@ -179,7 +179,7 @@ public class TADashboardFrame extends JFrame {
 
     private void refreshJobs() {
         jobTableModel.setRowCount(0);
-        for (JobPosting job : jobService.getAllJobs()) {
+        for (JobPosting job : jobService.getOpenJobs()) {
             jobTableModel.addRow(new Object[]{
                     job.getJobId(),
                     job.getModuleCode() + " - " + job.getModuleTitle(),
