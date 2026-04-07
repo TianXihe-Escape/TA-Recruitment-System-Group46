@@ -131,6 +131,7 @@ public class AdminDashboardFrame extends JFrame {
             });
         }
 
+        // The lower summary is intentionally plain text so it can double as a quick audit view in demos.
         StringBuilder builder = new StringBuilder("Jobs and Assignments\n\n");
         for (JobPosting job : jobs) {
             long applicationCount = applications.stream()
@@ -159,6 +160,7 @@ public class AdminDashboardFrame extends JFrame {
         int threshold = dataService.getConfig().getWorkloadThreshold();
         List<WorkloadRecord> workloads = workloadService.buildWorkloadRecords(profiles, jobs, applications, threshold);
 
+        // Suggestions are limited to OPEN jobs because closed jobs already have enough accepted TAs.
         StringBuilder builder = new StringBuilder("Rebalance Suggestions\n\n");
         for (JobPosting job : jobs) {
             if (job.getStatus() == JobStatus.OPEN) {
@@ -197,6 +199,7 @@ public class AdminDashboardFrame extends JFrame {
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
                                                        boolean hasFocus, int row, int column) {
             Component component = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            // A single red-tinted row is enough to surface overload risk without introducing another status widget.
             Object overloadFlag = table.getValueAt(row, 3);
             if (!isSelected && "YES".equals(overloadFlag)) {
                 component.setBackground(new Color(255, 224, 224));

@@ -240,6 +240,8 @@ public class TADashboardFrame extends JFrame {
         }
 
         JobPosting job = jobService.getJobById(application.getJobId());
+        // Keep the popup text compact but complete so a TA can understand the application outcome without
+        // switching between the table, job details dialog, and profile panel.
         String details = "Application ID: " + application.getApplicationId() + "\n" +
                 "Job: " + job.getModuleCode() + " - " + job.getModuleTitle() + "\n" +
                 "Status: " + application.getStatus() + "\n" +
@@ -338,6 +340,7 @@ public class TADashboardFrame extends JFrame {
     }
 
     private String buildTaDemandText(JobPosting job) {
+        // TA demand is presented as accepted/required so the applicant sees remaining competition at a glance.
         int acceptedCount = applicationService.getAcceptedCountForJob(job.getJobId());
         return Math.min(acceptedCount, job.getRequiredTaCount()) + "/" + job.getRequiredTaCount();
     }
@@ -354,6 +357,7 @@ public class TADashboardFrame extends JFrame {
                                                        boolean hasFocus, int row, int column) {
             Component component = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
             if (!isSelected && value instanceof LocalDate deadline) {
+                // This gives a lightweight deadline warning without adding extra columns or dialogs.
                 long daysRemaining = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), deadline);
                 if (deadline.isBefore(LocalDate.now())) {
                     component.setBackground(new Color(255, 224, 224));
