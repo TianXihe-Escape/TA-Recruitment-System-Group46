@@ -30,6 +30,10 @@ The implementation is aligned with the coursework direction:
 - changing `CLOSED -> OPEN` requires choosing which accepted TA(s) to remove before recruitment can continue
 - Reviewer notes are visible to TAs in `My Applications`, and notes are refreshed per selected application to avoid accidental carry-over
 - TA demand is shown consistently across MO and TA views as `accepted / required`
+- TA applicants can open an application detail popup to review status, reviewer notes, match score, missing skills, TA demand, and deadline in one place
+- MO applicants can be filtered by status during review, making it easier to inspect submitted, shortlisted, accepted, or rejected candidates
+- Deadline warnings now highlight near-due and overdue jobs in TA and MO job tables
+- Confirmation dialogs protect high-impact actions such as accept, reject, cancel acceptance, and reset demo data
 - UTF-8 data persistence and Chinese-friendly UI fonts to reduce encoding and display issues on Windows
 - Faster global scroll behavior, including form-area mouse-wheel scrolling on page containers
 

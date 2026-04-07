@@ -80,6 +80,9 @@ public class AdminDashboardFrame extends JFrame {
             UiMessage.info(this, "Sample data loaded.");
         });
         resetButton.addActionListener(event -> {
+            if (!UiMessage.confirm(this, "Resetting demo data will overwrite the current JSON files. Continue?", "Confirm Reset")) {
+                return;
+            }
             dataService.resetData();
             refreshData();
             UiMessage.info(this, "Demo data reset.");

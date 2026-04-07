@@ -17,6 +17,7 @@ import ui.dialogs.UiMessage;
 import util.Constants;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.time.LocalDate;
@@ -53,12 +54,16 @@ public class MOManagementFrame extends JFrame {
     private final JTextArea reviewArea = new JTextArea(4, 20);
     private final JTextArea applicantSummaryArea = new JTextArea(4, 20);
     private final JTextArea matchInfoArea = new JTextArea(6, 20);
+    private final JComboBox<String> applicantStatusFilter = new JComboBox<>(
+            new String[]{"All Statuses", "SUBMITTED", "SHORTLISTED", "ACCEPTED", "REJECTED"}
+    );
     private final DefaultTableModel jobTableModel = new DefaultTableModel(
             new Object[]{"Job ID", "Module", "Hours", "TA Demand", "Deadline", "Status"}, 0);
     private final JTable jobTable = new JTable(jobTableModel);
     private final DefaultTableModel applicantTableModel = new DefaultTableModel(
             new Object[]{"Application ID", "Applicant", "Status", "Match %", "Missing"}, 0);
     private final JTable applicantTable = new JTable(applicantTableModel);
+    private String loadedApplicantJobId;
 
     public MOManagementFrame(DataService dataService, User currentUser) {
         this.dataService = dataService;
@@ -162,6 +167,13 @@ public class MOManagementFrame extends JFrame {
             applicantTableModel.setRowCount(0);
             reviewArea.setText("");
             applicantSummaryArea.setText("");
+            matchInfoArea.setText("");
+            loadedApplicantJobId = null;
+        });
+        applicantStatusFilter.addActionListener(event -> {
+            if (!syncingForm && loadedApplicantJobId != null) {
+                loadApplicantsForJob(loadedApplicantJobId);
+            }
         });
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, UiTheme.wrapTable(jobTable), UiTheme.wrapTable(applicantTable));
@@ -178,9 +190,23 @@ public class MOManagementFrame extends JFrame {
             }
         });
 
+        JLabel filterLabel = new JLabel("Applicant Filter");
+        filterLabel.setForeground(UiTheme.TEXT);
+        filterLabel.setFont(UiTheme.uiFont(Font.BOLD, 13));
+
+        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        filterPanel.setOpaque(false);
+        filterPanel.add(filterLabel);
+        filterPanel.add(applicantStatusFilter);
+
+        JPanel topControls = new JPanel(new BorderLayout(12, 0));
+        topControls.setOpaque(false);
+        topControls.add(UiTheme.createButtonRow(FlowLayout.LEFT, loadApplicantsButton, shortlistButton, acceptButton, cancelAcceptanceButton, rejectButton, refreshButton), BorderLayout.WEST);
+        topControls.add(filterPanel, BorderLayout.EAST);
+
         JPanel body = new JPanel(new BorderLayout(0, 18));
         body.setOpaque(false);
-        body.add(UiTheme.createButtonRow(FlowLayout.LEFT, loadApplicantsButton, shortlistButton, acceptButton, cancelAcceptanceButton, rejectButton, refreshButton), BorderLayout.NORTH);
+        body.add(topControls, BorderLayout.NORTH);
         body.add(splitPane, BorderLayout.CENTER);
         body.add(buildReviewBottomPanel(), BorderLayout.SOUTH);
         panel.add(body, BorderLayout.CENTER);
@@ -231,6 +257,7 @@ public class MOManagementFrame extends JFrame {
         reviewArea.setText("");
         applicantSummaryArea.setText("");
         applicantTableModel.setRowCount(0);
+        loadedApplicantJobId = null;
         moduleCodeBox.requestFocusInWindow();
         syncingForm = false;
     }
@@ -333,6 +360,10 @@ public class MOManagementFrame extends JFrame {
             UiMessage.error(this, "Please select an applicant first.");
             return;
         }
+        if ((status == ApplicationStatus.ACCEPTED || status == ApplicationStatus.REJECTED)
+                && !UiMessage.confirm(this, "Are you sure you want to mark this application as " + status + "?", "Confirm Review Action")) {
+            return;
+        }
         String applicationId = String.valueOf(applicantTableModel.getValueAt(row, 0));
         int jobRow = jobTable.getSelectedRow();
         String selectedJobId = jobRow >= 0 ? String.valueOf(jobTableModel.getValueAt(jobRow, 0)) : null;
@@ -353,6 +384,9 @@ public class MOManagementFrame extends JFrame {
         int row = applicantTable.getSelectedRow();
         if (row < 0) {
             UiMessage.error(this, "Please select an applicant first.");
+            return;
+        }
+        if (!UiMessage.confirm(this, "Are you sure you want to cancel this accepted application and reopen the slot?", "Confirm Cancellation")) {
             return;
         }
         String applicationId = String.valueOf(applicantTableModel.getValueAt(row, 0));
@@ -377,11 +411,15 @@ public class MOManagementFrame extends JFrame {
             UiMessage.error(this, "You can only review applicants for your assigned modules.");
             return;
         }
+        loadedApplicantJobId = jobId;
         applicantTableModel.setRowCount(0);
         reviewArea.setText("");
         applicantSummaryArea.setText("");
         matchInfoArea.setText("");
         for (ApplicationRecord application : applicationService.getApplicationsForJob(jobId)) {
+            if (!matchesApplicantFilter(application)) {
+                continue;
+            }
             ApplicantProfile applicant = applicantService.getProfileByApplicantId(application.getApplicantId());
             applicantTableModel.addRow(new Object[]{
                     application.getApplicationId(),
@@ -454,8 +492,10 @@ public class MOManagementFrame extends JFrame {
         UiTheme.styleTextArea(reviewArea, 4);
         UiTheme.styleTextArea(applicantSummaryArea, 8);
         UiTheme.styleTextArea(matchInfoArea, 8);
+        UiTheme.styleComboBox(applicantStatusFilter);
         UiTheme.styleTable(jobTable);
         UiTheme.styleTable(applicantTable);
+        jobTable.getColumnModel().getColumn(4).setCellRenderer(new DeadlineWarningRenderer());
         UiTheme.setColumnWidths(jobTable, 100, 300, 80, 110, 140, 100);
         UiTheme.setColumnWidths(applicantTable, 130, 170, 120, 90, 220);
         applicantSummaryArea.setEditable(false);
@@ -523,6 +563,7 @@ public class MOManagementFrame extends JFrame {
         applicantSummaryArea.setText("");
         matchInfoArea.setText("");
         applicantTableModel.setRowCount(0);
+        loadedApplicantJobId = null;
         syncingForm = false;
     }
 
@@ -541,6 +582,8 @@ public class MOManagementFrame extends JFrame {
         matchInfoArea.setText("");
         applicantSummaryArea.setText("");
         reviewArea.setText("");
+        applicantTableModel.setRowCount(0);
+        loadedApplicantJobId = null;
         syncingForm = false;
     }
 
@@ -740,6 +783,11 @@ public class MOManagementFrame extends JFrame {
         return Math.min(acceptedCount, job.getRequiredTaCount()) + "/" + job.getRequiredTaCount();
     }
 
+    private boolean matchesApplicantFilter(ApplicationRecord application) {
+        String selected = String.valueOf(applicantStatusFilter.getSelectedItem());
+        return "All Statuses".equals(selected) || application.getStatus().name().equals(selected);
+    }
+
     private int findJobRow(String jobId) {
         for (int i = 0; i < jobTableModel.getRowCount(); i++) {
             if (jobId.equals(String.valueOf(jobTableModel.getValueAt(i, 0)))) {
@@ -753,6 +801,27 @@ public class MOManagementFrame extends JFrame {
         @Override
         public String toString() {
             return label;
+        }
+    }
+
+    private static class DeadlineWarningRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                                                       boolean hasFocus, int row, int column) {
+            Component component = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            if (!isSelected && value instanceof LocalDate deadline) {
+                long daysRemaining = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), deadline);
+                if (deadline.isBefore(LocalDate.now())) {
+                    component.setBackground(new Color(255, 224, 224));
+                } else if (daysRemaining <= 3) {
+                    component.setBackground(new Color(255, 245, 204));
+                } else {
+                    component.setBackground(Color.WHITE);
+                }
+            } else if (!isSelected) {
+                component.setBackground(Color.WHITE);
+            }
+            return component;
         }
     }
 }

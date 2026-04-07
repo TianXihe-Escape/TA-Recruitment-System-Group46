@@ -69,6 +69,13 @@ The Admin dashboard is used to monitor TA workloads, inspect jobs, reset demo da
 - match score
 - missing skills
 - reviewer notes
+9. Select any application and click `View Application Details` to open a summary popup with:
+- status
+- reviewer notes
+- match score
+- missing skills
+- TA demand
+- deadline
 
 ## MO Workflow
 1. Log in as an MO user.
@@ -81,12 +88,15 @@ The Admin dashboard is used to monitor TA workloads, inspect jobs, reset demo da
 - missing skills
 - applicant summary
 - reviewer notes
-7. Use `Shortlist`, `Accept`, `Reject`, or `Cancel Acceptance` as needed.
+7. Use the applicant status filter to narrow the list to `Submitted`, `Shortlisted`, `Accepted`, or `Rejected` records if needed.
+8. Use `Shortlist`, `Accept`, `Reject`, or `Cancel Acceptance` as needed.
+9. Confirmation dialogs are shown before high-impact review actions.
 
 ### Job Status Rules
 - Changing `OPEN -> CLOSED` requires the MO to choose the TA(s) who will be accepted before the change is saved.
 - Changing `CLOSED -> OPEN` requires the MO to choose which accepted TA(s) will be removed before recruitment can continue.
 - `TA Demand` is shown as `accepted / required`.
+- Deadline cells are highlighted when a deadline is very close or already overdue.
 
 ## Admin Workflow
 1. Log in as an Admin user.
@@ -94,6 +104,7 @@ The Admin dashboard is used to monitor TA workloads, inspect jobs, reset demo da
 3. Use `Load Demo Data` to repopulate the sample dataset.
 4. Use `Reset Demo Data` to clear and reset the dataset.
 5. Use `Rebalance Suggestion` to view simple recommendations for open jobs.
+6. A confirmation dialog is shown before resetting demo data.
 
 ## Data Files
 The application stores all data in:
