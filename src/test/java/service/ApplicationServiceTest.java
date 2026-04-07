@@ -82,6 +82,26 @@ class ApplicationServiceTest {
     }
 
     @Test
+    void shouldAllowReapplyByOverwritingWithdrawnApplication() {
+        ApplicantProfile profile = buildProfile();
+        JobPosting job = buildJob();
+        jobRepository.saveAll(List.of(job));
+
+        ApplicationRecord withdrawn = new ApplicationRecord();
+        withdrawn.setApplicationId("apply-01");
+        withdrawn.setApplicantId("a1");
+        withdrawn.setJobId("j1");
+        withdrawn.setStatus(ApplicationStatus.WITHDRAWN);
+        withdrawn.setReviewerNotes("Withdrawn by applicant.");
+        applicationRepository.saveAll(new ArrayList<>(List.of(withdrawn)));
+
+        ApplicationRecord reapplied = applicationService.apply(profile, job);
+
+        assertEquals("apply-01", reapplied.getApplicationId());
+        assertEquals(ApplicationStatus.SUBMITTED, applicationRepository.findAll().get(0).getStatus());
+    }
+
+    @Test
     void shouldRejectFinalizedStatusChange() {
         ApplicationRecord record = new ApplicationRecord();
         record.setApplicationId("x1");
@@ -153,15 +173,46 @@ class ApplicationServiceTest {
         record.setJobId("j1");
         record.setStatus(ApplicationStatus.ACCEPTED);
         applicationRepository.saveAll(new ArrayList<>(List.of(record)));
+        jobRepository.saveAll(List.of(buildJob()));
 
         applicationService.reopenJob("j1");
 
         List<ApplicationRecord> records = applicationRepository.findAll();
+        JobPosting updatedJob = jobRepository.findById("j1").orElseThrow();
+
         assertEquals(ApplicationStatus.SHORTLISTED, records.get(0).getStatus());
+        assertTrue(records.get(0).getReviewerNotes().contains("job was reopened"));
+        assertEquals(JobStatus.OPEN, updatedJob.getStatus());
     }
 
     @Test
-    void shouldKeepOnlyOneAcceptedApplicationPerJob() {
+    void shouldKeepJobOpenUntilRequiredTaCountIsFilled() {
+        ApplicationRecord first = new ApplicationRecord();
+        first.setApplicationId("x1");
+        first.setApplicantId("a1");
+        first.setJobId("j1");
+        first.setStatus(ApplicationStatus.SHORTLISTED);
+
+        ApplicationRecord second = new ApplicationRecord();
+        second.setApplicationId("x2");
+        second.setApplicantId("a2");
+        second.setJobId("j1");
+        second.setStatus(ApplicationStatus.SHORTLISTED);
+
+        applicationRepository.saveAll(new ArrayList<>(List.of(first, second)));
+        JobPosting job = buildJob();
+        job.setRequiredTaCount(2);
+        jobRepository.saveAll(List.of(job));
+
+        applicationService.updateStatus("x2", ApplicationStatus.ACCEPTED, "first accepted");
+
+        JobPosting updatedJob = jobRepository.findById("j1").orElseThrow();
+        // With a requirement of 2 TAs, the first acceptance should not close the job yet.
+        assertEquals(JobStatus.OPEN, updatedJob.getStatus());
+    }
+
+    @Test
+    void shouldCloseJobWhenRequiredTaCountIsFilled() {
         ApplicationRecord first = new ApplicationRecord();
         first.setApplicationId("x1");
         first.setApplicantId("a1");
@@ -175,20 +226,21 @@ class ApplicationServiceTest {
         second.setStatus(ApplicationStatus.SHORTLISTED);
 
         applicationRepository.saveAll(new ArrayList<>(List.of(first, second)));
-        jobRepository.saveAll(List.of(buildJob()));
 
-        applicationService.updateStatus("x2", ApplicationStatus.ACCEPTED, "replacement");
+        JobPosting job = buildJob();
+        job.setRequiredTaCount(2);
+        job.setStatus(JobStatus.OPEN);
+        jobRepository.saveAll(List.of(job));
 
-        List<ApplicationRecord> records = applicationRepository.findAll();
-        ApplicationRecord updatedFirst = records.stream().filter(record -> record.getApplicationId().equals("x1")).findFirst().orElseThrow();
-        ApplicationRecord updatedSecond = records.stream().filter(record -> record.getApplicationId().equals("x2")).findFirst().orElseThrow();
+        applicationService.updateStatus("x2", ApplicationStatus.ACCEPTED, "second accepted");
 
-        assertEquals(ApplicationStatus.SHORTLISTED, updatedFirst.getStatus());
-        assertEquals(ApplicationStatus.ACCEPTED, updatedSecond.getStatus());
+        JobPosting updatedJob = jobRepository.findById("j1").orElseThrow();
+        // The second acceptance fills the final vacancy, so the job should become closed automatically.
+        assertEquals(JobStatus.CLOSED, updatedJob.getStatus());
     }
 
     @Test
-    void shouldCancelAcceptedApplicationAndReopenJob() {
+    void shouldCancelAcceptedApplicationAndReopenJobWhenBelowRequiredTaCount() {
         ApplicationRecord record = new ApplicationRecord();
         record.setApplicationId("x1");
         record.setApplicantId("a1");
@@ -197,6 +249,7 @@ class ApplicationServiceTest {
         applicationRepository.saveAll(new ArrayList<>(List.of(record)));
 
         JobPosting job = buildJob();
+        job.setRequiredTaCount(2);
         job.setStatus(JobStatus.CLOSED);
         jobRepository.saveAll(List.of(job));
 
@@ -208,6 +261,22 @@ class ApplicationServiceTest {
         assertEquals(ApplicationStatus.SHORTLISTED, updatedRecord.getStatus());
         assertTrue(updatedRecord.getReviewerNotes().contains("MO cancelled the offer"));
         assertEquals(JobStatus.OPEN, updatedJob.getStatus());
+    }
+
+    @Test
+    void shouldWithdrawNonFinalizedApplication() {
+        ApplicationRecord record = new ApplicationRecord();
+        record.setApplicationId("x1");
+        record.setApplicantId("a1");
+        record.setJobId("j1");
+        record.setStatus(ApplicationStatus.SUBMITTED);
+        applicationRepository.saveAll(new ArrayList<>(List.of(record)));
+
+        applicationService.withdrawApplication("x1");
+
+        ApplicationRecord updated = applicationRepository.findAll().get(0);
+        assertEquals(ApplicationStatus.WITHDRAWN, updated.getStatus());
+        assertTrue(updated.getReviewerNotes().contains("Withdrawn by applicant"));
     }
 
     private ApplicantProfile buildProfile() {

@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
  * Explainable rule-based matching between applicant and job skills.
  */
 public class MatchingService {
+    // Keep the synonym list small and explainable so the matching result is easy to justify in demos.
     private static final Map<String, Set<String>> SYNONYMS = Map.of(
             "communication", Set.of("presentation", "teamwork"),
             "data analysis", Set.of("analytics", "data analytics"),
@@ -62,6 +63,7 @@ public class MatchingService {
         if (originalRequiredSkills == null) {
             return List.of();
         }
+        // Return skills in the job's original order so UI output matches what the MO entered.
         return originalRequiredSkills.stream()
                 .filter(skill -> normalizedSubset.contains(skill.trim().toLowerCase(Locale.ROOT)))
                 .collect(Collectors.toList());

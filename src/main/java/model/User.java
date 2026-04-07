@@ -1,5 +1,10 @@
 package model;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+
 /**
  * Login account persisted in the file store.
  */
@@ -8,6 +13,7 @@ public class User {
     private String username;
     private String password;
     private Role role;
+    private List<String> managedModuleCodes = new ArrayList<>();
 
     public User() {
     }
@@ -17,6 +23,11 @@ public class User {
         this.username = username;
         this.password = password;
         this.role = role;
+    }
+
+    public User(String userId, String username, String password, Role role, List<String> managedModuleCodes) {
+        this(userId, username, password, role);
+        setManagedModuleCodes(managedModuleCodes);
     }
 
     public String getUserId() {
@@ -49,5 +60,32 @@ public class User {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public List<String> getManagedModuleCodes() {
+        return new ArrayList<>(managedModuleCodes);
+    }
+
+    public void setManagedModuleCodes(List<String> managedModuleCodes) {
+        LinkedHashSet<String> normalizedCodes = new LinkedHashSet<>();
+        if (managedModuleCodes != null) {
+            for (String code : managedModuleCodes) {
+                if (code != null) {
+                    String normalized = code.trim().toUpperCase(Locale.ROOT);
+                    if (!normalized.isBlank()) {
+                        normalizedCodes.add(normalized);
+                    }
+                }
+            }
+        }
+        this.managedModuleCodes = new ArrayList<>(normalizedCodes);
+    }
+
+    public boolean managesModule(String moduleCode) {
+        if (moduleCode == null) {
+            return false;
+        }
+        String normalized = moduleCode.trim().toUpperCase(Locale.ROOT);
+        return managedModuleCodes.contains(normalized);
     }
 }

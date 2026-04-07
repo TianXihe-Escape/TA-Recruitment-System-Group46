@@ -178,6 +178,13 @@ public final class UiTheme {
         comboBox.setFocusable(true);
     }
 
+    public static void styleCheckBox(JCheckBox checkBox) {
+        checkBox.setFont(BODY_FONT);
+        checkBox.setForeground(MUTED_TEXT);
+        checkBox.setOpaque(false);
+        checkBox.setFocusPainted(false);
+    }
+
     public static void styleTextArea(JTextArea area, int rows) {
         area.setFont(BODY_FONT);
         area.setForeground(TEXT);
@@ -294,6 +301,11 @@ public final class UiTheme {
         styleScrollBar(scrollPane.getVerticalScrollBar());
         installWheelForwarding(component);
         return scrollPane;
+    }
+
+    public static void styleFileChooser(JFileChooser chooser) {
+        SwingUtilities.updateComponentTreeUI(chooser);
+        styleComponentTree(chooser);
     }
 
     public static void setColumnWidths(JTable table, int... widths) {
@@ -568,5 +580,21 @@ public final class UiTheme {
                 return button;
             }
         });
+    }
+
+    private static void styleComponentTree(Component component) {
+        if (component instanceof JScrollPane scrollPane) {
+            styleScrollPane(scrollPane);
+        } else if (component instanceof JPanel panel) {
+            panel.setBackground(BACKGROUND);
+        } else if (component instanceof JTable table) {
+            styleTable(table);
+        }
+
+        if (component instanceof Container container) {
+            for (Component child : container.getComponents()) {
+                styleComponentTree(child);
+            }
+        }
     }
 }

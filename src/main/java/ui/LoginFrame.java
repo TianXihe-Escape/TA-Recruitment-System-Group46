@@ -35,14 +35,17 @@ public class LoginFrame extends JFrame {
 
         JTextField usernameField = new JTextField();
         JPasswordField passwordField = new JPasswordField();
+        char passwordEchoChar = passwordField.getEchoChar();
         JComboBox<Role> roleBox = new JComboBox<>(Role.values());
         JButton loginButton = UiTheme.createPrimaryButton("Login");
         JButton registerButton = UiTheme.createSecondaryButton("Create TA Account");
         JButton loadSampleButton = UiTheme.createSecondaryButton("Load Demo Data");
+        JCheckBox showPasswordBox = new JCheckBox("Show Password");
 
         UiTheme.styleTextField(usernameField);
         UiTheme.styleTextField(passwordField);
         UiTheme.styleComboBox(roleBox);
+        UiTheme.styleCheckBox(showPasswordBox);
 
         JPanel root = UiTheme.createPagePanel();
         JPanel hero = buildHeroPanel();
@@ -51,7 +54,8 @@ public class LoginFrame extends JFrame {
         JPanel form = UiTheme.createFormGrid();
         UiTheme.addFormRow(form, 0, "Username / Email", usernameField);
         UiTheme.addFormRow(form, 2, "Password", passwordField);
-        UiTheme.addFormRow(form, 4, "Role", roleBox);
+        UiTheme.addFormRow(form, 4, "", showPasswordBox);
+        UiTheme.addFormRow(form, 6, "Role", roleBox);
 
         JPanel supportPanel = new JPanel();
         supportPanel.setOpaque(false);
@@ -62,7 +66,8 @@ public class LoginFrame extends JFrame {
         supportTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
         JTextArea accountArea = new JTextArea(
                 "TA: ta1@bupt.edu.cn / ta123\n" +
-                        "MO: mo1@bupt.edu.cn / mo123\n" +
+                        "MO 1: mo1@bupt.edu.cn / mo123\n" +
+                        "MO 2: mo2@bupt.edu.cn / mo123\n" +
                         "Admin: admin@bupt.edu.cn / admin123"
         );
         accountArea.setEditable(false);
@@ -107,11 +112,13 @@ public class LoginFrame extends JFrame {
                 UiMessage.error(this, ex.getMessage());
             }
         });
+        showPasswordBox.addActionListener(event ->
+                passwordField.setEchoChar(showPasswordBox.isSelected() ? (char) 0 : passwordEchoChar));
 
         registerButton.addActionListener(event -> new RegisterFrame(authService).setVisible(true));
         loadSampleButton.addActionListener(event -> {
             dataService.loadSampleData();
-            UiMessage.info(this, "Sample data loaded.\nTA: ta1@bupt.edu.cn / ta123\nMO: mo1@bupt.edu.cn / mo123\nAdmin: admin@bupt.edu.cn / admin123");
+            UiMessage.info(this, "Sample data loaded.\nTA: ta1@bupt.edu.cn / ta123\nMO 1: mo1@bupt.edu.cn / mo123\nMO 2: mo2@bupt.edu.cn / mo123\nAdmin: admin@bupt.edu.cn / admin123");
         });
 
         root.add(layout, BorderLayout.CENTER);

@@ -25,7 +25,22 @@ public final class UiMessage {
         show(parent, message, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
+    public static boolean confirm(Component parent, String message, String title) {
+        // Reuse the same scrollable message layout for confirmations so long warnings behave like info/error dialogs.
+        return JOptionPane.showConfirmDialog(
+                parent,
+                buildMessagePane(message),
+                title,
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+        ) == JOptionPane.YES_OPTION;
+    }
+
     private static void show(Component parent, String message, String title, int type) {
+        JOptionPane.showMessageDialog(parent, buildMessagePane(message), title, type);
+    }
+
+    private static JScrollPane buildMessagePane(String message) {
         JTextArea area = new JTextArea(message);
         area.setEditable(false);
         area.setOpaque(false);
@@ -40,10 +55,10 @@ public final class UiMessage {
         JScrollPane scrollPane = new JScrollPane(area);
         scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
         scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        // Size the pane from the content so short confirmations stay compact and multi-line messages remain readable.
         scrollPane.setPreferredSize(area.getPreferredSize());
         UiTheme.styleDialogScrollPane(scrollPane);
-
-        JOptionPane.showMessageDialog(parent, scrollPane, title, type);
+        return scrollPane;
     }
 
     private static int preferredColumns(String message) {

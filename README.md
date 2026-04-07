@@ -17,15 +17,27 @@ The implementation is aligned with the coursework direction:
 - wuyanze-zyy: 31222291 (Member)
 
 ## Key Features By Role
-- `TA Applicant`: register, log in, edit profile, choose a local CV file, browse jobs, view job details, apply, and track application status
-- `Module Organiser`: create and edit jobs, reopen closed jobs, view applicants per job, inspect match score and missing skills, shortlist, accept, reject, and safely replace an accepted TA when reopening a post
-- `Admin`: monitor workloads, highlight overload, inspect all jobs, load/reset sample data, view simple rebalance suggestions
+- `TA Applicant`: register, log in, edit profile, choose a local CV file, browse open jobs, view job details, apply, withdraw non-finalized applications, track application status, open an application detail popup, and read reviewer notes in `My Applications`
+- `Module Organiser`: create and edit jobs, reopen closed jobs, view applicants per job, inspect match score and missing skills, filter and sort applicants, shortlist, accept, reject, add reviewer notes, and safely adjust accepted TAs when reopening a post
+- `Admin`: monitor workloads, inspect all jobs, view summary cards for open jobs, closed jobs, applications, and accepted TAs, load or reset sample data, and view rebalance suggestions
 
 ## Reliability Improvements
 - Stronger validation for TA registration and profile editing, including normalized email input, phone number checks, Chinese-name-friendly validation, and cleaner text handling
-- More tolerant skill parsing that supports English and Chinese separators such as `,` `，` `;` `；` and `、`
-- Safer MO review workflow so refreshing tables after shortlist/accept/reject does not trigger false errors
-- Reopening a job now clears the previous accepted application state so a new TA can be selected correctly
+- More tolerant skill parsing that supports English and Chinese separators such as `,`, `，`, `;`, `；`, and `、`
+- Safer MO review workflow so refreshing tables after shortlist, accept, reject, or cancel acceptance does not trigger false errors
+- Guarded MO status changes:
+- changing `OPEN -> CLOSED` requires selecting the TA(s) to accept first
+- changing `CLOSED -> OPEN` requires choosing which accepted TA(s) to remove before recruitment can continue
+- Reviewer notes are visible to TAs in `My Applications`, and notes are refreshed per selected application to avoid accidental carry-over
+- TA demand is shown consistently across MO and TA views as `accepted / required`
+- TA applicants can open an application detail popup to review status, reviewer notes, match score, missing skills, TA demand, and deadline in one place
+- TA applicants can withdraw non-finalized applications, and withdrawn records stay in the audit trail while still allowing re-application later
+- MO applicants can be filtered by status and sorted by match score, applicant name, or status during review
+- Empty-state hints explain whether a table has no data yet or whether the current filter produced no matching rows
+- Status badges highlight `SUBMITTED`, `SHORTLISTED`, `ACCEPTED`, `REJECTED`, `WITHDRAWN`, `OPEN`, and `CLOSED` states more clearly in TA and MO tables
+- Deadline warnings now highlight near-due and overdue jobs in TA and MO job tables
+- Confirmation dialogs protect high-impact actions such as accept, reject, cancel acceptance, and reset demo data
+- Admin analytics cards give a fast snapshot of open jobs, closed jobs, total applications, and accepted TAs
 - UTF-8 data persistence and Chinese-friendly UI fonts to reduce encoding and display issues on Windows
 - Faster global scroll behavior, including form-area mouse-wheel scrolling on page containers
 
@@ -46,7 +58,7 @@ The implementation is aligned with the coursework direction:
 ## How To Run
 1. Install Java 17 or later.
 2. Open a terminal in the project root.
-3. If the project has already been compiled, you can run it directly:
+3. If the project has already been compiled, run:
 
 ```bash
 java -cp target/classes app.Main
@@ -65,7 +77,7 @@ mvn test
 mvn exec:java
 ```
 
-6. In the login screen, click `Load Sample Data` for a ready-to-demo dataset.
+6. In the login screen, click `Load Sample Data` for a ready-to-demo dataset if needed.
 
 ## Default Demo Accounts
 - `TA`: `ta1@bupt.edu.cn` / `ta123`
@@ -85,11 +97,11 @@ src/main/java
 src/test/java/service
   unit and smoke tests
 
+docs/
+  design, traceability, demo, tests, team split, user manual, screenshots
+
 data/
   users.json, profiles.json, jobs.json, applications.json, config.json
-
-docs/
-  design, traceability, demo, tests, teamwork split
 ```
 
 ## Testing
@@ -101,13 +113,20 @@ docs/
 ## Notes
 - Applicant and job data are stored in the `data/` folder as JSON files.
 - TA applicants must save a profile and choose a CV file before applying.
-- When a job is reopened, previously accepted applications for that job are moved back to a reviewable state.
+- `Reviewer Notes` are stored in `applications.json` and shown to TA users in `My Applications`.
+- A withdrawn application is marked as `WITHDRAWN` instead of being deleted, so the system keeps a readable history.
+- A job marked `OPEN` can continue recruiting TAs, while a job marked `CLOSED` cannot accept new applications.
+- When reopening a closed job, the MO must choose which accepted TA records move back to a reviewable state.
+- When closing an open job, the MO must choose which applicants become accepted before the status change is saved.
+
+## User Manual
+- See [docs/user-manual.md](docs/user-manual.md) for setup, role-based workflows, and screenshots.
 
 ## Screenshots
-- Add login screen screenshot
-- Add TA dashboard screenshot
-- Add MO management screenshot
-- Add Admin dashboard screenshot
+- Login: [docs/screenshots/login-frame.png](docs/screenshots/login-frame.png)
+- TA dashboard: [docs/screenshots/ta-dashboard.png](docs/screenshots/ta-dashboard.png)
+- MO dashboard: [docs/screenshots/mo-dashboard.png](docs/screenshots/mo-dashboard.png)
+- Admin dashboard: [docs/screenshots/admin-dashboard.png](docs/screenshots/admin-dashboard.png)
 
 ## Contribution
 - Use feature branches per module or role flow
