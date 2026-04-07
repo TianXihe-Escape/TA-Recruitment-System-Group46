@@ -28,9 +28,13 @@ public class AdminDashboardFrame extends JFrame {
     private final DataService dataService;
     private final WorkloadService workloadService;
     private final MatchingService matchingService;
+    private final JLabel openJobsValue = createMetricValueLabel();
+    private final JLabel closedJobsValue = createMetricValueLabel();
+    private final JLabel applicationCountValue = createMetricValueLabel();
+    private final JLabel acceptedCountValue = createMetricValueLabel();
     private final DefaultTableModel workloadTableModel = new DefaultTableModel(
             new Object[]{"TA", "Modules", "Total Hours", "Overload"}, 0);
-    private final JTable workloadTable = new JTable(workloadTableModel);
+    private final JTable workloadTable = new PlaceholderTable(workloadTableModel, "No workload records are available yet.");
     private final JTextArea jobSummaryArea = new JTextArea();
     private final JTextArea suggestionArea = new JTextArea();
 
@@ -89,11 +93,26 @@ public class AdminDashboardFrame extends JFrame {
         });
         suggestButton.addActionListener(event -> generateSuggestions());
 
+        JPanel centerPanel = new JPanel(new BorderLayout(0, 12));
+        centerPanel.setOpaque(false);
+        centerPanel.add(buildMetricsPanel(), BorderLayout.NORTH);
+        centerPanel.add(UiTheme.wrapTable(workloadTable), BorderLayout.CENTER);
+
         JPanel body = new JPanel(new BorderLayout(0, 18));
         body.setOpaque(false);
         body.add(UiTheme.createButtonRow(FlowLayout.LEFT, backButton, refreshButton, loadSampleButton, resetButton, suggestButton), BorderLayout.NORTH);
-        body.add(UiTheme.wrapTable(workloadTable), BorderLayout.CENTER);
+        body.add(centerPanel, BorderLayout.CENTER);
         panel.add(body, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JPanel buildMetricsPanel() {
+        JPanel panel = new JPanel(new GridLayout(1, 4, 12, 0));
+        panel.setOpaque(false);
+        panel.add(createMetricCard("Open Jobs", "Modules still accepting applications.", openJobsValue));
+        panel.add(createMetricCard("Closed Jobs", "Modules already filled or paused.", closedJobsValue));
+        panel.add(createMetricCard("Applications", "Total submissions in the system.", applicationCountValue));
+        panel.add(createMetricCard("Accepted TAs", "Offers currently locked in.", acceptedCountValue));
         return panel;
     }
 
@@ -130,6 +149,16 @@ public class AdminDashboardFrame extends JFrame {
                     record.isOverload() ? "YES" : "NO"
             });
         }
+
+        long openJobs = jobs.stream().filter(job -> job.getStatus() == JobStatus.OPEN).count();
+        long closedJobs = jobs.stream().filter(job -> job.getStatus() == JobStatus.CLOSED).count();
+        long acceptedApplications = applications.stream()
+                .filter(application -> application.getStatus() == model.ApplicationStatus.ACCEPTED)
+                .count();
+        openJobsValue.setText(String.valueOf(openJobs));
+        closedJobsValue.setText(String.valueOf(closedJobs));
+        applicationCountValue.setText(String.valueOf(applications.size()));
+        acceptedCountValue.setText(String.valueOf(acceptedApplications));
 
         // The lower summary is intentionally plain text so it can double as a quick audit view in demos.
         StringBuilder builder = new StringBuilder("Jobs and Assignments\n\n");
@@ -192,6 +221,23 @@ public class AdminDashboardFrame extends JFrame {
         JScrollPane scrollPane = new JScrollPane(area);
         UiTheme.styleScrollPane(scrollPane);
         return scrollPane;
+    }
+
+    private JPanel createMetricCard(String title, String subtitle, JLabel valueLabel) {
+        JPanel card = UiTheme.createCard(title, subtitle);
+        JPanel content = new JPanel(new BorderLayout());
+        content.setOpaque(false);
+        valueLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        content.add(valueLabel, BorderLayout.CENTER);
+        card.add(content, BorderLayout.CENTER);
+        return card;
+    }
+
+    private static JLabel createMetricValueLabel() {
+        JLabel label = new JLabel("0");
+        label.setFont(UiTheme.uiFont(Font.BOLD, 32));
+        label.setForeground(UiTheme.TEXT);
+        return label;
     }
 
     private static class WorkloadRenderer extends DefaultTableCellRenderer {

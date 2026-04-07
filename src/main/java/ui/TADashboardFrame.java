@@ -47,10 +47,10 @@ public class TADashboardFrame extends JFrame {
     private final JButton chooseCvButton = UiTheme.createSecondaryButton("Choose File");
     private final DefaultTableModel jobTableModel = new DefaultTableModel(
             new Object[]{"Job ID", "Module", "Hours", "TA Demand", "Deadline", "Skills", "Status"}, 0);
-    private final JTable jobTable = new JTable(jobTableModel);
+    private final JTable jobTable = new PlaceholderTable(jobTableModel, "No open jobs are available right now.");
     private final DefaultTableModel applicationTableModel = new DefaultTableModel(
             new Object[]{"Application ID", "Job ID", "Status", "Match %", "Missing Skills", "Reviewer Notes"}, 0);
-    private final JTable applicationTable = new JTable(applicationTableModel);
+    private final JTable applicationTable = new PlaceholderTable(applicationTableModel, "You have not submitted any applications yet.");
 
     public TADashboardFrame(DataService dataService, User currentUser) {
         this.dataService = dataService;
@@ -128,11 +128,13 @@ public class TADashboardFrame extends JFrame {
 
         JButton viewDetailsButton = UiTheme.createSecondaryButton("View Job Details");
         JButton viewApplicationButton = UiTheme.createSecondaryButton("View Application Details");
+        JButton withdrawButton = UiTheme.createSecondaryButton("Withdraw Application");
         JButton applyButton = UiTheme.createPrimaryButton("Apply");
         JButton refreshButton = UiTheme.createSecondaryButton("Refresh Tables");
 
         viewDetailsButton.addActionListener(event -> viewSelectedJob());
         viewApplicationButton.addActionListener(event -> viewSelectedApplication());
+        withdrawButton.addActionListener(event -> withdrawSelectedApplication());
         applyButton.addActionListener(event -> applyForSelectedJob());
         refreshButton.addActionListener(event -> {
             refreshJobs();
@@ -146,7 +148,7 @@ public class TADashboardFrame extends JFrame {
 
         JPanel body = new JPanel(new BorderLayout(0, 18));
         body.setOpaque(false);
-        body.add(UiTheme.createButtonRow(FlowLayout.LEFT, viewDetailsButton, viewApplicationButton, applyButton, refreshButton), BorderLayout.NORTH);
+        body.add(UiTheme.createButtonRow(FlowLayout.LEFT, viewDetailsButton, viewApplicationButton, withdrawButton, applyButton, refreshButton), BorderLayout.NORTH);
         body.add(tabs, BorderLayout.CENTER);
         panel.add(body, BorderLayout.CENTER);
         return panel;
@@ -273,6 +275,27 @@ public class TADashboardFrame extends JFrame {
         }
     }
 
+    private void withdrawSelectedApplication() {
+        int row = applicationTable.getSelectedRow();
+        if (row < 0) {
+            UiMessage.error(this, "Please select an application first.");
+            return;
+        }
+        String applicationId = String.valueOf(applicationTableModel.getValueAt(row, 0));
+        if (!UiMessage.confirm(this, "Are you sure you want to withdraw this application?", "Confirm Withdrawal")) {
+            return;
+        }
+
+        try {
+            applicationService.withdrawApplication(applicationId);
+            UiMessage.info(this, "Application withdrawn.");
+            refreshApplications();
+            refreshJobs();
+        } catch (Exception ex) {
+            UiMessage.error(this, ex.getMessage());
+        }
+    }
+
     private void returnToLogin() {
         new LoginFrame(dataService).setVisible(true);
         dispose();
@@ -331,6 +354,8 @@ public class TADashboardFrame extends JFrame {
         UiTheme.styleTable(jobTable);
         UiTheme.styleTable(applicationTable);
         jobTable.getColumnModel().getColumn(4).setCellRenderer(new DeadlineWarningRenderer());
+        jobTable.getColumnModel().getColumn(6).setCellRenderer(new StatusBadgeRenderer());
+        applicationTable.getColumnModel().getColumn(2).setCellRenderer(new StatusBadgeRenderer());
         UiTheme.setColumnWidths(jobTable, 90, 280, 80, 100, 130, 220, 100);
         UiTheme.setColumnWidths(applicationTable, 120, 90, 120, 90, 220, 280);
     }
@@ -370,6 +395,32 @@ public class TADashboardFrame extends JFrame {
                 component.setBackground(Color.WHITE);
             }
             return component;
+        }
+    }
+
+    private static class StatusBadgeRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                                                       boolean hasFocus, int row, int column) {
+            JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            label.setHorizontalAlignment(SwingConstants.CENTER);
+            if (isSelected) {
+                return label;
+            }
+
+            String status = value == null ? "" : value.toString();
+            label.setForeground(new Color(28, 37, 54));
+            switch (status) {
+                case "SUBMITTED" -> label.setBackground(new Color(232, 240, 255));
+                case "SHORTLISTED" -> label.setBackground(new Color(255, 245, 204));
+                case "ACCEPTED" -> label.setBackground(new Color(222, 245, 229));
+                case "REJECTED" -> label.setBackground(new Color(255, 224, 224));
+                case "WITHDRAWN" -> label.setBackground(new Color(234, 234, 234));
+                case "OPEN" -> label.setBackground(new Color(232, 240, 255));
+                case "CLOSED" -> label.setBackground(new Color(234, 234, 234));
+                default -> label.setBackground(Color.WHITE);
+            }
+            return label;
         }
     }
 }

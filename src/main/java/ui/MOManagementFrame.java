@@ -55,14 +55,17 @@ public class MOManagementFrame extends JFrame {
     private final JTextArea applicantSummaryArea = new JTextArea(4, 20);
     private final JTextArea matchInfoArea = new JTextArea(6, 20);
     private final JComboBox<String> applicantStatusFilter = new JComboBox<>(
-            new String[]{"All Statuses", "SUBMITTED", "SHORTLISTED", "ACCEPTED", "REJECTED"}
+            new String[]{"All Statuses", "SUBMITTED", "SHORTLISTED", "ACCEPTED", "REJECTED", "WITHDRAWN"}
+    );
+    private final JComboBox<String> applicantSortBox = new JComboBox<>(
+            new String[]{"Match % (High to Low)", "Match % (Low to High)", "Applicant Name (A-Z)", "Applicant Name (Z-A)", "Status"}
     );
     private final DefaultTableModel jobTableModel = new DefaultTableModel(
             new Object[]{"Job ID", "Module", "Hours", "TA Demand", "Deadline", "Status"}, 0);
-    private final JTable jobTable = new JTable(jobTableModel);
+    private final PlaceholderTable jobTable = new PlaceholderTable(jobTableModel, "No jobs are assigned to this MO yet.");
     private final DefaultTableModel applicantTableModel = new DefaultTableModel(
             new Object[]{"Application ID", "Applicant", "Status", "Match %", "Missing"}, 0);
-    private final JTable applicantTable = new JTable(applicantTableModel);
+    private final PlaceholderTable applicantTable = new PlaceholderTable(applicantTableModel, "Select a job and click Load Applicants to review submissions.");
     private String loadedApplicantJobId;
 
     public MOManagementFrame(DataService dataService, User currentUser) {
@@ -169,8 +172,14 @@ public class MOManagementFrame extends JFrame {
             applicantSummaryArea.setText("");
             matchInfoArea.setText("");
             loadedApplicantJobId = null;
+            updateApplicantEmptyState();
         });
         applicantStatusFilter.addActionListener(event -> {
+            if (!syncingForm && loadedApplicantJobId != null) {
+                loadApplicantsForJob(loadedApplicantJobId);
+            }
+        });
+        applicantSortBox.addActionListener(event -> {
             if (!syncingForm && loadedApplicantJobId != null) {
                 loadApplicantsForJob(loadedApplicantJobId);
             }
@@ -193,9 +202,14 @@ public class MOManagementFrame extends JFrame {
         JLabel filterLabel = new JLabel("Applicant Filter");
         filterLabel.setForeground(UiTheme.TEXT);
         filterLabel.setFont(UiTheme.uiFont(Font.BOLD, 13));
+        JLabel sortLabel = new JLabel("Sort");
+        sortLabel.setForeground(UiTheme.TEXT);
+        sortLabel.setFont(UiTheme.uiFont(Font.BOLD, 13));
 
         JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         filterPanel.setOpaque(false);
+        filterPanel.add(sortLabel);
+        filterPanel.add(applicantSortBox);
         filterPanel.add(filterLabel);
         filterPanel.add(applicantStatusFilter);
 
@@ -258,6 +272,7 @@ public class MOManagementFrame extends JFrame {
         applicantSummaryArea.setText("");
         applicantTableModel.setRowCount(0);
         loadedApplicantJobId = null;
+        updateApplicantEmptyState();
         moduleCodeBox.requestFocusInWindow();
         syncingForm = false;
     }
@@ -416,10 +431,11 @@ public class MOManagementFrame extends JFrame {
         reviewArea.setText("");
         applicantSummaryArea.setText("");
         matchInfoArea.setText("");
-        for (ApplicationRecord application : applicationService.getApplicationsForJob(jobId)) {
-            if (!matchesApplicantFilter(application)) {
-                continue;
-            }
+        List<ApplicationRecord> applications = applicationService.getApplicationsForJob(jobId).stream()
+                .filter(this::matchesApplicantFilter)
+                .sorted(this::compareApplications)
+                .toList();
+        for (ApplicationRecord application : applications) {
             ApplicantProfile applicant = applicantService.getProfileByApplicantId(application.getApplicantId());
             applicantTableModel.addRow(new Object[]{
                     application.getApplicationId(),
@@ -429,6 +445,7 @@ public class MOManagementFrame extends JFrame {
                     String.join(", ", application.getMissingSkills())
             });
         }
+        updateApplicantEmptyState();
     }
 
     private void selectJobRow(String jobId) {
@@ -493,9 +510,12 @@ public class MOManagementFrame extends JFrame {
         UiTheme.styleTextArea(applicantSummaryArea, 8);
         UiTheme.styleTextArea(matchInfoArea, 8);
         UiTheme.styleComboBox(applicantStatusFilter);
+        UiTheme.styleComboBox(applicantSortBox);
         UiTheme.styleTable(jobTable);
         UiTheme.styleTable(applicantTable);
         jobTable.getColumnModel().getColumn(4).setCellRenderer(new DeadlineWarningRenderer());
+        jobTable.getColumnModel().getColumn(5).setCellRenderer(new StatusBadgeRenderer());
+        applicantTable.getColumnModel().getColumn(2).setCellRenderer(new StatusBadgeRenderer());
         UiTheme.setColumnWidths(jobTable, 100, 300, 80, 110, 140, 100);
         UiTheme.setColumnWidths(applicantTable, 130, 170, 120, 90, 220);
         applicantSummaryArea.setEditable(false);
@@ -564,6 +584,7 @@ public class MOManagementFrame extends JFrame {
         matchInfoArea.setText("");
         applicantTableModel.setRowCount(0);
         loadedApplicantJobId = null;
+        updateApplicantEmptyState();
         syncingForm = false;
     }
 
@@ -584,6 +605,7 @@ public class MOManagementFrame extends JFrame {
         reviewArea.setText("");
         applicantTableModel.setRowCount(0);
         loadedApplicantJobId = null;
+        updateApplicantEmptyState();
         syncingForm = false;
     }
 
@@ -707,6 +729,7 @@ public class MOManagementFrame extends JFrame {
         List<ApplicantSelectionItem> candidates = applications.stream()
                 .filter(application -> application.getStatus() != ApplicationStatus.REJECTED)
                 .filter(application -> application.getStatus() != ApplicationStatus.ACCEPTED)
+                .filter(application -> application.getStatus() != ApplicationStatus.WITHDRAWN)
                 .map(this::toApplicantSelectionItem)
                 .collect(Collectors.toList());
 
@@ -790,6 +813,40 @@ public class MOManagementFrame extends JFrame {
         return "All Statuses".equals(selected) || application.getStatus().name().equals(selected);
     }
 
+    private int compareApplications(ApplicationRecord left, ApplicationRecord right) {
+        String selected = String.valueOf(applicantSortBox.getSelectedItem());
+        return switch (selected) {
+            case "Match % (Low to High)" -> Integer.compare(left.getMatchScore(), right.getMatchScore());
+            case "Applicant Name (A-Z)" -> applicantNameFor(left).compareToIgnoreCase(applicantNameFor(right));
+            case "Applicant Name (Z-A)" -> applicantNameFor(right).compareToIgnoreCase(applicantNameFor(left));
+            case "Status" -> left.getStatus().name().compareTo(right.getStatus().name());
+            default -> Integer.compare(right.getMatchScore(), left.getMatchScore());
+        };
+    }
+
+    private String applicantNameFor(ApplicationRecord application) {
+        ApplicantProfile applicant = applicantService.getProfileByApplicantId(application.getApplicantId());
+        if (applicant == null || applicant.getName() == null) {
+            return "";
+        }
+        return applicant.getName();
+    }
+
+    private void updateApplicantEmptyState() {
+        if (loadedApplicantJobId == null) {
+            applicantTable.setEmptyMessage("Select a job and click Load Applicants to review submissions.");
+            return;
+        }
+
+        String selected = String.valueOf(applicantStatusFilter.getSelectedItem());
+        if ("All Statuses".equals(selected)) {
+            applicantTable.setEmptyMessage("No applicants have applied to this job yet.");
+            return;
+        }
+
+        applicantTable.setEmptyMessage("No applicants match the current filter.");
+    }
+
     private int findJobRow(String jobId) {
         for (int i = 0; i < jobTableModel.getRowCount(); i++) {
             if (jobId.equals(String.valueOf(jobTableModel.getValueAt(i, 0)))) {
@@ -825,6 +882,31 @@ public class MOManagementFrame extends JFrame {
                 component.setBackground(Color.WHITE);
             }
             return component;
+        }
+    }
+
+    private static class StatusBadgeRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                                                       boolean hasFocus, int row, int column) {
+            JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            label.setHorizontalAlignment(SwingConstants.CENTER);
+            if (isSelected) {
+                return label;
+            }
+
+            String status = value == null ? "" : value.toString();
+            label.setForeground(new Color(28, 37, 54));
+            switch (status) {
+                case "SUBMITTED" -> label.setBackground(new Color(232, 240, 255));
+                case "SHORTLISTED" -> label.setBackground(new Color(255, 245, 204));
+                case "ACCEPTED" -> label.setBackground(new Color(222, 245, 229));
+                case "REJECTED" -> label.setBackground(new Color(255, 224, 224));
+                case "WITHDRAWN", "CLOSED" -> label.setBackground(new Color(234, 234, 234));
+                case "OPEN" -> label.setBackground(new Color(232, 240, 255));
+                default -> label.setBackground(Color.WHITE);
+            }
+            return label;
         }
     }
 }
