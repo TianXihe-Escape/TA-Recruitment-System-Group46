@@ -15,10 +15,12 @@ import ui.dialogs.UiMessage;
 import util.Constants;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.io.File;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import java.time.LocalDate;
 
 /**
  * TA dashboard for profile editing, browsing jobs, and tracking applications.
@@ -44,7 +46,7 @@ public class TADashboardFrame extends JFrame {
     private final JTextField cvPathField = new JTextField();
     private final JButton chooseCvButton = UiTheme.createSecondaryButton("Choose File");
     private final DefaultTableModel jobTableModel = new DefaultTableModel(
-            new Object[]{"Job ID", "Module", "Hours", "TA Demand", "Skills", "Status"}, 0);
+            new Object[]{"Job ID", "Module", "Hours", "TA Demand", "Deadline", "Skills", "Status"}, 0);
     private final JTable jobTable = new JTable(jobTableModel);
     private final DefaultTableModel applicationTableModel = new DefaultTableModel(
             new Object[]{"Application ID", "Job ID", "Status", "Match %", "Missing Skills", "Reviewer Notes"}, 0);
@@ -125,10 +127,12 @@ public class TADashboardFrame extends JFrame {
         JPanel panel = UiTheme.createCard("Opportunities", "Browse available jobs and monitor the progress of your submissions.");
 
         JButton viewDetailsButton = UiTheme.createSecondaryButton("View Job Details");
+        JButton viewApplicationButton = UiTheme.createSecondaryButton("View Application Details");
         JButton applyButton = UiTheme.createPrimaryButton("Apply");
         JButton refreshButton = UiTheme.createSecondaryButton("Refresh Tables");
 
         viewDetailsButton.addActionListener(event -> viewSelectedJob());
+        viewApplicationButton.addActionListener(event -> viewSelectedApplication());
         applyButton.addActionListener(event -> applyForSelectedJob());
         refreshButton.addActionListener(event -> {
             refreshJobs();
@@ -142,7 +146,7 @@ public class TADashboardFrame extends JFrame {
 
         JPanel body = new JPanel(new BorderLayout(0, 18));
         body.setOpaque(false);
-        body.add(UiTheme.createButtonRow(FlowLayout.LEFT, viewDetailsButton, applyButton, refreshButton), BorderLayout.NORTH);
+        body.add(UiTheme.createButtonRow(FlowLayout.LEFT, viewDetailsButton, viewApplicationButton, applyButton, refreshButton), BorderLayout.NORTH);
         body.add(tabs, BorderLayout.CENTER);
         panel.add(body, BorderLayout.CENTER);
         return panel;
@@ -179,12 +183,13 @@ public class TADashboardFrame extends JFrame {
 
     private void refreshJobs() {
         jobTableModel.setRowCount(0);
-        for (JobPosting job : jobService.getAllJobs()) {
+        for (JobPosting job : jobService.getOpenJobs()) {
             jobTableModel.addRow(new Object[]{
                     job.getJobId(),
                     job.getModuleCode() + " - " + job.getModuleTitle(),
                     job.getHours(),
                     buildTaDemandText(job),
+                    job.getApplicationDeadline(),
                     String.join(", ", job.getRequiredSkills()),
                     job.getStatus()
             });
@@ -215,6 +220,36 @@ public class TADashboardFrame extends JFrame {
         JobPosting job = jobService.getJobById(jobId);
         String taDemandSummary = buildTaDemandText(job);
         new JobDetailsDialog(this, job, taDemandSummary).setVisible(true);
+    }
+
+    private void viewSelectedApplication() {
+        int row = applicationTable.getSelectedRow();
+        if (row < 0) {
+            UiMessage.error(this, "Please select an application first.");
+            return;
+        }
+
+        String applicationId = String.valueOf(applicationTableModel.getValueAt(row, 0));
+        ApplicationRecord application = applicationService.getApplicationsForApplicant(profile.getApplicantId()).stream()
+                .filter(record -> applicationId.equals(record.getApplicationId()))
+                .findFirst()
+                .orElse(null);
+        if (application == null) {
+            UiMessage.error(this, "Application details could not be found.");
+            return;
+        }
+
+        JobPosting job = jobService.getJobById(application.getJobId());
+        String details = "Application ID: " + application.getApplicationId() + "\n" +
+                "Job: " + job.getModuleCode() + " - " + job.getModuleTitle() + "\n" +
+                "Status: " + application.getStatus() + "\n" +
+                "Applied At: " + valueOrDash(application.getAppliedAt() == null ? null : application.getAppliedAt().toString()) + "\n" +
+                "Match Score: " + application.getMatchScore() + "%\n" +
+                "Missing Skills: " + valueOrDash(String.join(", ", application.getMissingSkills())) + "\n" +
+                "Reviewer Notes: " + valueOrDash(application.getReviewerNotes()) + "\n" +
+                "TA Demand: " + buildTaDemandText(job) + "\n" +
+                "Deadline: " + valueOrDash(job.getApplicationDeadline() == null ? null : job.getApplicationDeadline().toString());
+        UiMessage.info(this, details);
     }
 
     private void applyForSelectedJob() {
@@ -293,7 +328,8 @@ public class TADashboardFrame extends JFrame {
         UiTheme.styleTextArea(experienceArea, 5);
         UiTheme.styleTable(jobTable);
         UiTheme.styleTable(applicationTable);
-        UiTheme.setColumnWidths(jobTable, 90, 300, 80, 110, 260, 100);
+        jobTable.getColumnModel().getColumn(4).setCellRenderer(new DeadlineWarningRenderer());
+        UiTheme.setColumnWidths(jobTable, 90, 280, 80, 100, 130, 220, 100);
         UiTheme.setColumnWidths(applicationTable, 120, 90, 120, 90, 220, 280);
     }
 
@@ -310,5 +346,26 @@ public class TADashboardFrame extends JFrame {
         JScrollPane scrollPane = new JScrollPane(area);
         UiTheme.styleScrollPane(scrollPane);
         return scrollPane;
+    }
+
+    private static class DeadlineWarningRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                                                       boolean hasFocus, int row, int column) {
+            Component component = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            if (!isSelected && value instanceof LocalDate deadline) {
+                long daysRemaining = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), deadline);
+                if (deadline.isBefore(LocalDate.now())) {
+                    component.setBackground(new Color(255, 224, 224));
+                } else if (daysRemaining <= 3) {
+                    component.setBackground(new Color(255, 245, 204));
+                } else {
+                    component.setBackground(Color.WHITE);
+                }
+            } else if (!isSelected) {
+                component.setBackground(Color.WHITE);
+            }
+            return component;
+        }
     }
 }

@@ -25,7 +25,21 @@ public final class UiMessage {
         show(parent, message, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
+    public static boolean confirm(Component parent, String message, String title) {
+        return JOptionPane.showConfirmDialog(
+                parent,
+                buildMessagePane(message),
+                title,
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+        ) == JOptionPane.YES_OPTION;
+    }
+
     private static void show(Component parent, String message, String title, int type) {
+        JOptionPane.showMessageDialog(parent, buildMessagePane(message), title, type);
+    }
+
+    private static JScrollPane buildMessagePane(String message) {
         JTextArea area = new JTextArea(message);
         area.setEditable(false);
         area.setOpaque(false);
@@ -42,8 +56,7 @@ public final class UiMessage {
         scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.setPreferredSize(area.getPreferredSize());
         UiTheme.styleDialogScrollPane(scrollPane);
-
-        JOptionPane.showMessageDialog(parent, scrollPane, title, type);
+        return scrollPane;
     }
 
     private static int preferredColumns(String message) {
