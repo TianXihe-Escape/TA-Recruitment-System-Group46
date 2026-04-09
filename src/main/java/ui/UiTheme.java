@@ -64,6 +64,8 @@ public final class UiTheme {
         UIManager.put("Table.background", SURFACE);
         UIManager.put("Table.selectionBackground", PRIMARY_SOFT);
         UIManager.put("Table.selectionForeground", TEXT);
+
+        installEnglishDialogLabels();
     }
 
     public static void styleFrame(JFrame frame) {
@@ -206,7 +208,11 @@ public final class UiTheme {
     }
 
     public static JButton createDangerButton(String text) {
-        return createActionButton(text);
+        JButton button = baseButton(text);
+        button.setBackground(DANGER);
+        button.setForeground(Color.WHITE);
+        button.setBorder(new EmptyBorder(10, 16, 10, 16));
+        return button;
     }
 
     public static JPanel createButtonRow(int align, JButton... buttons) {
@@ -363,6 +369,40 @@ public final class UiTheme {
                 new LineBorder(BORDER, 1, true),
                 new EmptyBorder(2, 2, 2, 2)
         );
+    }
+
+    private static void installEnglishDialogLabels() {
+        UIManager.put("OptionPane.okButtonText", "OK");
+        UIManager.put("OptionPane.cancelButtonText", "Cancel");
+        UIManager.put("OptionPane.yesButtonText", "Yes");
+        UIManager.put("OptionPane.noButtonText", "No");
+
+        UIManager.put("FileChooser.openButtonText", "Open");
+        UIManager.put("FileChooser.saveButtonText", "Save");
+        UIManager.put("FileChooser.cancelButtonText", "Cancel");
+        UIManager.put("FileChooser.updateButtonText", "Update");
+        UIManager.put("FileChooser.helpButtonText", "Help");
+        UIManager.put("FileChooser.directoryOpenButtonText", "Open");
+
+        UIManager.put("FileChooser.openDialogTitleText", "Open");
+        UIManager.put("FileChooser.saveDialogTitleText", "Save");
+        UIManager.put("FileChooser.lookInLabelText", "Look in:");
+        UIManager.put("FileChooser.saveInLabelText", "Save in:");
+        UIManager.put("FileChooser.fileNameLabelText", "File name:");
+        UIManager.put("FileChooser.filesOfTypeLabelText", "Files of type:");
+        UIManager.put("FileChooser.folderNameLabelText", "Folder name:");
+        UIManager.put("FileChooser.pathLabelText", "Path:");
+
+        UIManager.put("FileChooser.upFolderToolTipText", "Up One Level");
+        UIManager.put("FileChooser.homeFolderToolTipText", "Home");
+        UIManager.put("FileChooser.newFolderToolTipText", "Create New Folder");
+        UIManager.put("FileChooser.listViewButtonToolTipText", "List");
+        UIManager.put("FileChooser.detailsViewButtonToolTipText", "Details");
+        UIManager.put("FileChooser.fileNameHeaderText", "Name");
+        UIManager.put("FileChooser.fileSizeHeaderText", "Size");
+        UIManager.put("FileChooser.fileTypeHeaderText", "Type");
+        UIManager.put("FileChooser.fileDateHeaderText", "Modified");
+        UIManager.put("FileChooser.fileAttrHeaderText", "Attributes");
     }
 
     private static void applyScrollSpeed(JScrollPane scrollPane) {

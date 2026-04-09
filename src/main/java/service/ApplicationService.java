@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -160,6 +161,30 @@ public class ApplicationService {
         record.setStatus(ApplicationStatus.WITHDRAWN);
         record.setReviewerNotes(appendNote(record.getReviewerNotes(), "Withdrawn by applicant."));
         applicationRepository.saveAll(applications);
+    }
+
+    public void removeApplicationsForApplicant(String applicantId) {
+        List<ApplicationRecord> applications = new ArrayList<>(applicationRepository.findAll());
+        LinkedHashSet<String> affectedJobIds = new LinkedHashSet<>();
+        for (ApplicationRecord record : applications) {
+            if (!applicantId.equals(record.getApplicantId())) {
+                continue;
+            }
+            String jobId = record.getJobId();
+            if (jobId != null && !jobId.isBlank()) {
+                affectedJobIds.add(jobId);
+            }
+        }
+
+        if (affectedJobIds.isEmpty()) {
+            return;
+        }
+
+        applications.removeIf(record -> applicantId.equals(record.getApplicantId()));
+        applicationRepository.saveAll(applications);
+        for (String jobId : affectedJobIds) {
+            syncJobStatus(jobId, applications);
+        }
     }
 
     private void validateApplication(ApplicantProfile applicantProfile, JobPosting jobPosting) {

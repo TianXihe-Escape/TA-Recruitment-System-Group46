@@ -20,12 +20,18 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Admin view for workload monitoring and demo data management.
  */
 public class AdminDashboardFrame extends JFrame {
+    private static final int DIRECTORY_PANEL_HEIGHT = 220;
+    private static final int WORKLOAD_PANEL_HEIGHT = 120;
+
     private final DataService dataService;
     private final User currentUser;
     private final WorkloadService workloadService;
@@ -39,8 +45,11 @@ public class AdminDashboardFrame extends JFrame {
     private final DefaultTableModel workloadTableModel = new DefaultTableModel(
             new Object[]{"TA", "Modules", "Total Hours", "Overload"}, 0);
     private final JTable workloadTable = new PlaceholderTable(workloadTableModel, "No workload records are available yet.");
+    private final JPanel taDirectoryPanel = createDirectoryListPanel();
+    private final JPanel moDirectoryPanel = createDirectoryListPanel();
     private final JTextArea jobSummaryArea = new JTextArea();
     private final JTextArea suggestionArea = new JTextArea();
+    private final JTextField moNameField = new JTextField();
     private final JTextField moEmailField = new JTextField();
     private final JPasswordField moPasswordField = new JPasswordField();
     private final JPasswordField moConfirmField = new JPasswordField();
@@ -112,7 +121,7 @@ public class AdminDashboardFrame extends JFrame {
         JPanel centerPanel = new JPanel(new BorderLayout(0, 12));
         centerPanel.setOpaque(false);
         centerPanel.add(buildMetricsPanel(), BorderLayout.NORTH);
-        centerPanel.add(UiTheme.wrapTable(workloadTable), BorderLayout.CENTER);
+        centerPanel.add(buildOverviewPanel(), BorderLayout.CENTER);
 
         JPanel body = new JPanel(new BorderLayout(0, 18));
         body.setOpaque(false);
@@ -130,6 +139,46 @@ public class AdminDashboardFrame extends JFrame {
         panel.add(createMetricCard("Applications", "Total submissions in the system.", applicationCountValue));
         panel.add(createMetricCard("Accepted TAs", "Offers currently locked in.", acceptedCountValue));
         return panel;
+    }
+
+    private JSplitPane buildOverviewPanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 12));
+        panel.setOpaque(false);
+        panel.add(buildPeoplePanel(), BorderLayout.CENTER);
+        panel.add(buildWorkloadPanel(), BorderLayout.SOUTH);
+        return new JSplitPane(JSplitPane.VERTICAL_SPLIT, panel, new JPanel()) {
+            {
+                setEnabled(false);
+                setDividerSize(0);
+                setBorder(null);
+                setTopComponent(panel);
+                setBottomComponent(new JPanel());
+                setResizeWeight(1.0);
+            }
+        };
+    }
+
+    private JSplitPane buildPeoplePanel() {
+        JPanel taCard = UiTheme.createCard("TA Directory", "Scrollable TA profiles with core contact and skills information.");
+        taCard.add(wrapDirectory(taDirectoryPanel), BorderLayout.CENTER);
+
+        JPanel moCard = UiTheme.createCard("MO Directory", "Scrollable MO profiles with names and managed modules.");
+        moCard.add(wrapDirectory(moDirectoryPanel), BorderLayout.CENTER);
+
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, taCard, moCard);
+        splitPane.setResizeWeight(0.5);
+        splitPane.setDividerLocation(0.5);
+        UiTheme.styleSplitPane(splitPane);
+        return splitPane;
+    }
+
+    private JPanel buildWorkloadPanel() {
+        JPanel workloadCard = UiTheme.createCard("TA Workload", "Scrollable workload summary for accepted assignments.");
+        JScrollPane tableScrollPane = UiTheme.wrapTable(workloadTable);
+        tableScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+        tableScrollPane.setPreferredSize(new Dimension(0, WORKLOAD_PANEL_HEIGHT));
+        workloadCard.add(tableScrollPane, BorderLayout.CENTER);
+        return workloadCard;
     }
 
     private JSplitPane buildBottomPanel() {
@@ -155,6 +204,7 @@ public class AdminDashboardFrame extends JFrame {
 
     private void refreshData() {
         workloadTableModel.setRowCount(0);
+        List<User> users = dataService.getUserRepository().findAll();
         List<ApplicantProfile> profiles = dataService.getProfileRepository().findAll();
         List<JobPosting> jobs = dataService.getJobRepository().findAll();
         List<ApplicationRecord> applications = dataService.getApplicationRepository().findAll();
@@ -179,6 +229,8 @@ public class AdminDashboardFrame extends JFrame {
         closedJobsValue.setText(String.valueOf(closedJobs));
         applicationCountValue.setText(String.valueOf(applications.size()));
         acceptedCountValue.setText(String.valueOf(acceptedApplications));
+        refreshTaDirectory(profiles, applications);
+        refreshMoDirectory(users);
 
         // The lower summary is intentionally plain text so it can double as a quick audit view in demos.
         StringBuilder builder = new StringBuilder("Jobs and Assignments\n\n");
@@ -202,19 +254,68 @@ public class AdminDashboardFrame extends JFrame {
         suggestionArea.setText("Click 'Rebalance Suggestion' to recommend lower-load TAs for open jobs.");
     }
 
+    private void refreshTaDirectory(List<ApplicantProfile> profiles, List<ApplicationRecord> applications) {
+        taDirectoryPanel.removeAll();
+        List<JComponent> cards = new ArrayList<>();
+        for (ApplicantProfile profile : profiles) {
+            long submissionCount = applications.stream()
+                    .filter(application -> profile.getApplicantId().equals(application.getApplicantId()))
+                    .count();
+            String skills = profile.getSkills().isEmpty() ? "-" : String.join(", ", profile.getSkills());
+            String details = "Email: " + valueOrDash(profile.getEmail()) + "\n"
+                    + "Phone: " + valueOrDash(profile.getPhone()) + "\n"
+                    + "Skills: " + skills + "\n"
+                    + "Availability: " + valueOrDash(profile.getAvailability()) + "\n"
+                    + "Applications: " + submissionCount;
+            cards.add(createDirectoryEntry(
+                    valueOrDash(profile.getName()),
+                    profile.getApplicantId(),
+                    details,
+                    "Delete TA",
+                    () -> deleteTaAccount(profile)
+            ));
+        }
+        installDirectoryEntries(taDirectoryPanel, cards, "No TA profiles are available yet.");
+    }
+
+    private void refreshMoDirectory(List<User> users) {
+        moDirectoryPanel.removeAll();
+        List<JComponent> cards = new ArrayList<>();
+        for (User user : users) {
+            if (user.getRole() != model.Role.MO) {
+                continue;
+            }
+            String modules = user.getManagedModuleCodes().isEmpty()
+                    ? "-"
+                    : String.join(", ", user.getManagedModuleCodes());
+            String details = "Email: " + valueOrDash(user.getUsername()) + "\n"
+                    + "Modules: " + modules;
+            cards.add(createDirectoryEntry(
+                    valueOrDash(user.getName()),
+                    user.getUserId(),
+                    details,
+                    "Delete MO",
+                    () -> deleteMoAccount(user)
+            ));
+        }
+        installDirectoryEntries(moDirectoryPanel, cards, "No MO accounts are available yet.");
+    }
+
     private JPanel buildMoAccountPanel() {
         JPanel panel = UiTheme.createCard("Create MO Account", "Admin can provision an MO login and assign managed modules immediately.");
 
+        UiTheme.styleTextField(moNameField);
         UiTheme.styleTextField(moEmailField);
         UiTheme.styleTextField(moPasswordField);
         UiTheme.styleTextField(moConfirmField);
         UiTheme.styleTextField(moModulesField);
 
         JPanel form = UiTheme.createFormGrid();
-        UiTheme.addFormRow(form, 0, "MO Email", moEmailField);
-        UiTheme.addFormRow(form, 2, "Password", moPasswordField);
-        UiTheme.addFormRow(form, 4, "Confirm Password", moConfirmField);
-        UiTheme.addFormRow(form, 6, "Modules", moModulesField);
+        UiTheme.addFormRow(form, 0, "MO Name", moNameField);
+        UiTheme.addFormRow(form, 2, "MO Email", moEmailField);
+        UiTheme.addFormRow(form, 4, "Password", moPasswordField);
+        UiTheme.addFormRow(form, 6, "Confirm Password", moConfirmField);
+        UiTheme.addFormRow(form, 8, "Modules", moModulesField);
 
         JTextArea note = new JTextArea("Use commas to separate module codes, for example: COMP1001, DATA2002.");
         note.setEditable(false);
@@ -272,6 +373,7 @@ public class AdminDashboardFrame extends JFrame {
         try {
             User user = authService.registerMo(
                     moEmailField.getText(),
+                    moNameField.getText(),
                     new String(moPasswordField.getPassword()),
                     new String(moConfirmField.getPassword()),
                     moModules()
@@ -291,6 +393,7 @@ public class AdminDashboardFrame extends JFrame {
     }
 
     private void clearMoAccountForm() {
+        moNameField.setText("");
         moEmailField.setText("");
         moPasswordField.setText("");
         moConfirmField.setText("");
@@ -304,6 +407,17 @@ public class AdminDashboardFrame extends JFrame {
         UiTheme.setColumnWidths(workloadTable, 180, 420, 120, 100);
         jobSummaryArea.setEditable(false);
         suggestionArea.setEditable(false);
+    }
+
+    private JScrollPane wrapDirectory(JPanel panel) {
+        JScrollPane scrollPane = new JScrollPane(panel);
+        scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+        scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(24);
+        scrollPane.setPreferredSize(new Dimension(0, DIRECTORY_PANEL_HEIGHT));
+        scrollPane.setMinimumSize(new Dimension(220, DIRECTORY_PANEL_HEIGHT));
+        UiTheme.styleScrollPane(scrollPane);
+        return scrollPane;
     }
 
     private JScrollPane wrapArea(JTextArea area) {
@@ -320,6 +434,157 @@ public class AdminDashboardFrame extends JFrame {
         content.add(valueLabel, BorderLayout.CENTER);
         card.add(content, BorderLayout.CENTER);
         return card;
+    }
+
+    private static JPanel createDirectoryListPanel() {
+        JPanel panel = new JPanel();
+        panel.setOpaque(false);
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        return panel;
+    }
+
+    private JComponent createDirectoryEntry(String title, String subtitle, String details, String actionText, Runnable action) {
+        JPanel card = new JPanel(new BorderLayout(12, 0));
+        card.setBackground(UiTheme.SURFACE_ALT);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(UiTheme.BORDER, 1, true),
+                BorderFactory.createEmptyBorder(12, 12, 12, 12)
+        ));
+        card.setAlignmentX(Component.LEFT_ALIGNMENT);
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 180));
+
+        JPanel content = new JPanel(new BorderLayout(0, 10));
+        content.setOpaque(false);
+
+        JPanel header = new JPanel();
+        header.setOpaque(false);
+        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
+
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setForeground(UiTheme.TEXT);
+        titleLabel.setFont(UiTheme.uiFont(Font.BOLD, 15));
+
+        JLabel subtitleLabel = new JLabel(subtitle);
+        subtitleLabel.setForeground(UiTheme.MUTED_TEXT);
+        subtitleLabel.setFont(UiTheme.uiFont(Font.PLAIN, 12));
+        subtitleLabel.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
+
+        JTextArea detailArea = new JTextArea(details);
+        detailArea.setEditable(false);
+        detailArea.setOpaque(false);
+        detailArea.setLineWrap(true);
+        detailArea.setWrapStyleWord(true);
+        detailArea.setForeground(UiTheme.TEXT);
+        detailArea.setFont(UiTheme.uiFont(Font.PLAIN, 13));
+        detailArea.setBorder(BorderFactory.createEmptyBorder());
+
+        JButton deleteButton = UiTheme.createDangerButton(actionText);
+        deleteButton.addActionListener(event -> action.run());
+        deleteButton.setAlignmentY(Component.CENTER_ALIGNMENT);
+
+        JPanel actionPanel = new JPanel();
+        actionPanel.setOpaque(false);
+        actionPanel.setLayout(new BoxLayout(actionPanel, BoxLayout.Y_AXIS));
+        actionPanel.add(Box.createVerticalGlue());
+        actionPanel.add(deleteButton);
+        actionPanel.add(Box.createVerticalGlue());
+
+        header.add(titleLabel);
+        header.add(subtitleLabel);
+        content.add(header, BorderLayout.NORTH);
+        content.add(detailArea, BorderLayout.CENTER);
+        card.add(content, BorderLayout.CENTER);
+        card.add(actionPanel, BorderLayout.EAST);
+        return card;
+    }
+
+    private void deleteTaAccount(ApplicantProfile profile) {
+        String name = valueOrDash(profile.getName());
+        if (!UiMessage.confirm(this,
+                "Are you sure you want to delete TA account \"" + name + "\"?\n"
+                        + "This will remove the TA user, profile, and all related applications.",
+                "Confirm TA Deletion")) {
+            return;
+        }
+
+        try {
+            List<ApplicationRecord> applications = new ArrayList<>(dataService.getApplicationRepository().findAll());
+            applications.removeIf(application -> profile.getApplicantId().equals(application.getApplicantId()));
+            dataService.getApplicationRepository().saveAll(applications);
+
+            List<ApplicantProfile> profiles = new ArrayList<>(dataService.getProfileRepository().findAll());
+            profiles.removeIf(existingProfile -> profile.getApplicantId().equals(existingProfile.getApplicantId()));
+            dataService.getProfileRepository().saveAll(profiles);
+
+            List<User> users = new ArrayList<>(dataService.getUserRepository().findAll());
+            users.removeIf(user -> profile.getUserId().equals(user.getUserId()));
+            dataService.getUserRepository().saveAll(users);
+
+            refreshData();
+            UiMessage.info(this, "TA account deleted successfully.");
+        } catch (Exception ex) {
+            UiMessage.error(this, ex.getMessage());
+        }
+    }
+
+    private void deleteMoAccount(User moUser) {
+        String name = valueOrDash(moUser.getName());
+        if (!UiMessage.confirm(this,
+                "Are you sure you want to delete MO account \"" + name + "\"?\n"
+                        + "This will remove the MO user, the jobs posted by this MO, and related applications.",
+                "Confirm MO Deletion")) {
+            return;
+        }
+
+        try {
+            List<JobPosting> jobs = new ArrayList<>(dataService.getJobRepository().findAll());
+            Set<String> deletedJobIds = new HashSet<>();
+            jobs.removeIf(job -> {
+                boolean shouldDelete = moUser.getUserId().equals(job.getPostedBy());
+                if (shouldDelete) {
+                    deletedJobIds.add(job.getJobId());
+                }
+                return shouldDelete;
+            });
+            dataService.getJobRepository().saveAll(jobs);
+
+            List<ApplicationRecord> applications = new ArrayList<>(dataService.getApplicationRepository().findAll());
+            applications.removeIf(application -> deletedJobIds.contains(application.getJobId()));
+            dataService.getApplicationRepository().saveAll(applications);
+
+            List<User> users = new ArrayList<>(dataService.getUserRepository().findAll());
+            users.removeIf(user -> moUser.getUserId().equals(user.getUserId()));
+            dataService.getUserRepository().saveAll(users);
+
+            refreshData();
+            UiMessage.info(this, "MO account deleted successfully.");
+        } catch (Exception ex) {
+            UiMessage.error(this, ex.getMessage());
+        }
+    }
+
+    private void installDirectoryEntries(JPanel panel, List<JComponent> entries, String emptyMessage) {
+        panel.removeAll();
+        if (entries.isEmpty()) {
+            JLabel emptyLabel = new JLabel(emptyMessage);
+            emptyLabel.setForeground(UiTheme.MUTED_TEXT);
+            emptyLabel.setFont(UiTheme.uiFont(Font.PLAIN, 13));
+            emptyLabel.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
+            emptyLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            panel.add(emptyLabel);
+        } else {
+            for (JComponent entry : entries) {
+                panel.add(entry);
+                panel.add(Box.createVerticalStrut(10));
+            }
+        }
+        panel.add(Box.createVerticalGlue());
+        panel.revalidate();
+        panel.repaint();
+    }
+
+    private String valueOrDash(String value) {
+        return value == null || value.isBlank() ? "-" : value;
     }
 
     private static JLabel createMetricValueLabel() {

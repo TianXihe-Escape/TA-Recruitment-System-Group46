@@ -10,6 +10,7 @@ import java.util.Locale;
  */
 public class User {
     private String userId;
+    private String name;
     private String username;
     private String password;
     private Role role;
@@ -18,15 +19,25 @@ public class User {
     public User() {
     }
 
-    public User(String userId, String username, String password, Role role) {
+    public User(String userId, String name, String username, String password, Role role) {
         this.userId = userId;
+        this.name = name;
         this.username = username;
         this.password = password;
         this.role = role;
     }
 
+    public User(String userId, String username, String password, Role role) {
+        this(userId, null, username, password, role);
+    }
+
     public User(String userId, String username, String password, Role role, List<String> managedModuleCodes) {
         this(userId, username, password, role);
+        setManagedModuleCodes(managedModuleCodes);
+    }
+
+    public User(String userId, String name, String username, String password, Role role, List<String> managedModuleCodes) {
+        this(userId, name, username, password, role);
         setManagedModuleCodes(managedModuleCodes);
     }
 
@@ -36,6 +47,14 @@ public class User {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getUsername() {
