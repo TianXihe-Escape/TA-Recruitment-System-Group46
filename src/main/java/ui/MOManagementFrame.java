@@ -5,6 +5,7 @@ import model.ApplicationRecord;
 import model.ApplicationStatus;
 import model.JobPosting;
 import model.JobStatus;
+import model.Role;
 import model.SkillMatchResult;
 import model.User;
 import service.ApplicantService;
@@ -22,6 +23,7 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -40,6 +42,7 @@ public class MOManagementFrame extends JFrame {
     private final ValidationService validationService;
     private final User currentUser;
     private final List<String> managedModuleCodes;
+    private final boolean adminMode;
     private boolean syncingForm;
 
     private final JTextField jobIdField = new JTextField();
@@ -80,9 +83,10 @@ public class MOManagementFrame extends JFrame {
                 dataService.getJobRepository(),
                 matchingService
         );
-        this.managedModuleCodes = currentUser.getManagedModuleCodes();
+        this.adminMode = currentUser.getRole() == Role.ADMIN;
+        this.managedModuleCodes = resolveManagedModuleCodes();
 
-        setTitle("MO Management - " + Constants.APP_TITLE);
+        setTitle((adminMode ? "Hiring Management" : "MO Management") + " - " + Constants.APP_TITLE);
         setSize(1420, 880);
         setMinimumSize(new Dimension(1020, 700));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -96,7 +100,7 @@ public class MOManagementFrame extends JFrame {
 
         JPanel root = UiTheme.createPagePanel();
         root.add(UiTheme.createHeader(
-                "Module Organiser Console",
+                adminMode ? "Admin Hiring Console" : "Module Organiser Console",
                 buildScopeSummary()
         ), BorderLayout.NORTH);
         root.add(splitPane, BorderLayout.CENTER);
@@ -280,7 +284,9 @@ public class MOManagementFrame extends JFrame {
     private void saveJob() {
         try {
             if (managedModuleCodes.isEmpty()) {
-                UiMessage.error(this, "This MO is not assigned to any modules yet.");
+                UiMessage.error(this, adminMode
+                        ? "No manageable module codes are available yet."
+                        : "This MO is not assigned to any modules yet.");
                 return;
             }
             String jobId = jobIdField.getText().trim();
@@ -288,10 +294,10 @@ public class MOManagementFrame extends JFrame {
                     ? null
                     : jobService.getJobById(jobId);
             String moduleCode = String.valueOf(moduleCodeBox.getSelectedItem()).trim();
-            if (!currentUser.managesModule(moduleCode)) {
+            if (!canManageModule(moduleCode)) {
                 throw new IllegalArgumentException("You can only manage TA hiring for your assigned modules.");
             }
-            if (existingJob != null && !currentUser.managesModule(existingJob.getModuleCode())) {
+            if (existingJob != null && !canManageModule(existingJob.getModuleCode())) {
                 throw new IllegalArgumentException("You can only edit jobs for your assigned modules.");
             }
 
@@ -422,7 +428,7 @@ public class MOManagementFrame extends JFrame {
 
     private void loadApplicantsForJob(String jobId) {
         JobPosting job = jobService.getJobById(jobId);
-        if (!currentUser.managesModule(job.getModuleCode())) {
+        if (!canManageModule(job.getModuleCode())) {
             UiMessage.error(this, "You can only review applicants for your assigned modules.");
             return;
         }
@@ -529,13 +535,18 @@ public class MOManagementFrame extends JFrame {
 
     private List<JobPosting> getScopedJobs() {
         return jobService.getAllJobs().stream()
-                .filter(job -> currentUser.managesModule(job.getModuleCode()))
+                .filter(job -> canManageModule(job.getModuleCode()))
                 .collect(Collectors.toList());
     }
 
     private String buildScopeSummary() {
         if (managedModuleCodes.isEmpty()) {
-            return "This MO account is not assigned to any modules yet. Ask the admin to bind modules before posting jobs.";
+            return adminMode
+                    ? "No module codes are available yet. Create an MO account or add a managed module first."
+                    : "This MO account is not assigned to any modules yet. Ask the admin to bind modules before posting jobs.";
+        }
+        if (adminMode) {
+            return "Admin access includes all known modules: " + String.join(", ", managedModuleCodes) + ".";
         }
         return "Publish jobs, review applicants, and manage hiring decisions for: "
                 + String.join(", ", managedModuleCodes) + ".";
@@ -547,6 +558,29 @@ public class MOManagementFrame extends JFrame {
             model.addElement(moduleCode);
         }
         moduleCodeBox.setModel(model);
+    }
+
+    private boolean canManageModule(String moduleCode) {
+        return adminMode || currentUser.managesModule(moduleCode);
+    }
+
+    private List<String> resolveManagedModuleCodes() {
+        if (!adminMode) {
+            return currentUser.getManagedModuleCodes();
+        }
+
+        LinkedHashSet<String> moduleCodes = new LinkedHashSet<>();
+        dataService.getUserRepository().findAll().stream()
+                .flatMap(user -> user.getManagedModuleCodes().stream())
+                .map(validationService::normalizeModuleCode)
+                .filter(code -> !code.isBlank())
+                .forEach(moduleCodes::add);
+        jobService.getAllJobs().stream()
+                .map(JobPosting::getModuleCode)
+                .map(validationService::normalizeModuleCode)
+                .filter(code -> !code.isBlank())
+                .forEach(moduleCodes::add);
+        return List.copyOf(moduleCodes);
     }
 
     private void bindFormSync() {

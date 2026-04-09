@@ -137,7 +137,7 @@ public class LoginFrame extends JFrame {
         top.setOpaque(false);
         top.setLayout(new BoxLayout(top, BoxLayout.Y_AXIS));
 
-        JLabel eyebrow = UiTheme.createBadge("BUPT iSchool", new Color(255, 255, 255, 40), Color.WHITE);
+        JLabel eyebrow = UiTheme.createBadge("BUPT International School", new Color(255, 255, 255, 40), Color.WHITE);
         eyebrow.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel title = new JLabel("<html><div style='width:260px;'>TA Recruitment<br>Management System</div></html>");

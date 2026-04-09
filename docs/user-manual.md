@@ -52,7 +52,7 @@ The MO dashboard is used to manage jobs, review applicants, write reviewer notes
 ![MO dashboard](screenshots/mo-dashboard.png)
 
 ### Admin Dashboard
-The Admin dashboard is used to monitor TA workloads, inspect jobs, view summary cards, reset demo data, and generate rebalance suggestions.
+The Admin dashboard is used to monitor TA workloads, inspect jobs, view summary cards, reset demo data, generate rebalance suggestions, open the full hiring-management console, and create MO accounts with managed modules.
 
 ![Admin dashboard](screenshots/admin-dashboard.png)
 
@@ -121,10 +121,12 @@ The Admin dashboard is used to monitor TA workloads, inspect jobs, view summary 
 - total applications
 - accepted TAs
 3. Use `Refresh` to reload current workload data.
-4. Use `Load Demo Data` to repopulate the sample dataset.
-5. Use `Reset Demo Data` to clear and reset the dataset.
-6. Use `Rebalance Suggestion` to view simple recommendations for open jobs.
-7. A confirmation dialog is shown before resetting demo data.
+4. Use `Open Hiring Management` to access all MO job-posting and applicant-review functions across all known modules.
+5. Use `Create MO Account` to add a new MO login and assign one or more module codes.
+6. Use `Load Demo Data` to repopulate the sample dataset.
+7. Use `Reset Demo Data` to clear and reset the dataset.
+8. Use `Rebalance Suggestion` to view simple recommendations for open jobs.
+9. A confirmation dialog is shown before resetting demo data.
 
 ## Data Files
 The application stores all data in:
