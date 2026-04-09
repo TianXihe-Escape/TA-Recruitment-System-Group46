@@ -13,6 +13,7 @@ public class JobPosting {
     private String moduleTitle;
     private String duties;
     private int hours;
+    private int requiredTaCount = 1;
     private List<String> requiredSkills = new ArrayList<>();
     private LocalDate applicationDeadline;
     private JobStatus status = JobStatus.OPEN;
@@ -56,6 +57,14 @@ public class JobPosting {
 
     public void setHours(int hours) {
         this.hours = hours;
+    }
+
+    public int getRequiredTaCount() {
+        return requiredTaCount;
+    }
+
+    public void setRequiredTaCount(int requiredTaCount) {
+        this.requiredTaCount = requiredTaCount;
     }
 
     public List<String> getRequiredSkills() {

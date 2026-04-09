@@ -40,6 +40,11 @@ public class JobService {
     }
 
     public void saveJob(JobPosting jobPosting) {
+        jobPosting.setModuleCode(validationService.normalizeModuleCode(jobPosting.getModuleCode()));
+        jobPosting.setModuleTitle(validationService.normalizeText(jobPosting.getModuleTitle()));
+        jobPosting.setDuties(validationService.normalizeMultilineText(jobPosting.getDuties()));
+        jobPosting.setRequiredSkills(validationService.parseSkills(String.join(", ", jobPosting.getRequiredSkills())));
+
         List<String> errors = validationService.validateJobPosting(jobPosting);
         if (!errors.isEmpty()) {
             throw new IllegalArgumentException(String.join("\n", errors));

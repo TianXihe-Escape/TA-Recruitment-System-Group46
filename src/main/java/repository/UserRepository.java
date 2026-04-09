@@ -1,6 +1,5 @@
 package repository;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import model.User;
 
 import java.nio.file.Path;
@@ -20,8 +19,7 @@ public class UserRepository {
     }
 
     public List<User> findAll() {
-        return dataStore.readList(filePath, new TypeReference<>() {
-        });
+        return dataStore.readList(filePath, User.class);
     }
 
     public Optional<User> findByUsername(String username) {

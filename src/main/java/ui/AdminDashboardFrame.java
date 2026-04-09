@@ -7,6 +7,7 @@ import model.JobStatus;
 import model.User;
 import model.WorkloadRecord;
 import service.ApplicantService;
+import service.AuthService;
 import service.DataService;
 import service.JobService;
 import service.MatchingService;
@@ -26,76 +27,129 @@ import java.util.List;
  */
 public class AdminDashboardFrame extends JFrame {
     private final DataService dataService;
+    private final User currentUser;
     private final WorkloadService workloadService;
     private final MatchingService matchingService;
+    private final ValidationService validationService;
+    private final AuthService authService;
+    private final JLabel openJobsValue = createMetricValueLabel();
+    private final JLabel closedJobsValue = createMetricValueLabel();
+    private final JLabel applicationCountValue = createMetricValueLabel();
+    private final JLabel acceptedCountValue = createMetricValueLabel();
     private final DefaultTableModel workloadTableModel = new DefaultTableModel(
             new Object[]{"TA", "Modules", "Total Hours", "Overload"}, 0);
-    private final JTable workloadTable = new JTable(workloadTableModel);
+    private final JTable workloadTable = new PlaceholderTable(workloadTableModel, "No workload records are available yet.");
     private final JTextArea jobSummaryArea = new JTextArea();
     private final JTextArea suggestionArea = new JTextArea();
+    private final JTextField moEmailField = new JTextField();
+    private final JPasswordField moPasswordField = new JPasswordField();
+    private final JPasswordField moConfirmField = new JPasswordField();
+    private final JTextField moModulesField = new JTextField();
 
     public AdminDashboardFrame(DataService dataService, User currentUser) {
         this.dataService = dataService;
-        ValidationService validationService = new ValidationService();
+        this.currentUser = currentUser;
+        this.validationService = new ValidationService();
+        this.authService = new AuthService(
+                dataService.getUserRepository(),
+                dataService.getProfileRepository(),
+                this.validationService
+        );
         new ApplicantService(dataService.getProfileRepository(), validationService);
         new JobService(dataService.getJobRepository(), validationService);
         this.workloadService = new WorkloadService();
         this.matchingService = new MatchingService();
 
         setTitle("Admin Dashboard - " + Constants.APP_TITLE);
-        setSize(1200, 720);
+        setSize(1380, 860);
+        setMinimumSize(new Dimension(980, 680));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+        UiTheme.styleFrame(this);
+        styleComponents();
 
         workloadTable.setDefaultRenderer(Object.class, new WorkloadRenderer());
         JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, buildTopPanel(), buildBottomPanel());
         splitPane.setResizeWeight(0.55);
-        add(splitPane);
+        UiTheme.styleSplitPane(splitPane);
+
+        JPanel root = UiTheme.createPagePanel();
+        root.add(UiTheme.createHeader("Admin Control Center", "Audit workloads, repopulate demo data, and rebalance staffing decisions."), BorderLayout.NORTH);
+        root.add(splitPane, BorderLayout.CENTER);
+        add(UiTheme.wrapPage(root));
 
         refreshData();
     }
 
     private JPanel buildTopPanel() {
-        JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        JPanel panel = UiTheme.createCard("Workload Monitor", "Track assigned hours across TAs and quickly reset or repopulate the demo environment.");
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JButton refreshButton = new JButton("Refresh");
-        JButton loadSampleButton = new JButton("Load Sample Data");
-        JButton resetButton = new JButton("Reset Demo Data");
-        JButton suggestButton = new JButton("Rebalance Suggestion");
-        buttonPanel.add(refreshButton);
-        buttonPanel.add(loadSampleButton);
-        buttonPanel.add(resetButton);
-        buttonPanel.add(suggestButton);
+        JButton backButton = UiTheme.createSecondaryButton("Back to Login");
+        JButton refreshButton = UiTheme.createSecondaryButton("Refresh");
+        JButton hiringButton = UiTheme.createSecondaryButton("Open Hiring Management");
+        JButton loadSampleButton = UiTheme.createSecondaryButton("Load Demo Data");
+        JButton resetButton = UiTheme.createDangerButton("Reset Demo Data");
+        JButton suggestButton = UiTheme.createPrimaryButton("Rebalance Suggestion");
 
+        backButton.addActionListener(event -> returnToLogin());
         refreshButton.addActionListener(event -> refreshData());
+        hiringButton.addActionListener(event -> openHiringManagement());
         loadSampleButton.addActionListener(event -> {
             dataService.loadSampleData();
             refreshData();
             UiMessage.info(this, "Sample data loaded.");
         });
         resetButton.addActionListener(event -> {
+            if (!UiMessage.confirm(this, "Resetting demo data will overwrite the current JSON files. Continue?", "Confirm Reset")) {
+                return;
+            }
             dataService.resetData();
             refreshData();
             UiMessage.info(this, "Demo data reset.");
         });
         suggestButton.addActionListener(event -> generateSuggestions());
 
-        panel.add(buttonPanel, BorderLayout.NORTH);
-        panel.add(new JScrollPane(workloadTable), BorderLayout.CENTER);
+        JPanel centerPanel = new JPanel(new BorderLayout(0, 12));
+        centerPanel.setOpaque(false);
+        centerPanel.add(buildMetricsPanel(), BorderLayout.NORTH);
+        centerPanel.add(UiTheme.wrapTable(workloadTable), BorderLayout.CENTER);
+
+        JPanel body = new JPanel(new BorderLayout(0, 18));
+        body.setOpaque(false);
+        body.add(UiTheme.createButtonRow(FlowLayout.LEFT, backButton, refreshButton, hiringButton, loadSampleButton, resetButton, suggestButton), BorderLayout.NORTH);
+        body.add(centerPanel, BorderLayout.CENTER);
+        panel.add(body, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JPanel buildMetricsPanel() {
+        JPanel panel = new JPanel(new GridLayout(1, 4, 12, 0));
+        panel.setOpaque(false);
+        panel.add(createMetricCard("Open Jobs", "Modules still accepting applications.", openJobsValue));
+        panel.add(createMetricCard("Closed Jobs", "Modules already filled or paused.", closedJobsValue));
+        panel.add(createMetricCard("Applications", "Total submissions in the system.", applicationCountValue));
+        panel.add(createMetricCard("Accepted TAs", "Offers currently locked in.", acceptedCountValue));
         return panel;
     }
 
     private JSplitPane buildBottomPanel() {
-        jobSummaryArea.setEditable(false);
-        suggestionArea.setEditable(false);
+        JPanel jobsCard = UiTheme.createCard("Jobs and Assignments", "High-level list of current postings, hours, and statuses.");
+        jobsCard.add(wrapArea(jobSummaryArea), BorderLayout.CENTER);
+
+        JPanel suggestionsCard = UiTheme.createCard("Rebalance and MO Accounts", "Create MO accounts while reviewing staffing recommendations.");
+        JPanel suggestionContent = new JPanel(new BorderLayout(0, 16));
+        suggestionContent.setOpaque(false);
+        suggestionContent.add(wrapArea(suggestionArea), BorderLayout.CENTER);
+        suggestionContent.add(buildMoAccountPanel(), BorderLayout.SOUTH);
+        suggestionsCard.add(suggestionContent, BorderLayout.CENTER);
+
         JSplitPane splitPane = new JSplitPane(
                 JSplitPane.HORIZONTAL_SPLIT,
-                new JScrollPane(jobSummaryArea),
-                new JScrollPane(suggestionArea)
+                jobsCard,
+                suggestionsCard
         );
         splitPane.setResizeWeight(0.5);
+        UiTheme.styleSplitPane(splitPane);
         return splitPane;
     }
 
@@ -116,15 +170,72 @@ public class AdminDashboardFrame extends JFrame {
             });
         }
 
+        long openJobs = jobs.stream().filter(job -> job.getStatus() == JobStatus.OPEN).count();
+        long closedJobs = jobs.stream().filter(job -> job.getStatus() == JobStatus.CLOSED).count();
+        long acceptedApplications = applications.stream()
+                .filter(application -> application.getStatus() == model.ApplicationStatus.ACCEPTED)
+                .count();
+        openJobsValue.setText(String.valueOf(openJobs));
+        closedJobsValue.setText(String.valueOf(closedJobs));
+        applicationCountValue.setText(String.valueOf(applications.size()));
+        acceptedCountValue.setText(String.valueOf(acceptedApplications));
+
+        // The lower summary is intentionally plain text so it can double as a quick audit view in demos.
         StringBuilder builder = new StringBuilder("Jobs and Assignments\n\n");
         for (JobPosting job : jobs) {
+            long applicationCount = applications.stream()
+                    .filter(application -> job.getJobId().equals(application.getJobId()))
+                    .count();
+            long acceptedCount = applications.stream()
+                    .filter(application -> job.getJobId().equals(application.getJobId()))
+                    .filter(application -> application.getStatus() == model.ApplicationStatus.ACCEPTED)
+                    .count();
             builder.append(job.getJobId()).append(" | ")
                     .append(job.getModuleCode()).append(" ").append(job.getModuleTitle())
                     .append(" | ").append(job.getStatus())
-                    .append(" | ").append(job.getHours()).append("h\n");
+                    .append(" | ").append(job.getHours()).append("h")
+                    .append(" | applicants ").append(applicationCount).append("/").append(job.getRequiredTaCount())
+                    .append(" | accepted ").append(acceptedCount).append("/").append(job.getRequiredTaCount())
+                    .append("\n");
         }
         jobSummaryArea.setText(builder.toString());
         suggestionArea.setText("Click 'Rebalance Suggestion' to recommend lower-load TAs for open jobs.");
+    }
+
+    private JPanel buildMoAccountPanel() {
+        JPanel panel = UiTheme.createCard("Create MO Account", "Admin can provision an MO login and assign managed modules immediately.");
+
+        UiTheme.styleTextField(moEmailField);
+        UiTheme.styleTextField(moPasswordField);
+        UiTheme.styleTextField(moConfirmField);
+        UiTheme.styleTextField(moModulesField);
+
+        JPanel form = UiTheme.createFormGrid();
+        UiTheme.addFormRow(form, 0, "MO Email", moEmailField);
+        UiTheme.addFormRow(form, 2, "Password", moPasswordField);
+        UiTheme.addFormRow(form, 4, "Confirm Password", moConfirmField);
+        UiTheme.addFormRow(form, 6, "Modules", moModulesField);
+
+        JTextArea note = new JTextArea("Use commas to separate module codes, for example: COMP1001, DATA2002.");
+        note.setEditable(false);
+        note.setOpaque(false);
+        note.setWrapStyleWord(true);
+        note.setLineWrap(true);
+        note.setForeground(UiTheme.MUTED_TEXT);
+        note.setFont(UiTheme.uiFont(Font.PLAIN, 13));
+
+        JButton clearButton = UiTheme.createSecondaryButton("Clear");
+        JButton createButton = UiTheme.createPrimaryButton("Create MO Account");
+        clearButton.addActionListener(event -> clearMoAccountForm());
+        createButton.addActionListener(event -> createMoAccount());
+
+        JPanel body = new JPanel(new BorderLayout(0, 14));
+        body.setOpaque(false);
+        body.add(form, BorderLayout.NORTH);
+        body.add(note, BorderLayout.CENTER);
+        body.add(UiTheme.createButtonRow(FlowLayout.RIGHT, clearButton, createButton), BorderLayout.SOUTH);
+        panel.add(body, BorderLayout.CENTER);
+        return panel;
     }
 
     private void generateSuggestions() {
@@ -134,6 +245,7 @@ public class AdminDashboardFrame extends JFrame {
         int threshold = dataService.getConfig().getWorkloadThreshold();
         List<WorkloadRecord> workloads = workloadService.buildWorkloadRecords(profiles, jobs, applications, threshold);
 
+        // Suggestions are limited to OPEN jobs because closed jobs already have enough accepted TAs.
         StringBuilder builder = new StringBuilder("Rebalance Suggestions\n\n");
         for (JobPosting job : jobs) {
             if (job.getStatus() == JobStatus.OPEN) {
@@ -147,11 +259,82 @@ public class AdminDashboardFrame extends JFrame {
         suggestionArea.setText(builder.toString());
     }
 
+    private void returnToLogin() {
+        new LoginFrame(dataService).setVisible(true);
+        dispose();
+    }
+
+    private void openHiringManagement() {
+        new MOManagementFrame(dataService, currentUser).setVisible(true);
+    }
+
+    private void createMoAccount() {
+        try {
+            User user = authService.registerMo(
+                    moEmailField.getText(),
+                    new String(moPasswordField.getPassword()),
+                    new String(moConfirmField.getPassword()),
+                    moModules()
+            );
+            refreshData();
+            clearMoAccountForm();
+            UiMessage.info(this, "MO account created for " + user.getUsername() + ".");
+        } catch (Exception ex) {
+            UiMessage.error(this, ex.getMessage());
+        }
+    }
+
+    private List<String> moModules() {
+        return validationService.parseSkills(moModulesField.getText()).stream()
+                .map(validationService::normalizeModuleCode)
+                .toList();
+    }
+
+    private void clearMoAccountForm() {
+        moEmailField.setText("");
+        moPasswordField.setText("");
+        moConfirmField.setText("");
+        moModulesField.setText("");
+    }
+
+    private void styleComponents() {
+        UiTheme.styleTable(workloadTable);
+        UiTheme.styleTextArea(jobSummaryArea, 14);
+        UiTheme.styleTextArea(suggestionArea, 14);
+        UiTheme.setColumnWidths(workloadTable, 180, 420, 120, 100);
+        jobSummaryArea.setEditable(false);
+        suggestionArea.setEditable(false);
+    }
+
+    private JScrollPane wrapArea(JTextArea area) {
+        JScrollPane scrollPane = new JScrollPane(area);
+        UiTheme.styleScrollPane(scrollPane);
+        return scrollPane;
+    }
+
+    private JPanel createMetricCard(String title, String subtitle, JLabel valueLabel) {
+        JPanel card = UiTheme.createCard(title, subtitle);
+        JPanel content = new JPanel(new BorderLayout());
+        content.setOpaque(false);
+        valueLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        content.add(valueLabel, BorderLayout.CENTER);
+        card.add(content, BorderLayout.CENTER);
+        return card;
+    }
+
+    private static JLabel createMetricValueLabel() {
+        JLabel label = new JLabel("0");
+        label.setFont(UiTheme.uiFont(Font.BOLD, 32));
+        label.setForeground(UiTheme.TEXT);
+        return label;
+    }
+
     private static class WorkloadRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
                                                        boolean hasFocus, int row, int column) {
             Component component = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            // A single red-tinted row is enough to surface overload risk without introducing another status widget.
             Object overloadFlag = table.getValueAt(row, 3);
             if (!isSelected && "YES".equals(overloadFlag)) {
                 component.setBackground(new Color(255, 224, 224));

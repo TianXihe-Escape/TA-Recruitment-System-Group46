@@ -5,6 +5,7 @@ import java.util.List;
 
 /**
  * Aggregated view of accepted TA workload.
+ * This model is used only for admin reporting and suggestion logic, not for persistence.
  */
 public class WorkloadRecord {
     private String applicantId;
