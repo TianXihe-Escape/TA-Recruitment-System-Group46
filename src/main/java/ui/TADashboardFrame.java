@@ -25,18 +25,44 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * TA dashboard for profile editing, browsing jobs, and tracking applications.
+ * Main TA workspace.
+ * This frame combines profile editing, job browsing, and application tracking
+ * so applicants can complete their full workflow from one screen.
  */
 public class TADashboardFrame extends JFrame {
+    /**
+     * Description shown in the CV file chooser.
+     */
     private static final String CV_FILE_DESCRIPTION = "CV Files (*.pdf, *.doc, *.docx, *.rtf, *.txt)";
 
+    /**
+     * Shared data facade used for repositories and navigation back to login.
+     */
     private final DataService dataService;
+    /**
+     * Service for loading and saving applicant profiles.
+     */
     private final ApplicantService applicantService;
+    /**
+     * Service for querying jobs.
+     */
     private final JobService jobService;
+    /**
+     * Service for submission and application workflow actions.
+     */
     private final ApplicationService applicationService;
+    /**
+     * Validation helper for parsing form input.
+     */
     private final ValidationService validationService;
+    /**
+     * Current authenticated user.
+     */
     private final User currentUser;
 
+    /**
+     * Cached profile for the logged-in TA.
+     */
     private ApplicantProfile profile;
     private final JTextField nameField = new JTextField();
     private final JTextField emailField = new JTextField();
@@ -54,6 +80,9 @@ public class TADashboardFrame extends JFrame {
             new Object[]{"Application ID", "Job ID", "Status", "Match %", "Missing Skills", "Reviewer Notes"}, 0);
     private final JTable applicationTable = new PlaceholderTable(applicationTableModel, "You have not submitted any applications yet.");
 
+    /**
+     * Constructs the TA dashboard and loads the initial data snapshot.
+     */
     public TADashboardFrame(DataService dataService, User currentUser) {
         this.dataService = dataService;
         this.currentUser = currentUser;
@@ -90,6 +119,9 @@ public class TADashboardFrame extends JFrame {
         refreshApplications();
     }
 
+    /**
+     * Builds the profile-editing side of the split layout.
+     */
     private JPanel buildLeftPanel() {
         JPanel panel = UiTheme.createCard("Applicant Profile", "Keep this profile current so matching and review decisions stay accurate.");
 
@@ -127,6 +159,9 @@ public class TADashboardFrame extends JFrame {
         return panel;
     }
 
+    /**
+     * Builds the jobs and applications side of the split layout.
+     */
     private JPanel buildRightPanel() {
         JPanel panel = UiTheme.createCard("Opportunities", "Browse available jobs and monitor the progress of your submissions.");
 
@@ -158,6 +193,9 @@ public class TADashboardFrame extends JFrame {
         return panel;
     }
 
+    /**
+     * Copies the current profile model into the visible form fields.
+     */
     private void loadProfile() {
         nameField.setText(profile.getName());
         emailField.setText(profile.getEmail());
@@ -169,8 +207,12 @@ public class TADashboardFrame extends JFrame {
         cvPathField.setText(profile.getCvPath());
     }
 
+    /**
+     * Reads profile values from the form and persists them through the service layer.
+     */
     private void saveProfile() {
         try {
+            // Read the latest UI state into the cached profile object before validation.
             profile.setName(nameField.getText().trim());
             profile.setEmail(emailField.getText().trim());
             profile.setPhone(phoneField.getText().trim());
@@ -187,6 +229,9 @@ public class TADashboardFrame extends JFrame {
         }
     }
 
+    /**
+     * Reloads open jobs into the job table.
+     */
     private void refreshJobs() {
         jobTableModel.setRowCount(0);
         for (JobPosting job : jobService.getOpenJobs()) {
@@ -202,6 +247,9 @@ public class TADashboardFrame extends JFrame {
         }
     }
 
+    /**
+     * Reloads this TA's applications into the application table.
+     */
     private void refreshApplications() {
         applicationTableModel.setRowCount(0);
         for (ApplicationRecord record : applicationService.getApplicationsForApplicant(profile.getApplicantId())) {
@@ -216,6 +264,9 @@ public class TADashboardFrame extends JFrame {
         }
     }
 
+    /**
+     * Opens the details dialog for the currently selected job.
+     */
     private void viewSelectedJob() {
         int row = jobTable.getSelectedRow();
         if (row < 0) {
@@ -228,6 +279,9 @@ public class TADashboardFrame extends JFrame {
         new JobDetailsDialog(this, job, taDemandSummary).setVisible(true);
     }
 
+    /**
+     * Shows a textual summary of the selected application and linked job.
+     */
     private void viewSelectedApplication() {
         int row = applicationTable.getSelectedRow();
         if (row < 0) {
@@ -260,6 +314,9 @@ public class TADashboardFrame extends JFrame {
         UiMessage.info(this, details);
     }
 
+    /**
+     * Submits an application for the selected job.
+     */
     private void applyForSelectedJob() {
         int row = jobTable.getSelectedRow();
         if (row < 0) {
@@ -279,6 +336,9 @@ public class TADashboardFrame extends JFrame {
         }
     }
 
+    /**
+     * Withdraws the selected application after confirmation.
+     */
     private void withdrawSelectedApplication() {
         int row = applicationTable.getSelectedRow();
         if (row < 0) {
@@ -300,11 +360,17 @@ public class TADashboardFrame extends JFrame {
         }
     }
 
+    /**
+     * Returns to the login frame and closes the dashboard.
+     */
     private void returnToLogin() {
         new LoginFrame(dataService).setVisible(true);
         dispose();
     }
 
+    /**
+     * Deletes the current TA account together with its profile and applications.
+     */
     private void deleteCurrentAccount() {
         String confirmationMessage = "Are you sure you want to delete your TA account?\n"
                 + "This will permanently remove your profile and all of your applications.";
@@ -329,6 +395,9 @@ public class TADashboardFrame extends JFrame {
         }
     }
 
+    /**
+     * Builds the read-only CV path field plus choose-file button.
+     */
     private JPanel buildCvPathPicker() {
         JPanel panel = new JPanel(new BorderLayout(8, 0));
         panel.setOpaque(false);
@@ -337,6 +406,9 @@ public class TADashboardFrame extends JFrame {
         return panel;
     }
 
+    /**
+     * Opens a file chooser and stores the selected CV path in the form.
+     */
     private void chooseCvFile() {
         JFileChooser chooser = new JFileChooser();
         chooser.setDialogTitle("Select CV File");
@@ -368,6 +440,9 @@ public class TADashboardFrame extends JFrame {
         }
     }
 
+    /**
+     * Applies the shared visual styling and custom renderers used by this frame.
+     */
     private void styleComponents() {
         UiTheme.styleTextField(nameField);
         UiTheme.styleTextField(emailField);
@@ -388,22 +463,34 @@ public class TADashboardFrame extends JFrame {
         UiTheme.setColumnWidths(applicationTable, 120, 90, 120, 90, 220, 280);
     }
 
+    /**
+     * Returns a dash for null or blank text to keep UI output readable.
+     */
     private String valueOrDash(String value) {
         return value == null || value.isBlank() ? "-" : value;
     }
 
+    /**
+     * Formats current TA demand as accepted/required.
+     */
     private String buildTaDemandText(JobPosting job) {
         // TA demand is presented as accepted/required so the applicant sees remaining competition at a glance.
         int acceptedCount = applicationService.getAcceptedCountForJob(job.getJobId());
         return Math.min(acceptedCount, job.getRequiredTaCount()) + "/" + job.getRequiredTaCount();
     }
 
+    /**
+     * Wraps a text area in a themed scroll pane.
+     */
     private JScrollPane wrapArea(JTextArea area) {
         JScrollPane scrollPane = new JScrollPane(area);
         UiTheme.styleScrollPane(scrollPane);
         return scrollPane;
     }
 
+    /**
+     * Renderer that highlights rows with approaching or expired deadlines.
+     */
     private static class DeadlineWarningRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
@@ -426,6 +513,9 @@ public class TADashboardFrame extends JFrame {
         }
     }
 
+    /**
+     * Renderer that turns status values into colored badges.
+     */
     private static class StatusBadgeRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,

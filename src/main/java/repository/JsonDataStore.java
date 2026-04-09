@@ -22,9 +22,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Shared JSON persistence helper for collections and config objects.
+ * Low-level JSON persistence helper shared by all repositories.
+ * This class centralizes file initialization, JSON parsing, object mapping, and
+ * serialization so repository classes can stay small and domain-focused.
  */
 public class JsonDataStore {
+    /**
+     * Reads a JSON array file and converts each object entry into the requested type.
+     */
     public <T> List<T> readList(Path path, Class<T> itemClass) {
         initializeListFile(path);
         try {
@@ -48,6 +53,9 @@ public class JsonDataStore {
         }
     }
 
+    /**
+     * Writes a list of domain objects as a pretty-printed JSON array.
+     */
     public <T> void writeList(Path path, List<T> values) {
         ensureParent(path);
         try {
@@ -61,6 +69,9 @@ public class JsonDataStore {
         }
     }
 
+    /**
+     * Reads a single JSON object file, creating it with a default value if missing.
+     */
     public <T> T readObject(Path path, Class<T> clazz, T defaultValue) {
         initializeObjectFile(path, defaultValue);
         try {
@@ -77,6 +88,9 @@ public class JsonDataStore {
         }
     }
 
+    /**
+     * Writes a single object as a pretty-printed JSON object.
+     */
     public <T> void writeObject(Path path, T value) {
         ensureParent(path);
         try {
@@ -86,6 +100,9 @@ public class JsonDataStore {
         }
     }
 
+    /**
+     * Ensures an array-backed JSON file exists before read operations.
+     */
     private void initializeListFile(Path path) {
         ensureParent(path);
         if (!Files.exists(path)) {
@@ -93,6 +110,9 @@ public class JsonDataStore {
         }
     }
 
+    /**
+     * Ensures an object-backed JSON file exists before read operations.
+     */
     private <T> void initializeObjectFile(Path path, T defaultValue) {
         ensureParent(path);
         if (!Files.exists(path)) {
@@ -100,6 +120,9 @@ public class JsonDataStore {
         }
     }
 
+    /**
+     * Creates the parent directory tree for a data file if needed.
+     */
     private void ensureParent(Path path) {
         try {
             Files.createDirectories(path.getParent());
@@ -109,6 +132,9 @@ public class JsonDataStore {
     }
 
     @SuppressWarnings("unchecked")
+    /**
+     * Converts a parsed JSON object map into one of the supported domain models.
+     */
     private <T> T convertMap(Class<T> clazz, Map<String, Object> map) {
         // This central mapping keeps the on-disk JSON schema explicit and easy to evolve.
         if (clazz == User.class) {
@@ -175,6 +201,9 @@ public class JsonDataStore {
         throw new IllegalArgumentException("Unsupported class: " + clazz.getName());
     }
 
+    /**
+     * Converts a supported domain model into an ordered map structure for JSON output.
+     */
     private Object serialize(Object value) {
         // Use LinkedHashMap so exported JSON keeps a stable field order for easier manual inspection.
         if (value instanceof User user) {
@@ -235,10 +264,16 @@ public class JsonDataStore {
         throw new IllegalArgumentException("Unsupported value: " + value.getClass().getName());
     }
 
+    /**
+     * Converts any scalar JSON value into a string, preserving null.
+     */
     private String stringValue(Object value) {
         return value == null ? null : String.valueOf(value);
     }
 
+    /**
+     * Converts numeric JSON values into integers, accepting both JSON numbers and strings.
+     */
     private int intValue(Object value) {
         if (value instanceof Number number) {
             return number.intValue();
@@ -246,6 +281,9 @@ public class JsonDataStore {
         return Integer.parseInt(String.valueOf(value));
     }
 
+    /**
+     * Converts a parsed JSON array into a list of strings.
+     */
     private List<String> stringList(Object value) {
         List<String> results = new ArrayList<>();
         if (value instanceof List<?> items) {
@@ -256,6 +294,9 @@ public class JsonDataStore {
         return results;
     }
 
+    /**
+     * Converts a stored enum name back into the target enum constant.
+     */
     private <E extends Enum<E>> E enumValue(Class<E> enumClass, Object value) {
         if (value == null) {
             return null;
