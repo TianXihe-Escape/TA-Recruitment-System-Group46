@@ -32,12 +32,12 @@ public class SampleDataLoader {
 
     public void loadSampleData() {
         List<User> users = new ArrayList<>();
-        users.add(new User("user-ta-01", "ta1@bupt.edu.cn", "ta123", Role.TA));
-        users.add(new User("user-ta-02", "ta2@bupt.edu.cn", "ta123", Role.TA));
-        users.add(new User("user-ta-03", "ta3@bupt.edu.cn", "ta123", Role.TA));
-        users.add(new User("user-mo-01", "mo1@bupt.edu.cn", "mo123", Role.MO, List.of("COMP1001", "DATA2002")));
-        users.add(new User("user-mo-02", "mo2@bupt.edu.cn", "mo123", Role.MO, List.of("COMP3003")));
-        users.add(new User("user-admin-01", "admin@bupt.edu.cn", "admin123", Role.ADMIN));
+        users.add(new User("user-ta-01", "Li Hua", "ta1@bupt.edu.cn", "ta123", Role.TA));
+        users.add(new User("user-ta-02", "Zhang Wei", "ta2@bupt.edu.cn", "ta123", Role.TA));
+        users.add(new User("user-ta-03", "Chen Yu", "ta3@bupt.edu.cn", "ta123", Role.TA));
+        users.add(new User("user-mo-01", "Alice Moore", "mo1@bupt.edu.cn", "mo123", Role.MO, List.of("COMP1001", "DATA2002")));
+        users.add(new User("user-mo-02", "Brian Chen", "mo2@bupt.edu.cn", "mo123", Role.MO, List.of("COMP3003")));
+        users.add(new User("user-admin-01", "System Admin", "admin@bupt.edu.cn", "admin123", Role.ADMIN));
         userRepository.saveAll(users);
 
         List<ApplicantProfile> profiles = new ArrayList<>();

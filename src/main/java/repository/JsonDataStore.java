@@ -114,6 +114,7 @@ public class JsonDataStore {
         if (clazz == User.class) {
             User user = new User();
             user.setUserId(stringValue(map.get("userId")));
+            user.setName(stringValue(map.get("name")));
             user.setUsername(stringValue(map.get("username")));
             user.setPassword(stringValue(map.get("password")));
             user.setRole(enumValue(Role.class, map.get("role")));
@@ -179,6 +180,7 @@ public class JsonDataStore {
         if (value instanceof User user) {
             Map<String, Object> map = new LinkedHashMap<>();
             map.put("userId", user.getUserId());
+            map.put("name", user.getName());
             map.put("username", user.getUsername());
             map.put("password", user.getPassword());
             map.put("role", user.getRole() == null ? null : user.getRole().name());

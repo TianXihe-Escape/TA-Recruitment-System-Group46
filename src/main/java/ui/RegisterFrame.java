@@ -14,12 +14,13 @@ import java.awt.*;
 public class RegisterFrame extends JFrame {
     public RegisterFrame(AuthService authService) {
         setTitle("TA Registration - " + Constants.APP_TITLE);
-        setSize(560, 420);
-        setMinimumSize(new Dimension(520, 400));
+        setSize(560, 520);
+        setMinimumSize(new Dimension(520, 500));
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         UiTheme.styleFrame(this);
 
+        JTextField nameField = new JTextField();
         JTextField usernameField = new JTextField();
         JPasswordField passwordField = new JPasswordField();
         JPasswordField confirmField = new JPasswordField();
@@ -29,6 +30,7 @@ public class RegisterFrame extends JFrame {
         JButton closeButton = UiTheme.createSecondaryButton("Cancel");
         JCheckBox showPasswordsBox = new JCheckBox("Show Passwords");
 
+        UiTheme.styleTextField(nameField);
         UiTheme.styleTextField(usernameField);
         UiTheme.styleTextField(passwordField);
         UiTheme.styleTextField(confirmField);
@@ -37,10 +39,11 @@ public class RegisterFrame extends JFrame {
         JPanel root = UiTheme.createPagePanel();
         JPanel card = UiTheme.createCard("Create TA Account", "This creates a TA login and an empty applicant profile.");
         JPanel form = UiTheme.createFormGrid();
-        UiTheme.addFormRow(form, 0, "Email", usernameField);
-        UiTheme.addFormRow(form, 2, "Password", passwordField);
-        UiTheme.addFormRow(form, 4, "Confirm Password", confirmField);
-        UiTheme.addFormRow(form, 6, "", showPasswordsBox);
+        UiTheme.addFormRow(form, 0, "Name", nameField);
+        UiTheme.addFormRow(form, 2, "Email", usernameField);
+        UiTheme.addFormRow(form, 4, "Password", passwordField);
+        UiTheme.addFormRow(form, 6, "Confirm Password", confirmField);
+        UiTheme.addFormRow(form, 8, "", showPasswordsBox);
 
         JTextArea note = new JTextArea("After registration, sign in as TA and complete your profile before applying to jobs.");
         note.setEditable(false);
@@ -61,6 +64,7 @@ public class RegisterFrame extends JFrame {
             try {
                 User user = authService.registerTa(
                         usernameField.getText(),
+                        nameField.getText(),
                         new String(passwordField.getPassword()),
                         new String(confirmField.getPassword())
                 );

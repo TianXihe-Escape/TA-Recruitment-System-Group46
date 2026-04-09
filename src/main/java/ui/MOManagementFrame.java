@@ -89,7 +89,7 @@ public class MOManagementFrame extends JFrame {
         setTitle((adminMode ? "Hiring Management" : "MO Management") + " - " + Constants.APP_TITLE);
         setSize(1420, 880);
         setMinimumSize(new Dimension(1020, 700));
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         UiTheme.styleFrame(this);
         styleComponents();
@@ -132,7 +132,9 @@ public class MOManagementFrame extends JFrame {
         JPanel lower = UiTheme.createCard("Applicant Match Details", "Review fit, missing skills, and applicant notes for the selected submission.");
         lower.add(wrapArea(matchInfoArea), BorderLayout.CENTER);
 
-        JButton backButton = UiTheme.createSecondaryButton("Back to Login");
+        JButton backButton = adminMode
+                ? UiTheme.createDangerButton("Back to Previous Page")
+                : UiTheme.createSecondaryButton("Back to Login");
         JButton newButton = UiTheme.createSecondaryButton("New Job");
         JButton saveButton = UiTheme.createPrimaryButton("Save Job");
 
@@ -141,7 +143,7 @@ public class MOManagementFrame extends JFrame {
         saveButton.setEnabled(hasManagedModules);
         moduleCodeBox.setEnabled(hasManagedModules);
 
-        backButton.addActionListener(event -> returnToLogin());
+        backButton.addActionListener(event -> goBack());
         newButton.addActionListener(event -> clearForm());
         saveButton.addActionListener(event -> saveJob());
 
@@ -550,6 +552,14 @@ public class MOManagementFrame extends JFrame {
         }
         return "Publish jobs, review applicants, and manage hiring decisions for: "
                 + String.join(", ", managedModuleCodes) + ".";
+    }
+
+    private void goBack() {
+        if (adminMode) {
+            dispose();
+            return;
+        }
+        returnToLogin();
     }
 
     private void populateManagedModules() {

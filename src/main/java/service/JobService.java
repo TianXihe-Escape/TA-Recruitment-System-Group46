@@ -52,7 +52,11 @@ public class JobService {
 
         List<JobPosting> jobs = new ArrayList<>(jobRepository.findAll());
         if (jobPosting.getJobId() == null || jobPosting.getJobId().isBlank()) {
-            jobPosting.setJobId(IdGenerator.newId("job"));
+            jobPosting.setJobId(IdGenerator.nextJobId(
+                    jobs.stream()
+                            .map(JobPosting::getJobId)
+                            .toList()
+            ));
             jobs.add(jobPosting);
         } else {
             boolean updated = false;

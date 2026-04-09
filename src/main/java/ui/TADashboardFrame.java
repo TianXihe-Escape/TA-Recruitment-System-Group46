@@ -21,6 +21,8 @@ import java.awt.*;
 import java.io.File;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * TA dashboard for profile editing, browsing jobs, and tracking applications.
@@ -102,9 +104,11 @@ public class TADashboardFrame extends JFrame {
         UiTheme.addFormRow(form, 14, "CV Path", buildCvPathPicker());
 
         JButton saveProfileButton = UiTheme.createPrimaryButton("Save Profile");
+        JButton deleteAccountButton = UiTheme.createDangerButton("Delete Account");
         JButton backButton = UiTheme.createSecondaryButton("Back to Login");
         JButton refreshButton = UiTheme.createSecondaryButton("Refresh");
 
+        deleteAccountButton.addActionListener(event -> deleteCurrentAccount());
         backButton.addActionListener(event -> returnToLogin());
         saveProfileButton.addActionListener(event -> saveProfile());
         chooseCvButton.addActionListener(event -> chooseCvFile());
@@ -118,7 +122,7 @@ public class TADashboardFrame extends JFrame {
         JPanel body = new JPanel(new BorderLayout(0, 18));
         body.setOpaque(false);
         body.add(UiTheme.wrapPage(form), BorderLayout.CENTER);
-        body.add(UiTheme.createButtonRow(FlowLayout.RIGHT, backButton, refreshButton, saveProfileButton), BorderLayout.SOUTH);
+        body.add(UiTheme.createButtonRow(FlowLayout.RIGHT, deleteAccountButton, backButton, refreshButton, saveProfileButton), BorderLayout.SOUTH);
         panel.add(body, BorderLayout.CENTER);
         return panel;
     }
@@ -299,6 +303,30 @@ public class TADashboardFrame extends JFrame {
     private void returnToLogin() {
         new LoginFrame(dataService).setVisible(true);
         dispose();
+    }
+
+    private void deleteCurrentAccount() {
+        String confirmationMessage = "Are you sure you want to delete your TA account?\n"
+                + "This will permanently remove your profile and all of your applications.";
+        if (!UiMessage.confirm(this, confirmationMessage, "Delete Account")) {
+            return;
+        }
+
+        try {
+            applicationService.removeApplicationsForApplicant(profile.getApplicantId());
+
+            List<ApplicantProfile> profiles = new ArrayList<>(dataService.getProfileRepository().findAll());
+            profiles.removeIf(existingProfile -> profile.getApplicantId().equals(existingProfile.getApplicantId()));
+            dataService.getProfileRepository().saveAll(profiles);
+
+            List<User> users = new ArrayList<>(dataService.getUserRepository().findAll());
+            users.removeIf(user -> currentUser.getUserId().equals(user.getUserId()));
+            dataService.getUserRepository().saveAll(users);
+
+            returnToLogin();
+        } catch (Exception ex) {
+            UiMessage.error(this, ex.getMessage());
+        }
     }
 
     private JPanel buildCvPathPicker() {
