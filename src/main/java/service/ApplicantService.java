@@ -29,11 +29,19 @@ public class ApplicantService {
     }
 
     public void saveProfile(ApplicantProfile updatedProfile) {
+        updatedProfile.setName(validationService.normalizePersonName(updatedProfile.getName()));
+        updatedProfile.setEmail(validationService.normalizeEmail(updatedProfile.getEmail()));
+        updatedProfile.setPhone(validationService.normalizePhone(updatedProfile.getPhone()));
+        updatedProfile.setAvailability(validationService.normalizeText(updatedProfile.getAvailability()));
+        updatedProfile.setPreferredDuties(validationService.normalizeText(updatedProfile.getPreferredDuties()));
+        updatedProfile.setExperienceSummary(validationService.normalizeMultilineText(updatedProfile.getExperienceSummary()));
+
         List<String> errors = validationService.validateApplicantProfile(
                 updatedProfile.getName(),
                 updatedProfile.getEmail(),
                 updatedProfile.getPhone()
         );
+        errors.addAll(validationService.validateCvPath(updatedProfile.getCvPath()));
         if (!errors.isEmpty()) {
             throw new IllegalArgumentException(String.join("\n", errors));
         }

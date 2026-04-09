@@ -2,7 +2,6 @@ package service;
 
 import model.ApplicantProfile;
 import model.Role;
-import model.User;
 import repository.ApplicantProfileRepository;
 import repository.UserRepository;
 import util.IdGenerator;
@@ -28,19 +27,42 @@ public class AuthService {
     }
 
     public model.User login(String username, String password, Role role) {
-        List<String> errors = validationService.validateLogin(username, password);
+        String normalizedUsername = validationService.normalizeEmail(username);
+        List<String> errors = validationService.validateLogin(normalizedUsername, password);
         if (!errors.isEmpty()) {
             throw new IllegalArgumentException(String.join("\n", errors));
         }
 
-        return userRepository.findByUsername(username.trim())
+        return userRepository.findByUsername(normalizedUsername)
                 .filter(user -> user.getPassword().equals(password) && user.getRole() == role)
                 .orElseThrow(() -> new IllegalArgumentException("Wrong username, password, or role."));
     }
 
-    public model.User registerTa(String username, String password, String confirmPassword) {
-        List<String> errors = validationService.validateRegistration(username, password, confirmPassword);
-        Optional<model.User> existing = userRepository.findByUsername(username.trim());
+    public model.User registerTa(String username, String name, String password, String confirmPassword) {
+        return registerUser(username, name, password, confirmPassword, Role.TA, List.of());
+    }
+
+    public model.User registerMo(String username,
+                                 String name,
+                                 String password,
+                                 String confirmPassword,
+                                 List<String> managedModuleCodes) {
+        return registerUser(username, name, password, confirmPassword, Role.MO, managedModuleCodes);
+    }
+
+    private model.User registerUser(String username,
+                                    String name,
+                                    String password,
+                                    String confirmPassword,
+                                    Role role,
+                                    List<String> managedModuleCodes) {
+        String normalizedUsername = validationService.normalizeEmail(username);
+        String normalizedName = validationService.normalizePersonName(name);
+        List<String> errors = validationService.validateRegistration(normalizedUsername, password, confirmPassword);
+        if ((role == Role.MO || role == Role.TA) && normalizedName.isBlank()) {
+            errors.add(role == Role.MO ? "MO name is required." : "TA name is required.");
+        }
+        Optional<model.User> existing = userRepository.findByUsername(normalizedUsername);
         if (existing.isPresent()) {
             errors.add("This username is already registered.");
         }
@@ -49,15 +71,19 @@ public class AuthService {
         }
 
         List<model.User> users = new ArrayList<>(userRepository.findAll());
-        model.User user = new model.User(IdGenerator.newId("user"), username.trim(), password, Role.TA);
+        String userId = IdGenerator.nextUserId(role, users);
+        model.User user = new model.User(userId, normalizedName, normalizedUsername, password, role, managedModuleCodes);
         users.add(user);
         userRepository.saveAll(users);
 
-        List<ApplicantProfile> profiles = new ArrayList<>(profileRepository.findAll());
-        ApplicantProfile profile = new ApplicantProfile(IdGenerator.newId("applicant"), user.getUserId());
-        profile.setEmail(username.trim());
-        profiles.add(profile);
-        profileRepository.saveAll(profiles);
+        if (role == Role.TA) {
+            List<ApplicantProfile> profiles = new ArrayList<>(profileRepository.findAll());
+            ApplicantProfile profile = new ApplicantProfile(IdGenerator.nextApplicantId(profiles), user.getUserId());
+            profile.setName(normalizedName);
+            profile.setEmail(normalizedUsername);
+            profiles.add(profile);
+            profileRepository.saveAll(profiles);
+        }
         return user;
     }
 }

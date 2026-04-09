@@ -1,26 +1,56 @@
 [
   {
-    "userId": "user-ta-01",
-    "username": "ta1@bupt.edu.cn",
-    "password": "ta123",
-    "role": "TA"
+    "userId" : "user-ta-01",
+    "username" : "ta1@bupt.edu.cn",
+    "password" : "ta123",
+    "role" : "TA",
+    "managedModuleCodes" : [ ]
   },
   {
-    "userId": "user-ta-02",
-    "username": "ta2@bupt.edu.cn",
-    "password": "ta123",
-    "role": "TA"
+    "userId" : "user-ta-02",
+    "username" : "ta2@bupt.edu.cn",
+    "password" : "ta123",
+    "role" : "TA",
+    "managedModuleCodes" : [ ]
   },
   {
-    "userId": "user-mo-01",
-    "username": "mo1@bupt.edu.cn",
-    "password": "mo123",
-    "role": "MO"
+    "userId" : "user-ta-03",
+    "username" : "ta3@bupt.edu.cn",
+    "password" : "ta123",
+    "role" : "TA",
+    "managedModuleCodes" : [ ]
   },
   {
-    "userId": "user-admin-01",
-    "username": "admin@bupt.edu.cn",
-    "password": "admin123",
-    "role": "ADMIN"
+    "userId" : "user-mo-01",
+    "username" : "mo1@bupt.edu.cn",
+    "password" : "mo123",
+    "role" : "MO",
+    "managedModuleCodes" : [
+      "COMP1001",
+      "DATA2002"
+    ]
+  },
+  {
+    "userId" : "user-mo-02",
+    "username" : "mo2@bupt.edu.cn",
+    "password" : "mo123",
+    "role" : "MO",
+    "managedModuleCodes" : [
+      "COMP3003"
+    ]
+  },
+  {
+    "userId" : "user-admin-01",
+    "username" : "admin@bupt.edu.cn",
+    "password" : "admin123",
+    "role" : "ADMIN",
+    "managedModuleCodes" : [ ]
+  },
+  {
+    "userId" : "user-64b92970",
+    "username" : "ta4@bupt.edu.cn",
+    "password" : "ta456",
+    "role" : "TA",
+    "managedModuleCodes" : [ ]
   }
 ]

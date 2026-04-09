@@ -1,6 +1,5 @@
 package repository;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import model.JobPosting;
 
 import java.nio.file.Path;
@@ -20,8 +19,7 @@ public class JobRepository {
     }
 
     public List<JobPosting> findAll() {
-        return dataStore.readList(filePath, new TypeReference<>() {
-        });
+        return dataStore.readList(filePath, JobPosting.class);
     }
 
     public Optional<JobPosting> findById(String jobId) {

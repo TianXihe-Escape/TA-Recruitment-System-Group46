@@ -1,6 +1,7 @@
 package ui.dialogs;
 
 import model.JobPosting;
+import ui.UiTheme;
 
 import javax.swing.*;
 import java.awt.*;
@@ -10,22 +11,35 @@ import java.awt.*;
  */
 public class JobDetailsDialog extends JDialog {
     public JobDetailsDialog(Frame owner, JobPosting jobPosting) {
+        this(owner, jobPosting, null);
+    }
+
+    public JobDetailsDialog(Frame owner, JobPosting jobPosting, String taDemandSummary) {
         super(owner, "Job Details", true);
+        getContentPane().setBackground(UiTheme.BACKGROUND);
+
         JTextArea area = new JTextArea();
+        UiTheme.styleTextArea(area, 12);
         area.setEditable(false);
-        area.setLineWrap(true);
-        area.setWrapStyleWord(true);
         area.setText(
                 "Job ID: " + jobPosting.getJobId() + "\n" +
                         "Module: " + jobPosting.getModuleCode() + " - " + jobPosting.getModuleTitle() + "\n" +
                         "Duties: " + jobPosting.getDuties() + "\n" +
                         "Hours: " + jobPosting.getHours() + "\n" +
+                        "TA Needed: " + jobPosting.getRequiredTaCount() + "\n" +
+                        (taDemandSummary == null || taDemandSummary.isBlank() ? "" : "Applications / Needed: " + taDemandSummary + "\n") +
                         "Required Skills: " + String.join(", ", jobPosting.getRequiredSkills()) + "\n" +
                         "Deadline: " + jobPosting.getApplicationDeadline() + "\n" +
                         "Status: " + jobPosting.getStatus()
         );
-        add(new JScrollPane(area), BorderLayout.CENTER);
-        setSize(420, 300);
+        JScrollPane areaScrollPane = new JScrollPane(area);
+        UiTheme.styleScrollPane(areaScrollPane);
+        JPanel root = UiTheme.createPagePanel();
+        JPanel card = UiTheme.createCard("Job Summary", "Read-only details for the selected vacancy.");
+        card.add(areaScrollPane, BorderLayout.CENTER);
+        root.add(card, BorderLayout.CENTER);
+        add(root, BorderLayout.CENTER);
+        setSize(560, 420);
         setLocationRelativeTo(owner);
     }
 }

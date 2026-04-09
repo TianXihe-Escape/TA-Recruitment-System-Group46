@@ -33,6 +33,8 @@ public class WorkloadService {
             List<String> jobIds = new ArrayList<>();
             List<String> modules = new ArrayList<>();
 
+            // Workload is based only on accepted jobs because shortlisted or submitted applications
+            // should not count as a confirmed teaching commitment yet.
             for (ApplicationRecord application : accepted) {
                 JobPosting job = jobs.stream()
                         .filter(item -> item.getJobId().equals(application.getJobId()))
@@ -66,10 +68,12 @@ public class WorkloadService {
                     int leftScore = matchingService.calculateMatch(left.getSkills(), jobPosting.getRequiredSkills()).getScorePercentage();
                     int rightScore = matchingService.calculateMatch(right.getSkills(), jobPosting.getRequiredSkills()).getScorePercentage();
                     if (leftScore != rightScore) {
+                        // Prefer skill fit first so recommendations stay aligned with the MO's job requirements.
                         return Integer.compare(rightScore, leftScore);
                     }
                     int leftHours = findHours(left.getApplicantId(), workloadRecords);
                     int rightHours = findHours(right.getApplicantId(), workloadRecords);
+                    // Break ties with lower current load so recommendations also support balancing.
                     return Integer.compare(leftHours, rightHours);
                 })
                 .limit(3)
