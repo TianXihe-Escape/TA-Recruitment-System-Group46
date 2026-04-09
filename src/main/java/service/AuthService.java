@@ -39,6 +39,21 @@ public class AuthService {
     }
 
     public model.User registerTa(String username, String password, String confirmPassword) {
+        return registerUser(username, password, confirmPassword, Role.TA, List.of());
+    }
+
+    public model.User registerMo(String username,
+                                 String password,
+                                 String confirmPassword,
+                                 List<String> managedModuleCodes) {
+        return registerUser(username, password, confirmPassword, Role.MO, managedModuleCodes);
+    }
+
+    private model.User registerUser(String username,
+                                    String password,
+                                    String confirmPassword,
+                                    Role role,
+                                    List<String> managedModuleCodes) {
         String normalizedUsername = validationService.normalizeEmail(username);
         List<String> errors = validationService.validateRegistration(normalizedUsername, password, confirmPassword);
         Optional<model.User> existing = userRepository.findByUsername(normalizedUsername);
@@ -50,15 +65,17 @@ public class AuthService {
         }
 
         List<model.User> users = new ArrayList<>(userRepository.findAll());
-        model.User user = new model.User(IdGenerator.newId("user"), normalizedUsername, password, Role.TA);
+        model.User user = new model.User(IdGenerator.newId("user"), normalizedUsername, password, role, managedModuleCodes);
         users.add(user);
         userRepository.saveAll(users);
 
-        List<ApplicantProfile> profiles = new ArrayList<>(profileRepository.findAll());
-        ApplicantProfile profile = new ApplicantProfile(IdGenerator.newId("applicant"), user.getUserId());
-        profile.setEmail(normalizedUsername);
-        profiles.add(profile);
-        profileRepository.saveAll(profiles);
+        if (role == Role.TA) {
+            List<ApplicantProfile> profiles = new ArrayList<>(profileRepository.findAll());
+            ApplicantProfile profile = new ApplicantProfile(IdGenerator.newId("applicant"), user.getUserId());
+            profile.setEmail(normalizedUsername);
+            profiles.add(profile);
+            profileRepository.saveAll(profiles);
+        }
         return user;
     }
 }

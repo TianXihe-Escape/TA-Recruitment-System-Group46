@@ -13,9 +13,9 @@
     "applicationId" : "apply-02",
     "applicantId" : "applicant-02",
     "jobId" : "job-02",
-    "appliedAt" : "2026-04-04T17:58:56.351877600",
-    "status" : "ACCEPTED",
-    "reviewerNotes" : "Acceptance cleared because the job was reopened.",
+    "appliedAt" : "2026-04-09T11:36:56.933788900",
+    "status" : "SUBMITTED",
+    "reviewerNotes" : null,
     "matchScore" : 100,
     "missingSkills" : [ ]
   },

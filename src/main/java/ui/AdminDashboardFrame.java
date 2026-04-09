@@ -7,6 +7,7 @@ import model.JobStatus;
 import model.User;
 import model.WorkloadRecord;
 import service.ApplicantService;
+import service.AuthService;
 import service.DataService;
 import service.JobService;
 import service.MatchingService;
@@ -26,8 +27,11 @@ import java.util.List;
  */
 public class AdminDashboardFrame extends JFrame {
     private final DataService dataService;
+    private final User currentUser;
     private final WorkloadService workloadService;
     private final MatchingService matchingService;
+    private final ValidationService validationService;
+    private final AuthService authService;
     private final JLabel openJobsValue = createMetricValueLabel();
     private final JLabel closedJobsValue = createMetricValueLabel();
     private final JLabel applicationCountValue = createMetricValueLabel();
@@ -37,10 +41,20 @@ public class AdminDashboardFrame extends JFrame {
     private final JTable workloadTable = new PlaceholderTable(workloadTableModel, "No workload records are available yet.");
     private final JTextArea jobSummaryArea = new JTextArea();
     private final JTextArea suggestionArea = new JTextArea();
+    private final JTextField moEmailField = new JTextField();
+    private final JPasswordField moPasswordField = new JPasswordField();
+    private final JPasswordField moConfirmField = new JPasswordField();
+    private final JTextField moModulesField = new JTextField();
 
     public AdminDashboardFrame(DataService dataService, User currentUser) {
         this.dataService = dataService;
-        ValidationService validationService = new ValidationService();
+        this.currentUser = currentUser;
+        this.validationService = new ValidationService();
+        this.authService = new AuthService(
+                dataService.getUserRepository(),
+                dataService.getProfileRepository(),
+                this.validationService
+        );
         new ApplicantService(dataService.getProfileRepository(), validationService);
         new JobService(dataService.getJobRepository(), validationService);
         this.workloadService = new WorkloadService();
@@ -72,12 +86,14 @@ public class AdminDashboardFrame extends JFrame {
 
         JButton backButton = UiTheme.createSecondaryButton("Back to Login");
         JButton refreshButton = UiTheme.createSecondaryButton("Refresh");
+        JButton hiringButton = UiTheme.createSecondaryButton("Open Hiring Management");
         JButton loadSampleButton = UiTheme.createSecondaryButton("Load Demo Data");
         JButton resetButton = UiTheme.createDangerButton("Reset Demo Data");
         JButton suggestButton = UiTheme.createPrimaryButton("Rebalance Suggestion");
 
         backButton.addActionListener(event -> returnToLogin());
         refreshButton.addActionListener(event -> refreshData());
+        hiringButton.addActionListener(event -> openHiringManagement());
         loadSampleButton.addActionListener(event -> {
             dataService.loadSampleData();
             refreshData();
@@ -100,7 +116,7 @@ public class AdminDashboardFrame extends JFrame {
 
         JPanel body = new JPanel(new BorderLayout(0, 18));
         body.setOpaque(false);
-        body.add(UiTheme.createButtonRow(FlowLayout.LEFT, backButton, refreshButton, loadSampleButton, resetButton, suggestButton), BorderLayout.NORTH);
+        body.add(UiTheme.createButtonRow(FlowLayout.LEFT, backButton, refreshButton, hiringButton, loadSampleButton, resetButton, suggestButton), BorderLayout.NORTH);
         body.add(centerPanel, BorderLayout.CENTER);
         panel.add(body, BorderLayout.CENTER);
         return panel;
@@ -120,8 +136,12 @@ public class AdminDashboardFrame extends JFrame {
         JPanel jobsCard = UiTheme.createCard("Jobs and Assignments", "High-level list of current postings, hours, and statuses.");
         jobsCard.add(wrapArea(jobSummaryArea), BorderLayout.CENTER);
 
-        JPanel suggestionsCard = UiTheme.createCard("Rebalance Suggestions", "Use recommendations to route open jobs to lower-load applicants.");
-        suggestionsCard.add(wrapArea(suggestionArea), BorderLayout.CENTER);
+        JPanel suggestionsCard = UiTheme.createCard("Rebalance and MO Accounts", "Create MO accounts while reviewing staffing recommendations.");
+        JPanel suggestionContent = new JPanel(new BorderLayout(0, 16));
+        suggestionContent.setOpaque(false);
+        suggestionContent.add(wrapArea(suggestionArea), BorderLayout.CENTER);
+        suggestionContent.add(buildMoAccountPanel(), BorderLayout.SOUTH);
+        suggestionsCard.add(suggestionContent, BorderLayout.CENTER);
 
         JSplitPane splitPane = new JSplitPane(
                 JSplitPane.HORIZONTAL_SPLIT,
@@ -182,6 +202,42 @@ public class AdminDashboardFrame extends JFrame {
         suggestionArea.setText("Click 'Rebalance Suggestion' to recommend lower-load TAs for open jobs.");
     }
 
+    private JPanel buildMoAccountPanel() {
+        JPanel panel = UiTheme.createCard("Create MO Account", "Admin can provision an MO login and assign managed modules immediately.");
+
+        UiTheme.styleTextField(moEmailField);
+        UiTheme.styleTextField(moPasswordField);
+        UiTheme.styleTextField(moConfirmField);
+        UiTheme.styleTextField(moModulesField);
+
+        JPanel form = UiTheme.createFormGrid();
+        UiTheme.addFormRow(form, 0, "MO Email", moEmailField);
+        UiTheme.addFormRow(form, 2, "Password", moPasswordField);
+        UiTheme.addFormRow(form, 4, "Confirm Password", moConfirmField);
+        UiTheme.addFormRow(form, 6, "Modules", moModulesField);
+
+        JTextArea note = new JTextArea("Use commas to separate module codes, for example: COMP1001, DATA2002.");
+        note.setEditable(false);
+        note.setOpaque(false);
+        note.setWrapStyleWord(true);
+        note.setLineWrap(true);
+        note.setForeground(UiTheme.MUTED_TEXT);
+        note.setFont(UiTheme.uiFont(Font.PLAIN, 13));
+
+        JButton clearButton = UiTheme.createSecondaryButton("Clear");
+        JButton createButton = UiTheme.createPrimaryButton("Create MO Account");
+        clearButton.addActionListener(event -> clearMoAccountForm());
+        createButton.addActionListener(event -> createMoAccount());
+
+        JPanel body = new JPanel(new BorderLayout(0, 14));
+        body.setOpaque(false);
+        body.add(form, BorderLayout.NORTH);
+        body.add(note, BorderLayout.CENTER);
+        body.add(UiTheme.createButtonRow(FlowLayout.RIGHT, clearButton, createButton), BorderLayout.SOUTH);
+        panel.add(body, BorderLayout.CENTER);
+        return panel;
+    }
+
     private void generateSuggestions() {
         List<ApplicantProfile> profiles = dataService.getProfileRepository().findAll();
         List<JobPosting> jobs = dataService.getJobRepository().findAll();
@@ -206,6 +262,39 @@ public class AdminDashboardFrame extends JFrame {
     private void returnToLogin() {
         new LoginFrame(dataService).setVisible(true);
         dispose();
+    }
+
+    private void openHiringManagement() {
+        new MOManagementFrame(dataService, currentUser).setVisible(true);
+    }
+
+    private void createMoAccount() {
+        try {
+            User user = authService.registerMo(
+                    moEmailField.getText(),
+                    new String(moPasswordField.getPassword()),
+                    new String(moConfirmField.getPassword()),
+                    moModules()
+            );
+            refreshData();
+            clearMoAccountForm();
+            UiMessage.info(this, "MO account created for " + user.getUsername() + ".");
+        } catch (Exception ex) {
+            UiMessage.error(this, ex.getMessage());
+        }
+    }
+
+    private List<String> moModules() {
+        return validationService.parseSkills(moModulesField.getText()).stream()
+                .map(validationService::normalizeModuleCode)
+                .toList();
+    }
+
+    private void clearMoAccountForm() {
+        moEmailField.setText("");
+        moPasswordField.setText("");
+        moConfirmField.setText("");
+        moModulesField.setText("");
     }
 
     private void styleComponents() {
