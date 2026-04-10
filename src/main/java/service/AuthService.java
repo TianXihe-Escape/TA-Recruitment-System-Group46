@@ -180,9 +180,16 @@ public class AuthService {
         // Validate registration data
         List<String> errors = validationService.validateRegistration(normalizedUsername, password, confirmPassword);
 
-        // Additional validation for name requirement based on role
-        if ((role == Role.MO || role == Role.TA) && normalizedName.isBlank()) {
-            errors.add(role == Role.MO ? "MO name is required." : "TA name is required.");
+        // Validate the display name early so newly created accounts don't start in a
+        // state that later profile-editing rules would reject.
+        if (role == Role.MO || role == Role.TA) {
+            errors.addAll(validationService.validatePersonName(normalizedName));
+        }
+
+        // MO accounts must be provisioned with at least one manageable module;
+        // otherwise the account can log in but cannot actually manage hiring.
+        if (role == Role.MO) {
+            errors.addAll(validationService.validateManagedModuleCodes(managedModuleCodes));
         }
 
         // Check for existing user with the same username

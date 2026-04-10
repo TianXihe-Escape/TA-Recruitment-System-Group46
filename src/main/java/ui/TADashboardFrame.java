@@ -23,6 +23,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Main TA workspace.
@@ -274,7 +275,12 @@ public class TADashboardFrame extends JFrame {
             return;
         }
         String jobId = String.valueOf(jobTableModel.getValueAt(row, 0));
-        JobPosting job = jobService.getJobById(jobId);
+        JobPosting job = findJob(jobId).orElse(null);
+        if (job == null) {
+            UiMessage.error(this, "This job is no longer available. Please refresh the table.");
+            refreshJobs();
+            return;
+        }
         String taDemandSummary = buildTaDemandText(job);
         new JobDetailsDialog(this, job, taDemandSummary).setVisible(true);
     }
@@ -299,18 +305,18 @@ public class TADashboardFrame extends JFrame {
             return;
         }
 
-        JobPosting job = jobService.getJobById(application.getJobId());
+        JobPosting job = findJob(application.getJobId()).orElse(null);
         // Keep the popup text compact but complete so a TA can understand the application outcome without
         // switching between the table, job details dialog, and profile panel.
         String details = "Application ID: " + application.getApplicationId() + "\n" +
-                "Job: " + job.getModuleCode() + " - " + job.getModuleTitle() + "\n" +
+                "Job: " + (job == null ? "[Deleted Job]" : job.getModuleCode() + " - " + job.getModuleTitle()) + "\n" +
                 "Status: " + application.getStatus() + "\n" +
                 "Applied At: " + valueOrDash(application.getAppliedAt() == null ? null : application.getAppliedAt().toString()) + "\n" +
                 "Match Score: " + application.getMatchScore() + "%\n" +
                 "Missing Skills: " + valueOrDash(String.join(", ", application.getMissingSkills())) + "\n" +
                 "Reviewer Notes: " + valueOrDash(application.getReviewerNotes()) + "\n" +
-                "TA Demand: " + buildTaDemandText(job) + "\n" +
-                "Deadline: " + valueOrDash(job.getApplicationDeadline() == null ? null : job.getApplicationDeadline().toString());
+                "TA Demand: " + (job == null ? "-" : buildTaDemandText(job)) + "\n" +
+                "Deadline: " + valueOrDash(job == null || job.getApplicationDeadline() == null ? null : job.getApplicationDeadline().toString());
         UiMessage.info(this, details);
     }
 
@@ -326,7 +332,8 @@ public class TADashboardFrame extends JFrame {
 
         try {
             String jobId = String.valueOf(jobTableModel.getValueAt(row, 0));
-            JobPosting job = jobService.getJobById(jobId);
+            JobPosting job = findJob(jobId)
+                    .orElseThrow(() -> new IllegalStateException("This job is no longer available. Please refresh the table."));
             ApplicationRecord record = applicationService.apply(profile, job);
             UiMessage.info(this, "Application submitted.\nMatch score: " + record.getMatchScore() + "%");
             refreshApplications();
@@ -486,6 +493,14 @@ public class TADashboardFrame extends JFrame {
         JScrollPane scrollPane = new JScrollPane(area);
         UiTheme.styleScrollPane(scrollPane);
         return scrollPane;
+    }
+
+    /**
+     * Reads a job by id without throwing so UI actions can degrade gracefully if
+     * data changed outside the current screen.
+     */
+    private Optional<JobPosting> findJob(String jobId) {
+        return dataService.getJobRepository().findById(jobId);
     }
 
     /**

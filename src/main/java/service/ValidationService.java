@@ -1,4 +1,4 @@
-package service;
+﻿package service;
 
 import model.JobPosting;
 import util.FileUtil;
@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
  */
 public class ValidationService {
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
-    private static final Pattern NAME_PATTERN = Pattern.compile("^[\\p{L}][\\p{L}\\p{M} .·'\\-]{0,49}$");
+    private static final Pattern NAME_PATTERN = Pattern.compile("^[\\p{L}][\\p{L}\\p{M} .\\u00B7'\\-]{0,49}$");
     private static final Pattern PHONE_PATTERN = Pattern.compile("^(?:\\+?\\d{7,15}|1[3-9]\\d{9})$");
     private static final int MAX_SKILLS = 10;
     private static final int MAX_SKILL_LENGTH = 30;
@@ -70,11 +70,7 @@ public class ValidationService {
         String normalizedEmail = normalizeEmail(email);
         String normalizedPhone = normalizePhone(phone);
 
-        if (FileUtil.isBlank(normalizedName)) {
-            errors.add("Name is required.");
-        } else if (!NAME_PATTERN.matcher(normalizedName).matches()) {
-            errors.add("Name can use letters, spaces, apostrophes, hyphens, and Chinese characters.");
-        }
+        errors.addAll(validatePersonName(normalizedName));
         if (FileUtil.isBlank(normalizedEmail) || !EMAIL_PATTERN.matcher(normalizedEmail).matches()) {
             errors.add("A valid email is required.");
         }
@@ -82,6 +78,38 @@ public class ValidationService {
             errors.add("Phone number is required.");
         } else if (!PHONE_PATTERN.matcher(normalizedPhone).matches()) {
             errors.add("Please enter a valid phone number.");
+        }
+        return errors;
+    }
+
+    public List<String> validatePersonName(String name) {
+        List<String> errors = new ArrayList<>();
+        String normalizedName = normalizePersonName(name);
+        if (FileUtil.isBlank(normalizedName)) {
+            errors.add("Name is required.");
+        } else if (!NAME_PATTERN.matcher(normalizedName).matches()) {
+            errors.add("Name can use letters, spaces, apostrophes, hyphens, and Chinese characters.");
+        }
+        return errors;
+    }
+
+    public List<String> validateManagedModuleCodes(List<String> managedModuleCodes) {
+        List<String> errors = new ArrayList<>();
+        List<String> normalizedCodes = managedModuleCodes == null
+                ? List.of()
+                : managedModuleCodes.stream()
+                .map(this::normalizeModuleCode)
+                .filter(code -> !code.isBlank())
+                .distinct()
+                .toList();
+
+        if (normalizedCodes.isEmpty()) {
+            errors.add("At least one managed module code is required for an MO account.");
+            return errors;
+        }
+
+        if (normalizedCodes.stream().anyMatch(code -> code.length() > MAX_MODULE_CODE_LENGTH)) {
+            errors.add("Each managed module code must be 20 characters or fewer.");
         }
         return errors;
     }
@@ -162,7 +190,7 @@ public class ValidationService {
             return new ArrayList<>();
         }
         Map<String, String> normalizedSkills = new LinkedHashMap<>();
-        Arrays.stream(commaSeparatedSkills.split("[,，;；、\\n\\r]+"))
+        Arrays.stream(commaSeparatedSkills.split("[,;\\uFF0C\\uFF1B\\u3001\\n\\r]+"))
                 .map(this::normalizeText)
                 .filter(value -> !value.isBlank())
                 .forEach(value -> normalizedSkills.putIfAbsent(value.toLowerCase(Locale.ROOT), value));

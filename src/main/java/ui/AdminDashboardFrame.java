@@ -7,6 +7,7 @@ import model.JobStatus;
 import model.User;
 import model.WorkloadRecord;
 import service.ApplicantService;
+import service.ApplicationService;
 import service.AuthService;
 import service.DataService;
 import service.JobService;
@@ -52,6 +53,10 @@ public class AdminDashboardFrame extends JFrame {
      */
     private final WorkloadService workloadService;
     /**
+     * Service used for application cleanup so job status stays synchronized.
+     */
+    private final ApplicationService applicationService;
+    /**
      * Matching helper used for rebalance suggestions.
      */
     private final MatchingService matchingService;
@@ -94,6 +99,11 @@ public class AdminDashboardFrame extends JFrame {
         );
         new ApplicantService(dataService.getProfileRepository(), validationService);
         new JobService(dataService.getJobRepository(), validationService);
+        this.applicationService = new ApplicationService(
+                dataService.getApplicationRepository(),
+                dataService.getJobRepository(),
+                new MatchingService()
+        );
         this.workloadService = new WorkloadService();
         this.matchingService = new MatchingService();
 
@@ -605,9 +615,9 @@ public class AdminDashboardFrame extends JFrame {
         }
 
         try {
-            List<ApplicationRecord> applications = new ArrayList<>(dataService.getApplicationRepository().findAll());
-            applications.removeIf(application -> profile.getApplicantId().equals(application.getApplicantId()));
-            dataService.getApplicationRepository().saveAll(applications);
+            // Reuse the service-layer deletion path so removing a TA also reopens any
+            // jobs whose accepted headcount drops below the required demand.
+            applicationService.removeApplicationsForApplicant(profile.getApplicantId());
 
             List<ApplicantProfile> profiles = new ArrayList<>(dataService.getProfileRepository().findAll());
             profiles.removeIf(existingProfile -> profile.getApplicantId().equals(existingProfile.getApplicantId()));
