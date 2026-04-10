@@ -21,6 +21,7 @@ public class ValidationService {
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
     private static final Pattern NAME_PATTERN = Pattern.compile("^[\\p{L}][\\p{L}\\p{M} .·'\\-]{0,49}$");
     private static final Pattern PHONE_PATTERN = Pattern.compile("^(?:\\+?\\d{7,15}|1[3-9]\\d{9})$");
+    private static final String PHONE_ERROR_MESSAGE = "Please enter an 11-digit Chinese phone number or an international number with 7 to 15 digits.";
     private static final int MAX_SKILLS = 10;
     private static final int MAX_SKILL_LENGTH = 30;
     private static final int MAX_MODULE_CODE_LENGTH = 20;
@@ -81,7 +82,29 @@ public class ValidationService {
         if (FileUtil.isBlank(normalizedPhone)) {
             errors.add("Phone number is required.");
         } else if (!PHONE_PATTERN.matcher(normalizedPhone).matches()) {
-            errors.add("Please enter a valid phone number.");
+            errors.add(PHONE_ERROR_MESSAGE);
+        }
+        return errors;
+    }
+
+    public List<String> validateSkillInput(String rawSkills, String fieldLabel, boolean required) {
+        List<String> errors = new ArrayList<>();
+        List<String> tokens = splitSkillTokens(rawSkills);
+        String normalizedFieldLabel = normalizeText(fieldLabel).isBlank() ? "Skills" : normalizeText(fieldLabel);
+
+        if (required && tokens.isEmpty()) {
+            errors.add("At least one " + normalizedFieldLabel.toLowerCase(Locale.ROOT) + " item is required.");
+            return errors;
+        }
+        if (tokens.size() > MAX_SKILLS) {
+            errors.add(normalizedFieldLabel + " must contain " + MAX_SKILLS + " items or fewer.");
+        }
+        if (tokens.stream().anyMatch(skill -> skill.length() > MAX_SKILL_LENGTH)) {
+            errors.add("Each " + singularLabel(normalizedFieldLabel).toLowerCase(Locale.ROOT)
+                    + " must be " + MAX_SKILL_LENGTH + " characters or fewer.");
+        }
+        if (hasDuplicateSkills(tokens)) {
+            errors.add(normalizedFieldLabel + " cannot contain duplicate entries.");
         }
         return errors;
     }
@@ -162,9 +185,7 @@ public class ValidationService {
             return new ArrayList<>();
         }
         Map<String, String> normalizedSkills = new LinkedHashMap<>();
-        Arrays.stream(commaSeparatedSkills.split("[,，;；、\\n\\r]+"))
-                .map(this::normalizeText)
-                .filter(value -> !value.isBlank())
+        splitSkillTokens(commaSeparatedSkills).stream()
                 .forEach(value -> normalizedSkills.putIfAbsent(value.toLowerCase(Locale.ROOT), value));
         return normalizedSkills.values().stream()
                 .limit(MAX_SKILLS)
@@ -205,5 +226,29 @@ public class ValidationService {
                 .map(this::normalizeText)
                 .collect(Collectors.joining("\n"))
                 .trim();
+    }
+
+    private List<String> splitSkillTokens(String rawSkills) {
+        if (FileUtil.isBlank(rawSkills)) {
+            return List.of();
+        }
+        return Arrays.stream(rawSkills.split("[,，;；、\\n\\r]+"))
+                .map(this::normalizeText)
+                .filter(value -> !value.isBlank())
+                .collect(Collectors.toList());
+    }
+
+    private boolean hasDuplicateSkills(List<String> skills) {
+        return skills.stream()
+                .map(skill -> skill.toLowerCase(Locale.ROOT))
+                .distinct()
+                .count() != skills.size();
+    }
+
+    private String singularLabel(String label) {
+        if (label.endsWith("s") || label.endsWith("S")) {
+            return label.substring(0, label.length() - 1);
+        }
+        return label;
     }
 }

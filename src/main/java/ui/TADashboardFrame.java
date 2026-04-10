@@ -171,6 +171,10 @@ public class TADashboardFrame extends JFrame {
 
     private void saveProfile() {
         try {
+            List<String> skillErrors = validationService.validateSkillInput(skillsField.getText(), "Skills", false);
+            if (!skillErrors.isEmpty()) {
+                throw new IllegalArgumentException(String.join("\n", skillErrors));
+            }
             profile.setName(nameField.getText().trim());
             profile.setEmail(emailField.getText().trim());
             profile.setPhone(phoneField.getText().trim());
@@ -219,7 +223,7 @@ public class TADashboardFrame extends JFrame {
     private void viewSelectedJob() {
         int row = jobTable.getSelectedRow();
         if (row < 0) {
-            UiMessage.error(this, "Please select a job first.");
+            UiMessage.error(this, "Please select a job from the Available Jobs table before viewing details.");
             return;
         }
         String jobId = String.valueOf(jobTableModel.getValueAt(row, 0));
@@ -231,7 +235,7 @@ public class TADashboardFrame extends JFrame {
     private void viewSelectedApplication() {
         int row = applicationTable.getSelectedRow();
         if (row < 0) {
-            UiMessage.error(this, "Please select an application first.");
+            UiMessage.error(this, "Please select an application from My Applications before viewing details.");
             return;
         }
 
@@ -263,7 +267,15 @@ public class TADashboardFrame extends JFrame {
     private void applyForSelectedJob() {
         int row = jobTable.getSelectedRow();
         if (row < 0) {
-            UiMessage.error(this, "Please select a job first.");
+            UiMessage.error(this, "Please select a job from the Available Jobs table before applying.");
+            return;
+        }
+        List<String> profileIssues = getProfileIssuesForApplication();
+        if (!profileIssues.isEmpty()) {
+            UiMessage.error(this,
+                    "Please complete your profile before applying.\nMissing or invalid items:\n- "
+                            + String.join("\n- ", profileIssues)
+                            + "\n\nSave your profile first, then try again.");
             return;
         }
 
@@ -271,7 +283,10 @@ public class TADashboardFrame extends JFrame {
             String jobId = String.valueOf(jobTableModel.getValueAt(row, 0));
             JobPosting job = jobService.getJobById(jobId);
             ApplicationRecord record = applicationService.apply(profile, job);
-            UiMessage.info(this, "Application submitted.\nMatch score: " + record.getMatchScore() + "%");
+            UiMessage.info(this,
+                    "Application submitted for " + job.getModuleCode() + " - " + job.getModuleTitle()
+                            + ".\nMatch score: " + record.getMatchScore()
+                            + "%\nYou can track updates in My Applications.");
             refreshApplications();
             refreshJobs();
         } catch (Exception ex) {
@@ -282,7 +297,7 @@ public class TADashboardFrame extends JFrame {
     private void withdrawSelectedApplication() {
         int row = applicationTable.getSelectedRow();
         if (row < 0) {
-            UiMessage.error(this, "Please select an application first.");
+            UiMessage.error(this, "Please select an application from My Applications before withdrawing it.");
             return;
         }
         String applicationId = String.valueOf(applicationTableModel.getValueAt(row, 0));
@@ -396,6 +411,44 @@ public class TADashboardFrame extends JFrame {
         // TA demand is presented as accepted/required so the applicant sees remaining competition at a glance.
         int acceptedCount = applicationService.getAcceptedCountForJob(job.getJobId());
         return Math.min(acceptedCount, job.getRequiredTaCount()) + "/" + job.getRequiredTaCount();
+    }
+
+    private List<String> getProfileIssuesForApplication() {
+        List<String> issues = new ArrayList<>();
+        if (profile == null) {
+            issues.add("Applicant profile could not be loaded");
+            return issues;
+        }
+
+        String name = nameField.getText().trim();
+        String email = emailField.getText().trim();
+        String phone = phoneField.getText().trim();
+        String cvPath = cvPathField.getText().trim();
+
+        if (name.isBlank()) {
+            issues.add("Name");
+        }
+        if (email.isBlank()) {
+            issues.add("Email");
+        }
+        if (phone.isBlank()) {
+            issues.add("Phone number");
+        }
+        if (cvPath.isBlank()) {
+            issues.add("CV file");
+        }
+
+        List<String> profileErrors = validationService.validateApplicantProfile(name, email, phone);
+        for (String error : profileErrors) {
+            if ("Name is required.".equals(error)
+                    || "A valid email is required.".equals(error) && email.isBlank()
+                    || "Phone number is required.".equals(error)) {
+                continue;
+            }
+            issues.add(error);
+        }
+        issues.addAll(validationService.validateCvPath(cvPath));
+        return issues;
     }
 
     private JScrollPane wrapArea(JTextArea area) {
