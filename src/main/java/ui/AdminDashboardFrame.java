@@ -7,6 +7,7 @@ import model.JobStatus;
 import model.User;
 import model.WorkloadRecord;
 import service.ApplicantService;
+import service.ApplicationService;
 import service.AuthService;
 import service.DataService;
 import service.JobService;
@@ -26,17 +27,46 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Admin view for workload monitoring and demo data management.
+ * Administrator dashboard for workload monitoring, demo-data maintenance,
+ * and system-level account management.
  */
 public class AdminDashboardFrame extends JFrame {
+    /**
+     * Preferred height for directory scroll areas.
+     */
     private static final int DIRECTORY_PANEL_HEIGHT = 220;
+    /**
+     * Preferred height for the workload table card.
+     */
     private static final int WORKLOAD_PANEL_HEIGHT = 120;
 
+    /**
+     * Shared data facade for repository access.
+     */
     private final DataService dataService;
+    /**
+     * Logged-in administrator.
+     */
     private final User currentUser;
+    /**
+     * Service that aggregates accepted assignments into workload records.
+     */
     private final WorkloadService workloadService;
+    /**
+     * Service used for application cleanup so job status stays synchronized.
+     */
+    private final ApplicationService applicationService;
+    /**
+     * Matching helper used for rebalance suggestions.
+     */
     private final MatchingService matchingService;
+    /**
+     * Validation helper for MO account creation.
+     */
     private final ValidationService validationService;
+    /**
+     * Auth service used by admins to create MO accounts.
+     */
     private final AuthService authService;
     private final JLabel openJobsValue = createMetricValueLabel();
     private final JLabel closedJobsValue = createMetricValueLabel();
@@ -55,6 +85,9 @@ public class AdminDashboardFrame extends JFrame {
     private final JPasswordField moConfirmField = new JPasswordField();
     private final JTextField moModulesField = new JTextField();
 
+    /**
+     * Constructs the admin dashboard and immediately refreshes all summary data.
+     */
     public AdminDashboardFrame(DataService dataService, User currentUser) {
         this.dataService = dataService;
         this.currentUser = currentUser;
@@ -66,6 +99,11 @@ public class AdminDashboardFrame extends JFrame {
         );
         new ApplicantService(dataService.getProfileRepository(), validationService);
         new JobService(dataService.getJobRepository(), validationService);
+        this.applicationService = new ApplicationService(
+                dataService.getApplicationRepository(),
+                dataService.getJobRepository(),
+                new MatchingService()
+        );
         this.workloadService = new WorkloadService();
         this.matchingService = new MatchingService();
 
@@ -90,6 +128,9 @@ public class AdminDashboardFrame extends JFrame {
         refreshData();
     }
 
+    /**
+     * Builds the upper half of the dashboard with metrics and control buttons.
+     */
     private JPanel buildTopPanel() {
         JPanel panel = UiTheme.createCard("Workload Monitor", "Track assigned hours across TAs and quickly reset or repopulate the demo environment.");
 
@@ -131,6 +172,9 @@ public class AdminDashboardFrame extends JFrame {
         return panel;
     }
 
+    /**
+     * Builds the four KPI cards shown at the top of the screen.
+     */
     private JPanel buildMetricsPanel() {
         JPanel panel = new JPanel(new GridLayout(1, 4, 12, 0));
         panel.setOpaque(false);
@@ -141,6 +185,9 @@ public class AdminDashboardFrame extends JFrame {
         return panel;
     }
 
+    /**
+     * Builds the middle overview area containing directories and workload.
+     */
     private JSplitPane buildOverviewPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 12));
         panel.setOpaque(false);
@@ -158,6 +205,9 @@ public class AdminDashboardFrame extends JFrame {
         };
     }
 
+    /**
+     * Builds the TA and MO directory split view.
+     */
     private JSplitPane buildPeoplePanel() {
         JPanel taCard = UiTheme.createCard("TA Directory", "Scrollable TA profiles with core contact and skills information.");
         taCard.add(wrapDirectory(taDirectoryPanel), BorderLayout.CENTER);
@@ -172,6 +222,9 @@ public class AdminDashboardFrame extends JFrame {
         return splitPane;
     }
 
+    /**
+     * Builds the workload card that highlights accepted teaching assignments.
+     */
     private JPanel buildWorkloadPanel() {
         JPanel workloadCard = UiTheme.createCard("TA Workload", "Scrollable workload summary for accepted assignments.");
         JScrollPane tableScrollPane = UiTheme.wrapTable(workloadTable);
@@ -181,6 +234,9 @@ public class AdminDashboardFrame extends JFrame {
         return workloadCard;
     }
 
+    /**
+     * Builds the lower half with job summaries, suggestions, and MO provisioning.
+     */
     private JSplitPane buildBottomPanel() {
         JPanel jobsCard = UiTheme.createCard("Jobs and Assignments", "High-level list of current postings, hours, and statuses.");
         jobsCard.add(wrapArea(jobSummaryArea), BorderLayout.CENTER);
@@ -202,6 +258,9 @@ public class AdminDashboardFrame extends JFrame {
         return splitPane;
     }
 
+    /**
+     * Reloads all repository-backed data and refreshes every admin widget.
+     */
     private void refreshData() {
         workloadTableModel.setRowCount(0);
         List<User> users = dataService.getUserRepository().findAll();
@@ -254,6 +313,9 @@ public class AdminDashboardFrame extends JFrame {
         suggestionArea.setText("Click 'Rebalance Suggestion' to recommend lower-load TAs for open jobs.");
     }
 
+    /**
+     * Rebuilds the TA directory list from profile and application data.
+     */
     private void refreshTaDirectory(List<ApplicantProfile> profiles, List<ApplicationRecord> applications) {
         taDirectoryPanel.removeAll();
         List<JComponent> cards = new ArrayList<>();
@@ -278,6 +340,9 @@ public class AdminDashboardFrame extends JFrame {
         installDirectoryEntries(taDirectoryPanel, cards, "No TA profiles are available yet.");
     }
 
+    /**
+     * Rebuilds the MO directory list from user data.
+     */
     private void refreshMoDirectory(List<User> users) {
         moDirectoryPanel.removeAll();
         List<JComponent> cards = new ArrayList<>();
@@ -301,6 +366,9 @@ public class AdminDashboardFrame extends JFrame {
         installDirectoryEntries(moDirectoryPanel, cards, "No MO accounts are available yet.");
     }
 
+    /**
+     * Builds the embedded form used to provision a new MO account.
+     */
     private JPanel buildMoAccountPanel() {
         JPanel panel = UiTheme.createCard("Create MO Account", "Admin can provision an MO login and assign managed modules immediately.");
 
@@ -339,6 +407,9 @@ public class AdminDashboardFrame extends JFrame {
         return panel;
     }
 
+    /**
+     * Generates staffing suggestions for each currently open job.
+     */
     private void generateSuggestions() {
         List<ApplicantProfile> profiles = dataService.getProfileRepository().findAll();
         List<JobPosting> jobs = dataService.getJobRepository().findAll();
@@ -360,15 +431,24 @@ public class AdminDashboardFrame extends JFrame {
         suggestionArea.setText(builder.toString());
     }
 
+    /**
+     * Returns to the login frame and closes the admin dashboard.
+     */
     private void returnToLogin() {
         new LoginFrame(dataService).setVisible(true);
         dispose();
     }
 
+    /**
+     * Opens the hiring-management frame used for job operations.
+     */
     private void openHiringManagement() {
         new MOManagementFrame(dataService, currentUser).setVisible(true);
     }
 
+    /**
+     * Creates a new MO account from the values entered in the embedded form.
+     */
     private void createMoAccount() {
         try {
             User user = authService.registerMo(
@@ -386,12 +466,18 @@ public class AdminDashboardFrame extends JFrame {
         }
     }
 
+    /**
+     * Parses the MO modules field into normalized module codes.
+     */
     private List<String> moModules() {
         return validationService.parseSkills(moModulesField.getText()).stream()
                 .map(validationService::normalizeModuleCode)
                 .toList();
     }
 
+    /**
+     * Clears all fields in the MO account creation form.
+     */
     private void clearMoAccountForm() {
         moNameField.setText("");
         moEmailField.setText("");
@@ -400,6 +486,9 @@ public class AdminDashboardFrame extends JFrame {
         moModulesField.setText("");
     }
 
+    /**
+     * Applies shared styling to tables and text areas used by the admin screen.
+     */
     private void styleComponents() {
         UiTheme.styleTable(workloadTable);
         UiTheme.styleTextArea(jobSummaryArea, 14);
@@ -409,6 +498,9 @@ public class AdminDashboardFrame extends JFrame {
         suggestionArea.setEditable(false);
     }
 
+    /**
+     * Wraps a directory panel in a themed scroll pane with vertical scrolling.
+     */
     private JScrollPane wrapDirectory(JPanel panel) {
         JScrollPane scrollPane = new JScrollPane(panel);
         scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
@@ -420,12 +512,18 @@ public class AdminDashboardFrame extends JFrame {
         return scrollPane;
     }
 
+    /**
+     * Wraps a text area in a themed scroll pane.
+     */
     private JScrollPane wrapArea(JTextArea area) {
         JScrollPane scrollPane = new JScrollPane(area);
         UiTheme.styleScrollPane(scrollPane);
         return scrollPane;
     }
 
+    /**
+     * Creates one metric card containing a heading and large numeric value.
+     */
     private JPanel createMetricCard(String title, String subtitle, JLabel valueLabel) {
         JPanel card = UiTheme.createCard(title, subtitle);
         JPanel content = new JPanel(new BorderLayout());
@@ -436,6 +534,9 @@ public class AdminDashboardFrame extends JFrame {
         return card;
     }
 
+    /**
+     * Creates the shared container used by the TA and MO directories.
+     */
     private static JPanel createDirectoryListPanel() {
         JPanel panel = new JPanel();
         panel.setOpaque(false);
@@ -443,6 +544,9 @@ public class AdminDashboardFrame extends JFrame {
         return panel;
     }
 
+    /**
+     * Creates one directory card with a right-aligned delete action.
+     */
     private JComponent createDirectoryEntry(String title, String subtitle, String details, String actionText, Runnable action) {
         JPanel card = new JPanel(new BorderLayout(12, 0));
         card.setBackground(UiTheme.SURFACE_ALT);
@@ -498,6 +602,9 @@ public class AdminDashboardFrame extends JFrame {
         return card;
     }
 
+    /**
+     * Deletes a TA account and the related profile and application data.
+     */
     private void deleteTaAccount(ApplicantProfile profile) {
         String name = valueOrDash(profile.getName());
         if (!UiMessage.confirm(this,
@@ -508,9 +615,9 @@ public class AdminDashboardFrame extends JFrame {
         }
 
         try {
-            List<ApplicationRecord> applications = new ArrayList<>(dataService.getApplicationRepository().findAll());
-            applications.removeIf(application -> profile.getApplicantId().equals(application.getApplicantId()));
-            dataService.getApplicationRepository().saveAll(applications);
+            // Reuse the service-layer deletion path so removing a TA also reopens any
+            // jobs whose accepted headcount drops below the required demand.
+            applicationService.removeApplicationsForApplicant(profile.getApplicantId());
 
             List<ApplicantProfile> profiles = new ArrayList<>(dataService.getProfileRepository().findAll());
             profiles.removeIf(existingProfile -> profile.getApplicantId().equals(existingProfile.getApplicantId()));
@@ -527,6 +634,9 @@ public class AdminDashboardFrame extends JFrame {
         }
     }
 
+    /**
+     * Deletes an MO account together with jobs and applications owned by that MO.
+     */
     private void deleteMoAccount(User moUser) {
         String name = valueOrDash(moUser.getName());
         if (!UiMessage.confirm(this,
@@ -563,6 +673,9 @@ public class AdminDashboardFrame extends JFrame {
         }
     }
 
+    /**
+     * Replaces directory contents with the supplied entries or an empty-state label.
+     */
     private void installDirectoryEntries(JPanel panel, List<JComponent> entries, String emptyMessage) {
         panel.removeAll();
         if (entries.isEmpty()) {
@@ -583,10 +696,16 @@ public class AdminDashboardFrame extends JFrame {
         panel.repaint();
     }
 
+    /**
+     * Returns a dash for null or blank strings.
+     */
     private String valueOrDash(String value) {
         return value == null || value.isBlank() ? "-" : value;
     }
 
+    /**
+     * Creates the emphasized numeric label used inside metric cards.
+     */
     private static JLabel createMetricValueLabel() {
         JLabel label = new JLabel("0");
         label.setFont(UiTheme.uiFont(Font.BOLD, 32));
@@ -594,6 +713,9 @@ public class AdminDashboardFrame extends JFrame {
         return label;
     }
 
+    /**
+     * Renderer that tints overloaded rows red for quick admin scanning.
+     */
     private static class WorkloadRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,

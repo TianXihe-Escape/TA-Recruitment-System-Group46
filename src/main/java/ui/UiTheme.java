@@ -13,34 +13,181 @@ import java.awt.*;
 import java.awt.event.MouseWheelEvent;
 
 /**
- * Shared visual system for the Swing UI.
+ * Centralized theme and styling system for the TA Recruitment System's Swing user interface.
+ * This class provides a comprehensive visual design system that ensures consistency across
+ * all UI components, implementing a modern, professional appearance suitable for an
+ * educational institution application.
+ *
+ * Key design principles:
+ * - Consistent color palette with semantic color meanings
+ * - Typography hierarchy using carefully selected fonts
+ * - Unified component styling for buttons, forms, tables, and dialogs
+ * - Responsive and accessible design considerations
+ * - Cross-platform compatibility with Nimbus Look and Feel as base
+ *
+ * The theme system includes:
+ * - Color constants for backgrounds, surfaces, text, and accents
+ * - Font management with fallback support for different platforms
+ * - Component styling methods for all major Swing components
+ * - Custom scrollbar implementations with smooth gradients
+ * - Mouse wheel forwarding for improved user experience
+ * - Internationalization support with English dialog labels
+ *
+ * Usage:
+ * Call UiTheme.install() at application startup to apply the theme globally.
+ * Use the various styling methods (styleTextField, styleTable, etc.) to apply
+ * consistent styling to individual components.
+ *
+ * @author TA Recruitment System Development Team
+ * @version 1.0.0
+ * @since 2026-04-09
  */
 public final class UiTheme {
+
+    /**
+     * Primary background color for the application.
+     * A light blue-gray tone that provides a clean, professional backdrop
+     * for all major UI elements and page content.
+     */
     public static final Color BACKGROUND = new Color(243, 246, 251);
+
+    /**
+     * Surface color for cards, panels, and elevated content.
+     * Pure white provides maximum contrast and readability for content areas.
+     */
     public static final Color SURFACE = Color.WHITE;
+
+    /**
+     * Alternative surface color for secondary content areas.
+     * A slightly tinted white that provides subtle visual hierarchy
+     * without being as prominent as the primary surface color.
+     */
     public static final Color SURFACE_ALT = new Color(248, 250, 253);
+
+    /**
+     * Border color for separating UI elements.
+     * A muted blue-gray that provides subtle definition without being harsh.
+     */
     public static final Color BORDER = new Color(217, 224, 234);
+
+    /**
+     * Primary text color for headings and important content.
+     * A dark blue-gray that ensures excellent readability and accessibility.
+     */
     public static final Color TEXT = new Color(28, 39, 54);
+
+    /**
+     * Secondary text color for labels, captions, and less important text.
+     * A medium gray that provides sufficient contrast while indicating lower importance.
+     */
     public static final Color MUTED_TEXT = new Color(97, 109, 126);
+
+    /**
+     * Primary brand color for buttons, links, and interactive elements.
+     * A professional blue that conveys trust and reliability.
+     */
     public static final Color PRIMARY = new Color(36, 99, 235);
+
+    /**
+     * Light variant of the primary color for backgrounds and highlights.
+     * Used for selection states, hover effects, and subtle accents.
+     */
     public static final Color PRIMARY_SOFT = new Color(225, 236, 255);
+
+    /**
+     * Success color for positive actions and confirmations.
+     * A green tone that clearly indicates successful operations.
+     */
     public static final Color SUCCESS = new Color(22, 163, 74);
+
+    /**
+     * Warning color for cautionary messages and non-critical alerts.
+     * An amber tone that draws attention without causing alarm.
+     */
     public static final Color WARNING = new Color(245, 158, 11);
+
+    /**
+     * Danger/error color for critical alerts and destructive actions.
+     * A red tone that clearly indicates problems or dangerous operations.
+     */
     public static final Color DANGER = new Color(220, 38, 38);
+
+    /**
+     * Unit increment for smooth scrolling (pixels per wheel click).
+     * Controls how much content moves with each mouse wheel increment.
+     */
     private static final int SCROLL_UNIT_INCREMENT = 32;
+
+    /**
+     * Block increment for page-based scrolling (pixels per page).
+     * Controls how much content moves when clicking in the scrollbar track.
+     */
     private static final int SCROLL_BLOCK_INCREMENT = 96;
 
+    /**
+     * Resolved font family name based on system availability.
+     * Uses a prioritized list of CJK and Western fonts for optimal display
+     * across different platforms and languages.
+     */
     private static final String FONT_FAMILY = resolveFontFamily();
+
+    /**
+     * Font for main titles and headings.
+     * Large, bold font used for page titles and major section headers.
+     */
     private static final Font TITLE_FONT = uiFont(Font.BOLD, 28);
+
+    /**
+     * Font for section headers and card titles.
+     * Medium-sized bold font for subsection headings and important labels.
+     */
     private static final Font SECTION_FONT = uiFont(Font.BOLD, 18);
+
+    /**
+     * Font for body text and general content.
+     * Standard-sized regular font for readable body text and descriptions.
+     */
     private static final Font BODY_FONT = uiFont(Font.PLAIN, 14);
+
+    /**
+     * Font for small text and captions.
+     * Smaller font for labels, footnotes, and secondary information.
+     */
     private static final Font SMALL_FONT = uiFont(Font.PLAIN, 12);
+
+    /**
+     * Font for button text and call-to-action elements.
+     * Bold font that ensures button text is prominent and readable.
+     */
     private static final Font BUTTON_FONT = uiFont(Font.BOLD, 13);
 
+    /**
+     * Private constructor to prevent instantiation.
+     * This utility class contains only static methods and constants,
+     * so instantiation is unnecessary and should be prevented.
+     */
     private UiTheme() {
+        // Utility class - no instantiation allowed
     }
 
+    /**
+     * Installs the custom UI theme globally across the application.
+     * This method should be called once at application startup, before creating any UI components.
+     * It configures the Nimbus Look and Feel as the base, then overrides specific UI properties
+     * to achieve the desired visual appearance.
+     *
+     * The installation process includes:
+     * 1. Setting Nimbus as the system Look and Feel
+     * 2. Configuring color properties for various UI elements
+     * 3. Setting the default font for consistent typography
+     * 4. Installing English labels for standard dialogs
+     *
+     * If Nimbus is not available, the method gracefully continues with the default Look and Feel,
+     * though some styling may not be applied perfectly.
+     */
     public static void install() {
+        // Attempt to set Nimbus Look and Feel as the base theme
+        // Nimbus provides a modern, cross-platform appearance that we can customize
         try {
             for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
                 if ("Nimbus".equals(info.getName())) {
@@ -49,22 +196,30 @@ public final class UiTheme {
                 }
             }
         } catch (Exception ignored) {
+            // If Nimbus installation fails, continue with default Look and Feel
+            // The application will still function, though styling may be less polished
         }
 
-        UIManager.put("control", BACKGROUND);
-        UIManager.put("info", SURFACE);
-        UIManager.put("nimbusBase", PRIMARY);
-        UIManager.put("nimbusBlueGrey", new Color(236, 241, 248));
-        UIManager.put("nimbusFocus", new Color(120, 164, 255));
-        UIManager.put("text", TEXT);
-        UIManager.put("defaultFont", BODY_FONT);
-        UIManager.put("OptionPane.background", SURFACE);
-        UIManager.put("Panel.background", BACKGROUND);
-        UIManager.put("ScrollPane.background", SURFACE);
-        UIManager.put("Table.background", SURFACE);
-        UIManager.put("Table.selectionBackground", PRIMARY_SOFT);
-        UIManager.put("Table.selectionForeground", TEXT);
+        // Configure Nimbus color properties to match our theme
+        // These override the default Nimbus colors with our custom palette
+        UIManager.put("control", BACKGROUND);  // Background for controls like buttons
+        UIManager.put("info", SURFACE);  // Background for tooltips and info panels
+        UIManager.put("nimbusBase", PRIMARY);  // Base color for various Nimbus elements
+        UIManager.put("nimbusBlueGrey", new Color(236, 241, 248));  // Blue-gray accent color
+        UIManager.put("nimbusFocus", new Color(120, 164, 255));  // Focus ring color
+        UIManager.put("text", TEXT);  // Default text color
+        UIManager.put("defaultFont", BODY_FONT);  // Default font for all components
 
+        // Override specific component background colors
+        UIManager.put("OptionPane.background", SURFACE);  // Dialog background
+        UIManager.put("Panel.background", BACKGROUND);  // Panel background
+        UIManager.put("ScrollPane.background", SURFACE);  // Scroll pane background
+        UIManager.put("Table.background", SURFACE);  // Table background
+        UIManager.put("Table.selectionBackground", PRIMARY_SOFT);  // Selected table row background
+        UIManager.put("Table.selectionForeground", TEXT);  // Selected table row text color
+
+        // Install English labels for standard Swing dialogs
+        // This ensures consistent language regardless of system locale
         installEnglishDialogLabels();
     }
 
@@ -76,6 +231,13 @@ public final class UiTheme {
         return new Font(FONT_FAMILY, style, size);
     }
 
+    /**
+     * Creates a standard page panel with consistent padding and layout.
+     * This method provides a uniform container for page-level content,
+     * ensuring consistent margins and background across different screens.
+     *
+     * @return A JPanel configured as a page container with proper spacing and background.
+     */
     public static JPanel createPagePanel() {
         JPanel panel = new JPanel(new BorderLayout(20, 20));
         panel.setBackground(BACKGROUND);
@@ -83,25 +245,46 @@ public final class UiTheme {
         return panel;
     }
 
+    /**
+     * Creates a header panel with title and subtitle for page sections.
+     * This provides a consistent way to display page titles and descriptions,
+     * with proper typography and spacing.
+     *
+     * @param title    The main title text to display.
+     * @param subtitle The subtitle or description text (can be null).
+     * @return A JPanel containing the formatted header with title and subtitle.
+     */
     public static JPanel createHeader(String title, String subtitle) {
         JPanel header = new JPanel();
         header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
         header.setOpaque(false);
 
+        // Create and style the main title label
         JLabel titleLabel = new JLabel(title);
         titleLabel.setFont(TITLE_FONT);
         titleLabel.setForeground(TEXT);
 
+        // Create and style the subtitle label if provided
         JLabel subtitleLabel = new JLabel(subtitle);
         subtitleLabel.setFont(BODY_FONT);
         subtitleLabel.setForeground(MUTED_TEXT);
         subtitleLabel.setBorder(new EmptyBorder(6, 0, 0, 0));
 
+        // Add components to the header panel
         header.add(titleLabel);
         header.add(subtitleLabel);
         return header;
     }
 
+    /**
+     * Creates a card panel with optional title and subtitle.
+     * Cards provide visual grouping and elevation for content sections,
+     * with consistent styling and spacing.
+     *
+     * @param title    The card title (can be null for title-less cards).
+     * @param subtitle The card subtitle or description (can be null).
+     * @return A JPanel styled as a card with the specified title and subtitle.
+     */
     public static JPanel createCard(String title, String subtitle) {
         JPanel card = new JPanel(new BorderLayout(16, 16));
         card.setBackground(SURFACE);
@@ -110,16 +293,19 @@ public final class UiTheme {
                 new EmptyBorder(18, 18, 18, 18)
         ));
 
+        // Add header section if title is provided
         if (title != null && !title.isBlank()) {
             JPanel header = new JPanel();
             header.setOpaque(false);
             header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
 
+            // Title label with section font
             JLabel titleLabel = new JLabel(title);
             titleLabel.setFont(SECTION_FONT);
             titleLabel.setForeground(TEXT);
             header.add(titleLabel);
 
+            // Subtitle label if provided
             if (subtitle != null && !subtitle.isBlank()) {
                 JLabel subtitleLabel = new JLabel(subtitle);
                 subtitleLabel.setFont(BODY_FONT);
@@ -134,31 +320,51 @@ public final class UiTheme {
         return card;
     }
 
+    /**
+     * Creates a form grid panel for organizing form elements.
+     * This provides a GridBagLayout container specifically designed for form layouts,
+     * with consistent spacing and alignment.
+     *
+     * @return A JPanel configured with GridBagLayout for form content.
+     */
     public static JPanel createFormGrid() {
         JPanel form = new JPanel(new GridBagLayout());
         form.setOpaque(false);
         return form;
     }
 
+    /**
+     * Adds a labeled form row to a form grid.
+     * This method handles the complex GridBagLayout constraints to create
+     * properly aligned label-field pairs in forms.
+     *
+     * @param form  The form panel to add the row to.
+     * @param row   The row index for positioning (0-based).
+     * @param label The text for the field label.
+     * @param component The form component (text field, combo box, etc.).
+     */
     public static void addFormRow(JPanel form, int row, String label, JComponent component) {
+        // Configure constraints for the label
         GridBagConstraints labelConstraints = new GridBagConstraints();
-        labelConstraints.gridx = 0;
-        labelConstraints.gridy = row;
-        labelConstraints.weightx = 0;
-        labelConstraints.anchor = GridBagConstraints.NORTHWEST;
-        labelConstraints.insets = new Insets(row == 0 ? 0 : 10, 0, 6, 0);
+        labelConstraints.gridx = 0;  // Left column
+        labelConstraints.gridy = row;  // Specified row
+        labelConstraints.weightx = 0;  // Don't expand horizontally
+        labelConstraints.anchor = GridBagConstraints.NORTHWEST;  // Top-left alignment
+        labelConstraints.insets = new Insets(row == 0 ? 0 : 10, 0, 6, 0);  // Spacing between rows
 
+        // Create and add the label
         JLabel labelComponent = new JLabel(label);
         labelComponent.setFont(SMALL_FONT);
         labelComponent.setForeground(MUTED_TEXT);
         form.add(labelComponent, labelConstraints);
 
+        // Configure constraints for the input component
         GridBagConstraints fieldConstraints = new GridBagConstraints();
-        fieldConstraints.gridx = 0;
-        fieldConstraints.gridy = row + 1;
-        fieldConstraints.weightx = 1;
-        fieldConstraints.fill = GridBagConstraints.HORIZONTAL;
-        fieldConstraints.insets = new Insets(0, 0, 0, 0);
+        fieldConstraints.gridx = 0;  // Same column (right below label)
+        fieldConstraints.gridy = row + 1;  // Next row
+        fieldConstraints.weightx = 1;  // Expand to fill available width
+        fieldConstraints.fill = GridBagConstraints.HORIZONTAL;  // Fill horizontally
+        fieldConstraints.insets = new Insets(0, 0, 0, 0);  // No additional insets
         form.add(component, fieldConstraints);
     }
 

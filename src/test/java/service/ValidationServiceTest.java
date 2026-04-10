@@ -1,4 +1,4 @@
-package service;
+﻿package service;
 
 import model.JobPosting;
 import model.JobStatus;
@@ -38,9 +38,9 @@ class ValidationServiceTest {
 
     @Test
     void shouldAcceptChineseNameAndNormalizeSkills() {
-        assertTrue(validationService.validateApplicantProfile("李 华", "li@bupt.edu.cn", "13800000000").isEmpty());
-        assertEquals(List.of("Java", "沟通", "Python"),
-                validationService.parseSkills("Java，沟通、Python; java"));
+        assertTrue(validationService.validateApplicantProfile("\u674E\u534E", "li@bupt.edu.cn", "13800000000").isEmpty());
+        assertEquals(List.of("Java", "\u6C9F\u901A", "Python", "SQL"),
+                validationService.parseSkills("Java\uFF0C\u6C9F\u901A\u3001Python; java\nSQL"));
     }
 
     @Test
