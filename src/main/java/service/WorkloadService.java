@@ -8,9 +8,20 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Aggregates accepted applications into admin workload views.
+ * Service that turns accepted applications into workload-oriented admin data.
+ * It is deliberately read-only: the service computes summaries and suggestions
+ * but does not modify any persisted records.
  */
 public class WorkloadService {
+    /**
+     * Builds workload summaries for every applicant using accepted applications only.
+     *
+     * @param profiles applicant profiles
+     * @param jobs all job postings
+     * @param applications all application records
+     * @param threshold hour limit used to flag overload
+     * @return workload records sorted by total hours descending
+     */
     public List<WorkloadRecord> buildWorkloadRecords(List<ApplicantProfile> profiles,
                                                      List<JobPosting> jobs,
                                                      List<ApplicationRecord> applications,
@@ -20,6 +31,8 @@ public class WorkloadService {
         for (ApplicantProfile profile : profiles) {
             WorkloadRecord record = new WorkloadRecord();
             record.setApplicantId(profile.getApplicantId());
+            // Prefer the applicant's real name, but fall back to email so admin tables
+            // still show an identifiable label when a profile is incomplete.
             record.setApplicantName(profile.getName() == null || profile.getName().isBlank()
                     ? profile.getEmail()
                     : profile.getName());
@@ -54,11 +67,22 @@ public class WorkloadService {
             results.add(record);
         }
 
+        // Highest-load applicants are shown first because overload investigation is the
+        // main admin use case for this screen.
         return results.stream()
                 .sorted(Comparator.comparing(WorkloadRecord::getTotalHours).reversed())
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Suggests the top applicants for a job by combining skill match and current load.
+     *
+     * @param jobPosting target job
+     * @param profiles all applicants
+     * @param workloadRecords precomputed workloads
+     * @param matchingService skill matching helper
+     * @return up to three suggestion strings for admin display
+     */
     public List<String> suggestApplicantsForJob(JobPosting jobPosting,
                                                 List<ApplicantProfile> profiles,
                                                 List<WorkloadRecord> workloadRecords,
@@ -78,6 +102,8 @@ public class WorkloadService {
                 })
                 .limit(3)
                 .map(profile -> {
+                    // Recompute the score for the final display string so the explanation
+                    // shown to admins always matches the ranking criteria above.
                     int score = matchingService.calculateMatch(profile.getSkills(), jobPosting.getRequiredSkills()).getScorePercentage();
                     int hours = findHours(profile.getApplicantId(), workloadRecords);
                     return profile.getName() + " (" + score + "% match, " + hours + "h current load)";
@@ -85,6 +111,9 @@ public class WorkloadService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Looks up current assigned hours for a specific applicant from prebuilt workload records.
+     */
     private int findHours(String applicantId, List<WorkloadRecord> records) {
         return records.stream()
                 .filter(record -> record.getApplicantId().equals(applicantId))
