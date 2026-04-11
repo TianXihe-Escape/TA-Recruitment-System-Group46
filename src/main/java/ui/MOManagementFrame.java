@@ -30,10 +30,17 @@ import java.util.stream.Collectors;
 
 /**
  * MO dashboard for posting jobs and reviewing applicants.
+ *
+ * This frame is shared by normal Module Organisers and admins. Normal MOs only
+ * see their assigned modules, while admins can work across all known modules.
+ * It combines three responsibilities in one screen: editing job postings,
+ * loading applications for a selected job, and recording review decisions.
  */
 public class MOManagementFrame extends JFrame {
+    // New jobs do not have a repository ID yet, so the form shows this until save generates one.
     private static final String NEW_JOB_PLACEHOLDER = "AUTO-GENERATED ON SAVE";
 
+    // Services are kept as fields because most button actions need to read or save data.
     private final DataService dataService;
     private final JobService jobService;
     private final ApplicantService applicantService;
@@ -43,8 +50,10 @@ public class MOManagementFrame extends JFrame {
     private final User currentUser;
     private final List<String> managedModuleCodes;
     private final boolean adminMode;
+    // Prevents combo box/list listeners from reloading data while the form is being filled programmatically.
     private boolean syncingForm;
 
+    // Left-side job posting form fields.
     private final JTextField jobIdField = new JTextField();
     private final JComboBox<String> moduleCodeBox = new JComboBox<>();
     private final JTextField moduleTitleField = new JTextField();
@@ -55,8 +64,10 @@ public class MOManagementFrame extends JFrame {
     private final JComboBox<JobStatus> statusBox = new JComboBox<>(JobStatus.values());
     private final JTextArea dutiesArea = new JTextArea(3, 20);
     private final JTextArea reviewArea = new JTextArea(4, 20);
+    // Read-only text areas that show details for the selected applicant/application.
     private final JTextArea applicantSummaryArea = new JTextArea(4, 20);
     private final JTextArea matchInfoArea = new JTextArea(6, 20);
+    // Filter and sort controls are reapplied each time the applicant table reloads.
     private final JComboBox<String> applicantStatusFilter = new JComboBox<>(
             new String[]{"All Statuses", "SUBMITTED", "SHORTLISTED", "ACCEPTED", "REJECTED", "WITHDRAWN"}
     );
@@ -69,12 +80,14 @@ public class MOManagementFrame extends JFrame {
     private final DefaultTableModel applicantTableModel = new DefaultTableModel(
             new Object[]{"Application ID", "Applicant", "Status", "Match %", "Missing"}, 0);
     private final PlaceholderTable applicantTable = new PlaceholderTable(applicantTableModel, "Select a job and click Load Applicants to review submissions.");
+    // Keeps the applicant table tied to the job currently loaded after filters or sorting change.
     private String loadedApplicantJobId;
 
     public MOManagementFrame(DataService dataService, User currentUser) {
         this.dataService = dataService;
         this.currentUser = currentUser;
         this.validationService = new ValidationService();
+        // Each service receives the repository it owns; the frame stays focused on UI coordination.
         this.jobService = new JobService(dataService.getJobRepository(), validationService);
         this.applicantService = new ApplicantService(dataService.getProfileRepository(), validationService);
         this.matchingService = new MatchingService();
@@ -84,8 +97,10 @@ public class MOManagementFrame extends JFrame {
                 matchingService
         );
         this.adminMode = currentUser.getRole() == Role.ADMIN;
+        // The module list is resolved once when the frame opens, then used for filtering and validation.
         this.managedModuleCodes = resolveManagedModuleCodes();
 
+        // Build the main two-column layout: job editor on the left, review queue on the right.
         setTitle((adminMode ? "Hiring Management" : "MO Management") + " - " + Constants.APP_TITLE);
         setSize(1420, 880);
         setMinimumSize(new Dimension(1020, 700));
@@ -106,15 +121,21 @@ public class MOManagementFrame extends JFrame {
         root.add(splitPane, BorderLayout.CENTER);
         add(UiTheme.wrapPage(root));
 
+        // Initial load: show existing jobs first, then reset the editor into "new job" mode.
         refreshJobs();
         clearForm();
         bindFormSync();
     }
 
+    /**
+     * Creates the job editor form, including controls for creating a new posting
+     * and updating an existing one.
+     */
     private JPanel buildFormPanel() {
         JPanel panel = UiTheme.createCard("Job Posting Editor", "Select an existing job to revise it, or start a new vacancy from a clean form.");
 
         JPanel form = UiTheme.createFormGrid();
+        // Job IDs are owned by JobService, so users can view them but not edit them directly.
         jobIdField.setEditable(false);
         jobIdField.setForeground(Color.GRAY);
         matchInfoArea.setEditable(false);
@@ -138,11 +159,13 @@ public class MOManagementFrame extends JFrame {
         JButton newButton = UiTheme.createSecondaryButton("New Job");
         JButton saveButton = UiTheme.createPrimaryButton("Save Job");
 
+        // If the user has no modules, the form stays visible but cannot create invalid jobs.
         boolean hasManagedModules = !managedModuleCodes.isEmpty();
         newButton.setEnabled(hasManagedModules);
         saveButton.setEnabled(hasManagedModules);
         moduleCodeBox.setEnabled(hasManagedModules);
 
+        // Button handlers are small and delegate the real work to helper methods below.
         backButton.addActionListener(event -> goBack());
         newButton.addActionListener(event -> clearForm());
         saveButton.addActionListener(event -> saveJob());
@@ -156,6 +179,10 @@ public class MOManagementFrame extends JFrame {
         return panel;
     }
 
+    /**
+     * Builds the review area with the job table, applicant table, filters, and
+     * status-change buttons used during applicant review.
+     */
     private JPanel buildTablesPanel() {
         JPanel panel = UiTheme.createCard("Review Queue", "Inspect job postings on the top table and applicant submissions below.");
 
@@ -166,6 +193,7 @@ public class MOManagementFrame extends JFrame {
         JButton rejectButton = UiTheme.createDangerButton("Reject");
         JButton refreshButton = UiTheme.createSecondaryButton("Refresh");
 
+        // Review buttons operate on the currently selected applicant row.
         loadApplicantsButton.addActionListener(event -> loadApplicantsForSelectedJob());
         shortlistButton.addActionListener(event -> updateApplicationStatus(ApplicationStatus.SHORTLISTED));
         acceptButton.addActionListener(event -> updateApplicationStatus(ApplicationStatus.ACCEPTED));
@@ -180,6 +208,7 @@ public class MOManagementFrame extends JFrame {
             loadedApplicantJobId = null;
             updateApplicantEmptyState();
         });
+        // Changing a filter or sort option reuses the last loaded job instead of requiring a new selection.
         applicantStatusFilter.addActionListener(event -> {
             if (!syncingForm && loadedApplicantJobId != null) {
                 loadApplicantsForJob(loadedApplicantJobId);
@@ -191,6 +220,7 @@ public class MOManagementFrame extends JFrame {
             }
         });
 
+        // Selecting a job fills the editor; selecting an applicant fills the match and notes panels.
         JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, UiTheme.wrapTable(jobTable), UiTheme.wrapTable(applicantTable));
         splitPane.setResizeWeight(0.5);
         UiTheme.styleSplitPane(splitPane);
@@ -233,9 +263,13 @@ public class MOManagementFrame extends JFrame {
         return panel;
     }
 
+    /**
+     * Reloads the job table using only jobs inside the current user's module scope.
+     */
     private void refreshJobs() {
         jobTableModel.setRowCount(0);
         for (JobPosting job : getScopedJobs()) {
+            // The table stores only display columns; full JobPosting objects are fetched by ID when needed.
             jobTableModel.addRow(new Object[]{
                     job.getJobId(),
                     job.getModuleCode() + " - " + job.getModuleTitle(),
@@ -247,11 +281,15 @@ public class MOManagementFrame extends JFrame {
         }
     }
 
+    /**
+     * Copies the selected job from the table into the editor form.
+     */
     private void loadSelectedJobToForm() {
         int row = jobTable.getSelectedRow();
         if (row < 0) {
             return;
         }
+        // The table row may be stale if another action changed the repository, so the job is looked up again.
         String jobId = String.valueOf(jobTableModel.getValueAt(row, 0));
         JobPosting job = findJob(jobId).orElse(null);
         if (job == null) {
@@ -263,8 +301,12 @@ public class MOManagementFrame extends JFrame {
         applyJobToForm(job);
     }
 
+    /**
+     * Resets the form for creating a new job and clears applicant-specific panels.
+     */
     private void clearForm() {
         syncingForm = true;
+        // Clearing selections can fire listeners, so syncingForm stays true until the reset is complete.
         jobTable.clearSelection();
         applicantTable.clearSelection();
         jobIdField.setForeground(Color.GRAY);
@@ -291,6 +333,10 @@ public class MOManagementFrame extends JFrame {
         syncingForm = false;
     }
 
+    /**
+     * Validates form input, creates or updates a JobPosting, and handles the
+     * extra applicant decisions needed when closing or reopening a job.
+     */
     private void saveJob() {
         try {
             if (managedModuleCodes.isEmpty()) {
@@ -300,21 +346,25 @@ public class MOManagementFrame extends JFrame {
                 return;
             }
             String jobId = jobIdField.getText().trim();
+            // A placeholder means this is a new posting; otherwise the existing job is loaded for comparison.
             JobPosting existingJob = NEW_JOB_PLACEHOLDER.equals(jobId) || jobId.isBlank()
                     ? null
                     : jobService.getJobById(jobId);
             String moduleCode = String.valueOf(moduleCodeBox.getSelectedItem()).trim();
+            // Permission is checked both for the chosen module and the existing job being edited.
             if (!canManageModule(moduleCode)) {
                 throw new IllegalArgumentException("You can only manage TA hiring for your assigned modules.");
             }
             if (existingJob != null && !canManageModule(existingJob.getModuleCode())) {
                 throw new IllegalArgumentException("You can only edit jobs for your assigned modules.");
             }
+            // Required skills are validated before parsing so the user receives one clear message.
             List<String> skillErrors = validationService.validateSkillInput(skillsField.getText(), "Required skills", true);
             if (!skillErrors.isEmpty()) {
                 throw new IllegalArgumentException(String.join("\n", skillErrors));
             }
 
+            // Build a fresh domain object from the form so JobService validation receives a complete posting.
             JobPosting jobPosting = new JobPosting();
             jobPosting.setJobId(NEW_JOB_PLACEHOLDER.equals(jobId) ? "" : jobId);
             jobPosting.setModuleCode(moduleCode);
@@ -327,6 +377,7 @@ public class MOManagementFrame extends JFrame {
             jobPosting.setDuties(dutiesArea.getText().trim());
             jobPosting.setPostedBy(currentUser.getUserId());
 
+            // Changing between OPEN and CLOSED can affect applicant statuses, so those paths are separated.
             if (jobPosting.getStatus() == JobStatus.CLOSED) {
                 if (!handleClosingJob(jobPosting, existingJob)) {
                     return;
@@ -337,6 +388,7 @@ public class MOManagementFrame extends JFrame {
                 }
             }
             UiMessage.info(this, "Job saved successfully.");
+            // Reload from storage after saving so generated IDs and service-side updates are reflected.
             refreshJobs();
             clearForm();
         } catch (NumberFormatException ex) {
@@ -348,6 +400,9 @@ public class MOManagementFrame extends JFrame {
         }
     }
 
+    /**
+     * Loads applicants for the job selected in the job table.
+     */
     private void loadApplicantsForSelectedJob() {
         int row = jobTable.getSelectedRow();
         if (row < 0) {
@@ -358,6 +413,10 @@ public class MOManagementFrame extends JFrame {
         loadApplicantsForJob(jobId);
     }
 
+    /**
+     * Displays the selected applicant's profile summary, reviewer notes, and
+     * skill matching details for the currently selected job.
+     */
     private void showSelectedApplicantMatch() {
         int applicationRow = applicantTable.getSelectedRow();
         int jobRow = jobTable.getSelectedRow();
@@ -366,6 +425,7 @@ public class MOManagementFrame extends JFrame {
         }
         String applicationId = String.valueOf(applicantTableModel.getValueAt(applicationRow, 0));
         String jobId = String.valueOf(jobTableModel.getValueAt(jobRow, 0));
+        // Application rows only contain display data, so fetch the full record from the service.
         ApplicationRecord application = applicationService.getApplicationsForJob(jobId).stream()
                 .filter(item -> item.getApplicationId().equals(applicationId))
                 .findFirst()
@@ -381,6 +441,7 @@ public class MOManagementFrame extends JFrame {
             reviewArea.setText("");
             return;
         }
+        // Match details are calculated live so the display reflects the latest job requirements.
         SkillMatchResult matchResult = matchingService.calculateMatch(applicant.getSkills(), job.getRequiredSkills());
         matchInfoArea.setText(
                 "Applicant: " + applicant.getName() + "\n" +
@@ -395,12 +456,17 @@ public class MOManagementFrame extends JFrame {
         reviewArea.setText(application.getReviewerNotes() == null ? "" : application.getReviewerNotes());
     }
 
+    /**
+     * Applies a review status to the selected application and refreshes the
+     * same job afterwards so the reviewer does not lose context.
+     */
     private void updateApplicationStatus(ApplicationStatus status) {
         int row = applicantTable.getSelectedRow();
         if (row < 0) {
             UiMessage.error(this, "Please select an applicant first.");
             return;
         }
+        // Accepting and rejecting are final enough to ask for confirmation; shortlisting stays lightweight.
         if ((status == ApplicationStatus.ACCEPTED || status == ApplicationStatus.REJECTED)
                 && !UiMessage.confirm(this, "Are you sure you want to mark this application as " + status + "?", "Confirm Review Action")) {
             return;
@@ -409,6 +475,7 @@ public class MOManagementFrame extends JFrame {
         int jobRow = jobTable.getSelectedRow();
         String selectedJobId = jobRow >= 0 ? String.valueOf(jobTableModel.getValueAt(jobRow, 0)) : null;
         try {
+            // Reviewer notes are saved with the status change so decisions have context later.
             applicationService.updateStatus(applicationId, status, reviewArea.getText().trim());
             UiMessage.info(this, "Application updated to " + status + ".");
             refreshJobs();
@@ -421,6 +488,9 @@ public class MOManagementFrame extends JFrame {
         }
     }
 
+    /**
+     * Cancels an accepted application and reopens the job slot managed by the service layer.
+     */
     private void cancelAcceptedApplication() {
         int row = applicantTable.getSelectedRow();
         if (row < 0) {
@@ -434,6 +504,7 @@ public class MOManagementFrame extends JFrame {
         int jobRow = jobTable.getSelectedRow();
         String selectedJobId = jobRow >= 0 ? String.valueOf(jobTableModel.getValueAt(jobRow, 0)) : null;
         try {
+            // Cancelling acceptance is handled by the service because it may also reopen the job.
             applicationService.cancelAcceptance(applicationId, reviewArea.getText().trim());
             UiMessage.info(this, "Accepted application cancelled and job reopened.");
             refreshJobs();
@@ -446,9 +517,13 @@ public class MOManagementFrame extends JFrame {
         }
     }
 
+    /**
+     * Reloads applicants for one job, applying the current filter and sort order.
+     */
     private void loadApplicantsForJob(String jobId) {
         JobPosting job = findJob(jobId).orElse(null);
         if (job == null) {
+            // If the job disappeared, clear dependent panels so no old applicant details remain on screen.
             loadedApplicantJobId = null;
             applicantTableModel.setRowCount(0);
             reviewArea.setText("");
@@ -463,17 +538,20 @@ public class MOManagementFrame extends JFrame {
             UiMessage.error(this, "You can only review applicants for your assigned modules.");
             return;
         }
+        // From this point, filter/sort changes can reload this same job through loadedApplicantJobId.
         loadedApplicantJobId = jobId;
         applicantTableModel.setRowCount(0);
         reviewArea.setText("");
         applicantSummaryArea.setText("");
         matchInfoArea.setText("");
+        // Filtering and sorting happen before table rendering so table rows stay simple display data.
         List<ApplicationRecord> applications = applicationService.getApplicationsForJob(jobId).stream()
                 .filter(this::matchesApplicantFilter)
                 .sorted(this::compareApplications)
                 .toList();
         for (ApplicationRecord application : applications) {
             ApplicantProfile applicant = findApplicant(application.getApplicantId()).orElse(null);
+            // Deleted applicant profiles are still shown so historical application records are not hidden.
             applicantTableModel.addRow(new Object[]{
                     application.getApplicationId(),
                     applicant == null ? "[Deleted Applicant]" : valueOrDash(applicant.getName()),
@@ -485,6 +563,9 @@ public class MOManagementFrame extends JFrame {
         updateApplicantEmptyState();
     }
 
+    /**
+     * Reselects a job row after table refreshes, if the job still exists.
+     */
     private void selectJobRow(String jobId) {
         for (int i = 0; i < jobTableModel.getRowCount(); i++) {
             if (jobId.equals(String.valueOf(jobTableModel.getValueAt(i, 0)))) {
@@ -496,10 +577,14 @@ public class MOManagementFrame extends JFrame {
     }
 
     private void returnToLogin() {
+        // Normal MO users return to login; admins simply close this child window in goBack().
         new LoginFrame(dataService).setVisible(true);
         dispose();
     }
 
+    /**
+     * Builds the lower review panel containing applicant details and editable reviewer notes.
+     */
     private JPanel buildReviewBottomPanel() {
         JPanel panel = new JPanel(new GridLayout(1, 2, 16, 0));
         panel.setOpaque(false);
@@ -515,6 +600,9 @@ public class MOManagementFrame extends JFrame {
         return panel;
     }
 
+    /**
+     * Formats applicant details into a readable block for the reviewer.
+     */
     private String buildApplicantSummary(ApplicantProfile applicant, ApplicationRecord application, JobPosting job) {
         return "Name: " + valueOrDash(applicant.getName()) + "\n" +
                 "Email: " + valueOrDash(applicant.getEmail()) + "\n" +
@@ -530,9 +618,13 @@ public class MOManagementFrame extends JFrame {
     }
 
     private String valueOrDash(String value) {
+        // Keeps summary panels readable when optional profile fields are missing.
         return value == null || value.isBlank() ? "-" : value;
     }
 
+    /**
+     * Applies shared UI styling and table renderers after Swing components are created.
+     */
     private void styleComponents() {
         UiTheme.styleTextField(jobIdField);
         UiTheme.styleComboBox(moduleCodeBox);
@@ -550,6 +642,7 @@ public class MOManagementFrame extends JFrame {
         UiTheme.styleComboBox(applicantSortBox);
         UiTheme.styleTable(jobTable);
         UiTheme.styleTable(applicantTable);
+        // Custom renderers add quick visual cues without changing the underlying table values.
         jobTable.getColumnModel().getColumn(4).setCellRenderer(new DeadlineWarningRenderer());
         jobTable.getColumnModel().getColumn(5).setCellRenderer(new StatusBadgeRenderer());
         applicantTable.getColumnModel().getColumn(2).setCellRenderer(new StatusBadgeRenderer());
@@ -559,17 +652,24 @@ public class MOManagementFrame extends JFrame {
     }
 
     private JScrollPane wrapArea(JTextArea area) {
+        // Text areas are always wrapped in themed scroll panes for consistent spacing and borders.
         JScrollPane scrollPane = new JScrollPane(area);
         UiTheme.styleScrollPane(scrollPane);
         return scrollPane;
     }
 
+    /**
+     * Returns all jobs visible to this user.
+     */
     private List<JobPosting> getScopedJobs() {
         return jobService.getAllJobs().stream()
                 .filter(job -> canManageModule(job.getModuleCode()))
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Builds the header summary explaining which modules this screen can manage.
+     */
     private String buildScopeSummary() {
         if (managedModuleCodes.isEmpty()) {
             return adminMode
@@ -591,6 +691,9 @@ public class MOManagementFrame extends JFrame {
         returnToLogin();
     }
 
+    /**
+     * Populates the module selector from the resolved permission scope.
+     */
     private void populateManagedModules() {
         DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
         for (String moduleCode : managedModuleCodes) {
@@ -600,14 +703,22 @@ public class MOManagementFrame extends JFrame {
     }
 
     private boolean canManageModule(String moduleCode) {
+        // Admin mode bypasses per-user module checks; normal users rely on their assigned module list.
         return adminMode || currentUser.managesModule(moduleCode);
     }
 
+    /**
+     * Resolves module access for the current user.
+     *
+     * Admins do not have a single assigned list, so their scope is collected
+     * from existing MO assignments and job postings.
+     */
     private List<String> resolveManagedModuleCodes() {
         if (!adminMode) {
             return currentUser.getManagedModuleCodes();
         }
 
+        // LinkedHashSet preserves discovery order while removing duplicates from users and jobs.
         LinkedHashSet<String> moduleCodes = new LinkedHashSet<>();
         dataService.getUserRepository().findAll().stream()
                 .flatMap(user -> user.getManagedModuleCodes().stream())
@@ -622,6 +733,9 @@ public class MOManagementFrame extends JFrame {
         return List.copyOf(moduleCodes);
     }
 
+    /**
+     * Keeps the form aligned with the module selected from the combo box.
+     */
     private void bindFormSync() {
         moduleCodeBox.addActionListener(event -> {
             if (!syncingForm) {
@@ -630,6 +744,10 @@ public class MOManagementFrame extends JFrame {
         });
     }
 
+    /**
+     * When a module is selected, load its existing job if one exists; otherwise
+     * prepare the form for a new job under that module.
+     */
     private void syncFormToSelectedModule() {
         String moduleCode = String.valueOf(moduleCodeBox.getSelectedItem()).trim();
         if (moduleCode.isBlank()) {
@@ -640,6 +758,7 @@ public class MOManagementFrame extends JFrame {
                 .filter(job -> moduleCode.equals(job.getModuleCode()))
                 .findFirst();
 
+        // One module maps to one active editor state here; selecting the module loads that job immediately.
         if (existingJob.isPresent()) {
             applyJobToForm(existingJob.get());
             selectJobRow(existingJob.get().getJobId());
@@ -647,6 +766,7 @@ public class MOManagementFrame extends JFrame {
         }
 
         syncingForm = true;
+        // No job exists for this module yet, so keep the module and reset the rest of the form.
         jobTable.clearSelection();
         applicantTable.clearSelection();
         jobIdField.setForeground(Color.GRAY);
@@ -661,8 +781,13 @@ public class MOManagementFrame extends JFrame {
         syncingForm = false;
     }
 
+    /**
+     * Copies a JobPosting into the editor and clears applicant details that
+     * belonged to any previously selected job.
+     */
     private void applyJobToForm(JobPosting job) {
         syncingForm = true;
+        // Existing jobs show their real ID in black to distinguish them from new unsaved postings.
         jobIdField.setForeground(Color.BLACK);
         jobIdField.setText(job.getJobId());
         moduleCodeBox.setSelectedItem(job.getModuleCode());
@@ -682,12 +807,17 @@ public class MOManagementFrame extends JFrame {
         syncingForm = false;
     }
 
+    /**
+     * Saves an open job. If the job was previously closed, the reviewer may
+     * need to remove accepted TAs so at least one slot becomes available again.
+     */
     private boolean handleOpeningJob(JobPosting jobPosting, JobPosting existingJob) {
         if (existingJob == null || existingJob.getStatus() != JobStatus.CLOSED) {
             jobService.saveJob(jobPosting);
             return true;
         }
 
+        // Reopening a previously closed job may require cancelling accepted applications first.
         List<ApplicationRecord> acceptedApplications = applicationService.getApplicationsForJob(existingJob.getJobId()).stream()
                 .filter(application -> application.getStatus() == ApplicationStatus.ACCEPTED)
                 .collect(Collectors.toList());
@@ -699,6 +829,7 @@ public class MOManagementFrame extends JFrame {
             return true;
         }
 
+        // A null result means the reviewer cancelled the dialog, so the save is abandoned.
         List<ApplicationRecord> selectedApplicants = promptForAcceptedTaRemoval(jobPosting, acceptedApplications, minimumToCancel);
         if (selectedApplicants == null) {
             return false;
@@ -712,12 +843,17 @@ public class MOManagementFrame extends JFrame {
         return true;
     }
 
+    /**
+     * Saves a closed job. If there are not enough accepted applicants yet, the
+     * reviewer must pick applicants to accept before the job can be closed.
+     */
     private boolean handleClosingJob(JobPosting jobPosting, JobPosting existingJob) {
         if (existingJob == null) {
             UiMessage.error(this, "Save the job as OPEN first, then select TAs before closing it.");
             return false;
         }
 
+        // Existing accepted applications count toward the required TA number before asking for more.
         List<ApplicationRecord> applications = applicationService.getApplicationsForJob(existingJob.getJobId());
         int acceptedCount = (int) applications.stream()
                 .filter(application -> application.getStatus() == ApplicationStatus.ACCEPTED)
@@ -731,6 +867,7 @@ public class MOManagementFrame extends JFrame {
                 return false;
             }
 
+            // Save as OPEN first so each acceptance can update demand/status through ApplicationService rules.
             jobPosting.setStatus(JobStatus.OPEN);
             jobService.saveJob(jobPosting);
 
@@ -745,9 +882,14 @@ public class MOManagementFrame extends JFrame {
         return true;
     }
 
+    /**
+     * Shows a dialog for selecting accepted applicants who should be removed
+     * when reopening a fully staffed job.
+     */
     private List<ApplicationRecord> promptForAcceptedTaRemoval(JobPosting jobPosting,
                                                                List<ApplicationRecord> acceptedApplications,
                                                                int minimumSelectionCount) {
+        // Loop until the user either cancels or selects enough accepted TAs to free a slot.
         while (true) {
             JList<ApplicantSelectionItem> selectionList = buildApplicantSelectionList(
                     acceptedApplications.stream()
@@ -784,6 +926,7 @@ public class MOManagementFrame extends JFrame {
                 return null;
             }
 
+            // The dialog allows multi-select, but this validation enforces the required minimum.
             List<ApplicantSelectionItem> selectedValues = selectionList.getSelectedValuesList();
             if (selectedValues.size() < minimumSelectionCount) {
                 UiMessage.error(this, "Please select at least " + minimumSelectionCount + " accepted TA(s) to reopen this job.");
@@ -796,9 +939,14 @@ public class MOManagementFrame extends JFrame {
         }
     }
 
+    /**
+     * Shows a dialog for selecting the exact number of applicants needed to fill
+     * the remaining TA vacancies before closing a job.
+     */
     private List<ApplicationRecord> promptForTaSelection(JobPosting jobPosting,
                                                          List<ApplicationRecord> applications,
                                                          int additionalNeeded) {
+        // Only active, non-accepted applicants can be chosen to fill remaining TA slots.
         List<ApplicantSelectionItem> candidates = applications.stream()
                 .filter(application -> application.getStatus() != ApplicationStatus.REJECTED)
                 .filter(application -> application.getStatus() != ApplicationStatus.ACCEPTED)
@@ -811,6 +959,7 @@ public class MOManagementFrame extends JFrame {
             return null;
         }
 
+        // Closing requires an exact number so the final accepted count matches requiredTaCount.
         while (true) {
             JList<ApplicantSelectionItem> selectionList = buildApplicantSelectionList(candidates);
 
@@ -843,6 +992,7 @@ public class MOManagementFrame extends JFrame {
                 return null;
             }
 
+            // Exact-count validation keeps accidental over-selection from accepting too many TAs.
             List<ApplicantSelectionItem> selectedValues = selectionList.getSelectedValuesList();
             if (selectedValues.size() != additionalNeeded) {
                 UiMessage.error(this, "Please select exactly " + additionalNeeded + " TA(s).");
@@ -855,6 +1005,9 @@ public class MOManagementFrame extends JFrame {
         }
     }
 
+    /**
+     * Converts an application into a compact display item for selection dialogs.
+     */
     private ApplicantSelectionItem toApplicantSelectionItem(ApplicationRecord application) {
         ApplicantProfile applicant = findApplicant(application.getApplicantId()).orElse(null);
         String applicantName = applicant == null ? "[Deleted Applicant]" : valueOrDash(applicant.getName());
@@ -866,6 +1019,9 @@ public class MOManagementFrame extends JFrame {
         return new ApplicantSelectionItem(application, label);
     }
 
+    /**
+     * Creates the reusable multi-select list used by TA selection dialogs.
+     */
     private JList<ApplicantSelectionItem> buildApplicantSelectionList(List<ApplicantSelectionItem> items) {
         DefaultListModel<ApplicantSelectionItem> model = new DefaultListModel<>();
         for (ApplicantSelectionItem item : items) {
@@ -873,21 +1029,31 @@ public class MOManagementFrame extends JFrame {
         }
         JList<ApplicantSelectionItem> selectionList = new JList<>(model);
         selectionList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        // Keep the dialog usable for both small and larger candidate lists.
         selectionList.setVisibleRowCount(Math.min(8, Math.max(4, items.size())));
         selectionList.setCellRenderer(new DefaultListCellRenderer());
         return selectionList;
     }
 
+    /**
+     * Displays accepted TA count against required TA count, capped at demand.
+     */
     private String buildTaDemandText(JobPosting job) {
         int acceptedCount = applicationService.getAcceptedCountForJob(job.getJobId());
         return Math.min(acceptedCount, job.getRequiredTaCount()) + "/" + job.getRequiredTaCount();
     }
 
+    /**
+     * Checks whether an application should remain visible under the selected status filter.
+     */
     private boolean matchesApplicantFilter(ApplicationRecord application) {
         String selected = String.valueOf(applicantStatusFilter.getSelectedItem());
         return "All Statuses".equals(selected) || application.getStatus().name().equals(selected);
     }
 
+    /**
+     * Sorts applications according to the current reviewer-selected option.
+     */
     private int compareApplications(ApplicationRecord left, ApplicationRecord right) {
         String selected = String.valueOf(applicantSortBox.getSelectedItem());
         return switch (selected) {
@@ -899,6 +1065,9 @@ public class MOManagementFrame extends JFrame {
         };
     }
 
+    /**
+     * Looks up the applicant name used by name-based sorting.
+     */
     private String applicantNameFor(ApplicationRecord application) {
         ApplicantProfile applicant = findApplicant(application.getApplicantId()).orElse(null);
         if (applicant == null || applicant.getName() == null) {
@@ -908,13 +1077,19 @@ public class MOManagementFrame extends JFrame {
     }
 
     private Optional<JobPosting> findJob(String jobId) {
+        // Repository lookups are wrapped here to keep callers concise.
         return dataService.getJobRepository().findById(jobId);
     }
 
     private Optional<ApplicantProfile> findApplicant(String applicantId) {
+        // Applicant profiles are separate from application records, so missing profiles are possible.
         return dataService.getProfileRepository().findByApplicantId(applicantId);
     }
 
+    /**
+     * Updates the applicant table's empty message based on whether a job is loaded
+     * and whether a status filter is active.
+     */
     private void updateApplicantEmptyState() {
         if (loadedApplicantJobId == null) {
             applicantTable.setEmptyMessage("Select a job and click Load Applicants to review submissions.");
@@ -930,6 +1105,9 @@ public class MOManagementFrame extends JFrame {
         applicantTable.setEmptyMessage("No applicants match the current filter.");
     }
 
+    /**
+     * Finds a job's row in the current table model.
+     */
     private int findJobRow(String jobId) {
         for (int i = 0; i < jobTableModel.getRowCount(); i++) {
             if (jobId.equals(String.valueOf(jobTableModel.getValueAt(i, 0)))) {
@@ -942,10 +1120,14 @@ public class MOManagementFrame extends JFrame {
     private record ApplicantSelectionItem(ApplicationRecord application, String label) {
         @Override
         public String toString() {
+            // JList uses toString() for the visible label when no custom text extractor is provided.
             return label;
         }
     }
 
+    /**
+     * Highlights deadlines in the job table so urgent or overdue postings stand out.
+     */
     private static class DeadlineWarningRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
@@ -968,6 +1150,9 @@ public class MOManagementFrame extends JFrame {
         }
     }
 
+    /**
+     * Renders application and job statuses with background colors for quick scanning.
+     */
     private static class StatusBadgeRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,

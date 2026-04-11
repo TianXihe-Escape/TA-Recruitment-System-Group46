@@ -84,6 +84,7 @@ public class AdminDashboardFrame extends JFrame {
     private final JPasswordField moPasswordField = new JPasswordField();
     private final JPasswordField moConfirmField = new JPasswordField();
     private final JTextField moModulesField = new JTextField();
+    private JScrollPane pageScrollPane;
 
     /**
      * Constructs the admin dashboard and immediately refreshes all summary data.
@@ -123,9 +124,11 @@ public class AdminDashboardFrame extends JFrame {
         JPanel root = UiTheme.createPagePanel();
         root.add(UiTheme.createHeader("Admin Control Center", "Audit workloads, repopulate demo data, and rebalance staffing decisions."), BorderLayout.NORTH);
         root.add(splitPane, BorderLayout.CENTER);
-        add(UiTheme.wrapPage(root));
+        pageScrollPane = UiTheme.wrapPage(root);
+        add(pageScrollPane);
 
         refreshData();
+        scrollPageToTop();
     }
 
     /**
@@ -311,6 +314,27 @@ public class AdminDashboardFrame extends JFrame {
         }
         jobSummaryArea.setText(builder.toString());
         suggestionArea.setText("Click 'Rebalance Suggestion' to recommend lower-load TAs for open jobs.");
+    }
+
+    /**
+     * Keeps the admin dashboard opening at the header instead of jumping to
+     * lower text fields that Swing may choose during initial focus setup.
+     */
+    private void scrollPageToTop() {
+        SwingUtilities.invokeLater(() -> {
+            setPageScrollPositionToTop();
+            SwingUtilities.invokeLater(this::setPageScrollPositionToTop);
+        });
+    }
+
+    private void setPageScrollPositionToTop() {
+        if (pageScrollPane == null) {
+            return;
+        }
+        jobSummaryArea.setCaretPosition(0);
+        suggestionArea.setCaretPosition(0);
+        pageScrollPane.getViewport().setViewPosition(new Point(0, 0));
+        pageScrollPane.getVerticalScrollBar().setValue(pageScrollPane.getVerticalScrollBar().getMinimum());
     }
 
     /**
