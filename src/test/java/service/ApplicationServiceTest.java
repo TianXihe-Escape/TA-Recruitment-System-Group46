@@ -279,6 +279,42 @@ class ApplicationServiceTest {
         assertTrue(updated.getReviewerNotes().contains("Withdrawn by applicant"));
     }
 
+    @Test
+    void shouldReopenAffectedJobsWhenApplicantIsRemoved() {
+        ApplicationRecord accepted = new ApplicationRecord();
+        accepted.setApplicationId("x1");
+        accepted.setApplicantId("a1");
+        accepted.setJobId("j1");
+        accepted.setStatus(ApplicationStatus.ACCEPTED);
+
+        ApplicationRecord shortlisted = new ApplicationRecord();
+        shortlisted.setApplicationId("x2");
+        shortlisted.setApplicantId("a1");
+        shortlisted.setJobId("j2");
+        shortlisted.setStatus(ApplicationStatus.SHORTLISTED);
+
+        applicationRepository.saveAll(new ArrayList<>(List.of(accepted, shortlisted)));
+
+        JobPosting closedJob = buildJob();
+        closedJob.setJobId("j1");
+        closedJob.setRequiredTaCount(1);
+        closedJob.setStatus(JobStatus.CLOSED);
+
+        JobPosting openJob = buildJob();
+        openJob.setJobId("j2");
+        openJob.setModuleCode("COMP1002");
+        openJob.setModuleTitle("Data Structures");
+        openJob.setStatus(JobStatus.OPEN);
+
+        jobRepository.saveAll(List.of(closedJob, openJob));
+
+        applicationService.removeApplicationsForApplicant("a1");
+
+        assertTrue(applicationRepository.findAll().isEmpty());
+        assertEquals(JobStatus.OPEN, jobRepository.findById("j1").orElseThrow().getStatus());
+        assertEquals(JobStatus.OPEN, jobRepository.findById("j2").orElseThrow().getStatus());
+    }
+
     private ApplicantProfile buildProfile() {
         ApplicantProfile profile = new ApplicantProfile("a1", "u1");
         profile.setCvPath("cv.pdf");

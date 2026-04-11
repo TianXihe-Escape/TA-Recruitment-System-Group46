@@ -5,16 +5,49 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Stored application from a TA to a job.
+ * Persistent record of a TA application to a specific job posting.
+ * Each record tracks both the workflow status and lightweight review metadata
+ * such as missing skills and reviewer notes.
  */
 public class ApplicationRecord {
+    /**
+     * Unique application identifier.
+     */
     private String applicationId;
+
+    /**
+     * Applicant who submitted the application.
+     */
     private String applicantId;
+
+    /**
+     * Job posting being applied to.
+     */
     private String jobId;
+
+    /**
+     * Timestamp of the latest submission or resubmission.
+     */
     private LocalDateTime appliedAt;
+
+    /**
+     * Current state in the review workflow.
+     */
     private ApplicationStatus status = ApplicationStatus.SUBMITTED;
+
+    /**
+     * Notes left by reviewers or system workflow transitions.
+     */
     private String reviewerNotes;
+
+    /**
+     * Skill match score calculated at submission time.
+     */
     private int matchScore;
+
+    /**
+     * Skills required by the job that were not matched by the applicant.
+     */
     private List<String> missingSkills = new ArrayList<>();
 
     public String getApplicationId() {
@@ -78,6 +111,7 @@ public class ApplicationRecord {
     }
 
     public void setMissingSkills(List<String> missingSkills) {
+        // Keep a copy so outside callers cannot hold a mutable reference to internal state.
         this.missingSkills = missingSkills == null ? new ArrayList<>() : new ArrayList<>(missingSkills);
     }
 }
