@@ -27,12 +27,16 @@ public final class UiMessage {
 
     public static boolean confirm(Component parent, String message, String title) {
         // Reuse the same scrollable message layout for confirmations so long warnings behave like info/error dialogs.
-        return JOptionPane.showConfirmDialog(
+        Object[] options = {"Yes", "No"};
+        return JOptionPane.showOptionDialog(
                 parent,
                 buildMessagePane(message),
                 title,
                 JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE
+                JOptionPane.QUESTION_MESSAGE,
+                null,
+                options,
+                options[0]
         ) == JOptionPane.YES_OPTION;
     }
 

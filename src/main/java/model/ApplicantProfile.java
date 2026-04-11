@@ -4,23 +4,73 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Applicant profile owned by a TA account.
+ * Applicant profile linked to a TA user account.
+ * This model stores the profile information used for matching, review, and
+ * contact purposes after the TA logs into the system.
  */
 public class ApplicantProfile {
+    /**
+     * Unique applicant identifier used by applications and workload records.
+     */
     private String applicantId;
+
+    /**
+     * Owning login-account id.
+     */
     private String userId;
+
+    /**
+     * Applicant display name.
+     */
     private String name;
+
+    /**
+     * Primary contact email.
+     */
     private String email;
+
+    /**
+     * Applicant phone number.
+     */
     private String phone;
+
+    /**
+     * Skills entered by the applicant for matching against job requirements.
+     */
     private List<String> skills = new ArrayList<>();
+
+    /**
+     * Free-text summary of when the applicant can work.
+     */
     private String availability;
+
+    /**
+     * Short experience description shown to reviewers.
+     */
     private String experienceSummary;
+
+    /**
+     * Preferred TA duties or work types.
+     */
     private String preferredDuties;
+
+    /**
+     * Local file path to the applicant CV selected in the UI.
+     */
     private String cvPath;
 
+    /**
+     * No-args constructor used by JSON deserialization and empty object creation.
+     */
     public ApplicantProfile() {
     }
 
+    /**
+     * Creates a minimal profile bound to a user account.
+     *
+     * @param applicantId generated applicant id
+     * @param userId owning user id
+     */
     public ApplicantProfile(String applicantId, String userId) {
         this.applicantId = applicantId;
         this.userId = userId;
@@ -71,6 +121,7 @@ public class ApplicantProfile {
     }
 
     public void setSkills(List<String> skills) {
+        // Store a defensive copy so callers cannot mutate the internal list accidentally.
         this.skills = skills == null ? new ArrayList<>() : new ArrayList<>(skills);
     }
 
