@@ -5,6 +5,7 @@ import model.ApplicationRecord;
 import model.ApplicationStatus;
 import model.JobPosting;
 import model.JobStatus;
+import model.Role;
 import model.SkillMatchResult;
 import model.User;
 import service.ApplicantService;
@@ -22,6 +23,7 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -40,6 +42,7 @@ public class MOManagementFrame extends JFrame {
     private final ValidationService validationService;
     private final User currentUser;
     private final List<String> managedModuleCodes;
+    private final boolean adminMode;
     private boolean syncingForm;
 
     private final JTextField jobIdField = new JTextField();
@@ -80,12 +83,13 @@ public class MOManagementFrame extends JFrame {
                 dataService.getJobRepository(),
                 matchingService
         );
-        this.managedModuleCodes = currentUser.getManagedModuleCodes();
+        this.adminMode = currentUser.getRole() == Role.ADMIN;
+        this.managedModuleCodes = resolveManagedModuleCodes();
 
-        setTitle("MO Management - " + Constants.APP_TITLE);
+        setTitle((adminMode ? "Hiring Management" : "MO Management") + " - " + Constants.APP_TITLE);
         setSize(1420, 880);
         setMinimumSize(new Dimension(1020, 700));
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         UiTheme.styleFrame(this);
         styleComponents();
@@ -96,7 +100,7 @@ public class MOManagementFrame extends JFrame {
 
         JPanel root = UiTheme.createPagePanel();
         root.add(UiTheme.createHeader(
-                "Module Organiser Console",
+                adminMode ? "Admin Hiring Console" : "Module Organiser Console",
                 buildScopeSummary()
         ), BorderLayout.NORTH);
         root.add(splitPane, BorderLayout.CENTER);
@@ -128,7 +132,9 @@ public class MOManagementFrame extends JFrame {
         JPanel lower = UiTheme.createCard("Applicant Match Details", "Review fit, missing skills, and applicant notes for the selected submission.");
         lower.add(wrapArea(matchInfoArea), BorderLayout.CENTER);
 
-        JButton backButton = UiTheme.createSecondaryButton("Back to Login");
+        JButton backButton = adminMode
+                ? UiTheme.createDangerButton("Back to Previous Page")
+                : UiTheme.createSecondaryButton("Back to Login");
         JButton newButton = UiTheme.createSecondaryButton("New Job");
         JButton saveButton = UiTheme.createPrimaryButton("Save Job");
 
@@ -137,7 +143,7 @@ public class MOManagementFrame extends JFrame {
         saveButton.setEnabled(hasManagedModules);
         moduleCodeBox.setEnabled(hasManagedModules);
 
-        backButton.addActionListener(event -> returnToLogin());
+        backButton.addActionListener(event -> goBack());
         newButton.addActionListener(event -> clearForm());
         saveButton.addActionListener(event -> saveJob());
 
@@ -246,7 +252,15 @@ public class MOManagementFrame extends JFrame {
         if (row < 0) {
             return;
         }
-        applyJobToForm(jobService.getJobById(String.valueOf(jobTableModel.getValueAt(row, 0))));
+        String jobId = String.valueOf(jobTableModel.getValueAt(row, 0));
+        JobPosting job = findJob(jobId).orElse(null);
+        if (job == null) {
+            UiMessage.error(this, "The selected job no longer exists. Refreshing the table now.");
+            refreshJobs();
+            clearForm();
+            return;
+        }
+        applyJobToForm(job);
     }
 
     private void clearForm() {
@@ -280,7 +294,9 @@ public class MOManagementFrame extends JFrame {
     private void saveJob() {
         try {
             if (managedModuleCodes.isEmpty()) {
-                UiMessage.error(this, "This MO is not assigned to any modules yet.");
+                UiMessage.error(this, adminMode
+                        ? "No manageable module codes are available yet."
+                        : "This MO is not assigned to any modules yet.");
                 return;
             }
             String jobId = jobIdField.getText().trim();
@@ -288,11 +304,15 @@ public class MOManagementFrame extends JFrame {
                     ? null
                     : jobService.getJobById(jobId);
             String moduleCode = String.valueOf(moduleCodeBox.getSelectedItem()).trim();
-            if (!currentUser.managesModule(moduleCode)) {
+            if (!canManageModule(moduleCode)) {
                 throw new IllegalArgumentException("You can only manage TA hiring for your assigned modules.");
             }
-            if (existingJob != null && !currentUser.managesModule(existingJob.getModuleCode())) {
+            if (existingJob != null && !canManageModule(existingJob.getModuleCode())) {
                 throw new IllegalArgumentException("You can only edit jobs for your assigned modules.");
+            }
+            List<String> skillErrors = validationService.validateSkillInput(skillsField.getText(), "Required skills", true);
+            if (!skillErrors.isEmpty()) {
+                throw new IllegalArgumentException(String.join("\n", skillErrors));
             }
 
             JobPosting jobPosting = new JobPosting();
@@ -322,7 +342,7 @@ public class MOManagementFrame extends JFrame {
         } catch (NumberFormatException ex) {
             UiMessage.error(this, "Hours and required TA count must be numbers.");
         } catch (DateTimeParseException ex) {
-            UiMessage.error(this, "Deadline must use the format YYYY-MM-DD.");
+            UiMessage.error(this, "Deadline must use YYYY-MM-DD format, for example 2026-04-30.");
         } catch (Exception ex) {
             UiMessage.error(this, ex.getMessage());
         }
@@ -353,8 +373,14 @@ public class MOManagementFrame extends JFrame {
         if (application == null) {
             return;
         }
-        ApplicantProfile applicant = applicantService.getProfileByApplicantId(application.getApplicantId());
-        JobPosting job = jobService.getJobById(jobId);
+        ApplicantProfile applicant = findApplicant(application.getApplicantId()).orElse(null);
+        JobPosting job = findJob(jobId).orElse(null);
+        if (applicant == null || job == null) {
+            matchInfoArea.setText("The selected applicant or job record no longer exists. Refresh the review queue.");
+            applicantSummaryArea.setText("");
+            reviewArea.setText("");
+            return;
+        }
         SkillMatchResult matchResult = matchingService.calculateMatch(applicant.getSkills(), job.getRequiredSkills());
         matchInfoArea.setText(
                 "Applicant: " + applicant.getName() + "\n" +
@@ -421,8 +447,19 @@ public class MOManagementFrame extends JFrame {
     }
 
     private void loadApplicantsForJob(String jobId) {
-        JobPosting job = jobService.getJobById(jobId);
-        if (!currentUser.managesModule(job.getModuleCode())) {
+        JobPosting job = findJob(jobId).orElse(null);
+        if (job == null) {
+            loadedApplicantJobId = null;
+            applicantTableModel.setRowCount(0);
+            reviewArea.setText("");
+            applicantSummaryArea.setText("");
+            matchInfoArea.setText("");
+            updateApplicantEmptyState();
+            UiMessage.error(this, "This job no longer exists. Please refresh the job list.");
+            refreshJobs();
+            return;
+        }
+        if (!canManageModule(job.getModuleCode())) {
             UiMessage.error(this, "You can only review applicants for your assigned modules.");
             return;
         }
@@ -436,10 +473,10 @@ public class MOManagementFrame extends JFrame {
                 .sorted(this::compareApplications)
                 .toList();
         for (ApplicationRecord application : applications) {
-            ApplicantProfile applicant = applicantService.getProfileByApplicantId(application.getApplicantId());
+            ApplicantProfile applicant = findApplicant(application.getApplicantId()).orElse(null);
             applicantTableModel.addRow(new Object[]{
                     application.getApplicationId(),
-                    applicant.getName(),
+                    applicant == null ? "[Deleted Applicant]" : valueOrDash(applicant.getName()),
                     application.getStatus(),
                     application.getMatchScore(),
                     String.join(", ", application.getMissingSkills())
@@ -529,16 +566,29 @@ public class MOManagementFrame extends JFrame {
 
     private List<JobPosting> getScopedJobs() {
         return jobService.getAllJobs().stream()
-                .filter(job -> currentUser.managesModule(job.getModuleCode()))
+                .filter(job -> canManageModule(job.getModuleCode()))
                 .collect(Collectors.toList());
     }
 
     private String buildScopeSummary() {
         if (managedModuleCodes.isEmpty()) {
-            return "This MO account is not assigned to any modules yet. Ask the admin to bind modules before posting jobs.";
+            return adminMode
+                    ? "No module codes are available yet. Create an MO account or add a managed module first."
+                    : "This MO account is not assigned to any modules yet. Ask the admin to bind modules before posting jobs.";
+        }
+        if (adminMode) {
+            return "Admin access includes all known modules: " + String.join(", ", managedModuleCodes) + ".";
         }
         return "Publish jobs, review applicants, and manage hiring decisions for: "
                 + String.join(", ", managedModuleCodes) + ".";
+    }
+
+    private void goBack() {
+        if (adminMode) {
+            dispose();
+            return;
+        }
+        returnToLogin();
     }
 
     private void populateManagedModules() {
@@ -547,6 +597,29 @@ public class MOManagementFrame extends JFrame {
             model.addElement(moduleCode);
         }
         moduleCodeBox.setModel(model);
+    }
+
+    private boolean canManageModule(String moduleCode) {
+        return adminMode || currentUser.managesModule(moduleCode);
+    }
+
+    private List<String> resolveManagedModuleCodes() {
+        if (!adminMode) {
+            return currentUser.getManagedModuleCodes();
+        }
+
+        LinkedHashSet<String> moduleCodes = new LinkedHashSet<>();
+        dataService.getUserRepository().findAll().stream()
+                .flatMap(user -> user.getManagedModuleCodes().stream())
+                .map(validationService::normalizeModuleCode)
+                .filter(code -> !code.isBlank())
+                .forEach(moduleCodes::add);
+        jobService.getAllJobs().stream()
+                .map(JobPosting::getModuleCode)
+                .map(validationService::normalizeModuleCode)
+                .filter(code -> !code.isBlank())
+                .forEach(moduleCodes::add);
+        return List.copyOf(moduleCodes);
     }
 
     private void bindFormSync() {
@@ -783,9 +856,11 @@ public class MOManagementFrame extends JFrame {
     }
 
     private ApplicantSelectionItem toApplicantSelectionItem(ApplicationRecord application) {
-        ApplicantProfile applicant = applicantService.getProfileByApplicantId(application.getApplicantId());
-        String label = applicant.getName()
-                + " | " + applicant.getEmail()
+        ApplicantProfile applicant = findApplicant(application.getApplicantId()).orElse(null);
+        String applicantName = applicant == null ? "[Deleted Applicant]" : valueOrDash(applicant.getName());
+        String applicantEmail = applicant == null ? "-" : valueOrDash(applicant.getEmail());
+        String label = applicantName
+                + " | " + applicantEmail
                 + " | " + application.getStatus()
                 + " | Match " + application.getMatchScore() + "%";
         return new ApplicantSelectionItem(application, label);
@@ -825,11 +900,19 @@ public class MOManagementFrame extends JFrame {
     }
 
     private String applicantNameFor(ApplicationRecord application) {
-        ApplicantProfile applicant = applicantService.getProfileByApplicantId(application.getApplicantId());
+        ApplicantProfile applicant = findApplicant(application.getApplicantId()).orElse(null);
         if (applicant == null || applicant.getName() == null) {
             return "";
         }
         return applicant.getName();
+    }
+
+    private Optional<JobPosting> findJob(String jobId) {
+        return dataService.getJobRepository().findById(jobId);
+    }
+
+    private Optional<ApplicantProfile> findApplicant(String applicantId) {
+        return dataService.getProfileRepository().findByApplicantId(applicantId);
     }
 
     private void updateApplicantEmptyState() {
