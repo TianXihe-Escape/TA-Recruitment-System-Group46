@@ -310,6 +310,10 @@ public class MOManagementFrame extends JFrame {
             if (existingJob != null && !canManageModule(existingJob.getModuleCode())) {
                 throw new IllegalArgumentException("You can only edit jobs for your assigned modules.");
             }
+            List<String> skillErrors = validationService.validateSkillInput(skillsField.getText(), "Required skills", true);
+            if (!skillErrors.isEmpty()) {
+                throw new IllegalArgumentException(String.join("\n", skillErrors));
+            }
 
             JobPosting jobPosting = new JobPosting();
             jobPosting.setJobId(NEW_JOB_PLACEHOLDER.equals(jobId) ? "" : jobId);
@@ -338,7 +342,7 @@ public class MOManagementFrame extends JFrame {
         } catch (NumberFormatException ex) {
             UiMessage.error(this, "Hours and required TA count must be numbers.");
         } catch (DateTimeParseException ex) {
-            UiMessage.error(this, "Deadline must use the format YYYY-MM-DD.");
+            UiMessage.error(this, "Deadline must use YYYY-MM-DD format, for example 2026-04-30.");
         } catch (Exception ex) {
             UiMessage.error(this, ex.getMessage());
         }

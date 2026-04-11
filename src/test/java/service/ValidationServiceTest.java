@@ -30,10 +30,39 @@ class ValidationServiceTest {
     }
 
     @Test
+    void shouldExplainAcceptedPhoneFormatsClearly() {
+        assertTrue(validationService.validateApplicantProfile("Li Hua", "li@bupt.edu.cn", "138 0000 0000").isEmpty());
+        assertEquals(List.of("Please enter an 11-digit Chinese phone number or an international number with 7 to 15 digits."),
+                validationService.validateApplicantProfile("Li Hua", "li@bupt.edu.cn", "12345"));
+    }
+
+    @Test
     void shouldAcceptChineseNameAndNormalizeSkills() {
         assertTrue(validationService.validateApplicantProfile("\u674E\u534E", "li@bupt.edu.cn", "13800000000").isEmpty());
         assertEquals(List.of("Java", "\u6C9F\u901A", "Python", "SQL"),
                 validationService.parseSkills("Java\uFF0C\u6C9F\u901A\u3001Python; java\nSQL"));
+    }
+
+    @Test
+    void shouldRejectDuplicateSkillsIgnoringCase() {
+        assertEquals(List.of("Skills cannot contain duplicate entries."),
+                validationService.validateSkillInput("Java, java, Python", "Skills", false));
+    }
+
+    @Test
+    void shouldRejectTooManySkills() {
+        assertEquals(List.of("Skills must contain 10 items or fewer."),
+                validationService.validateSkillInput("Java, Python, SQL, Git, Docker, Linux, Spring, React, Testing, Scrum, AWS",
+                        "Skills",
+                        false));
+    }
+
+    @Test
+    void shouldRejectOverlongRequiredSkill() {
+        assertEquals(List.of("Each required skill must be 30 characters or fewer."),
+                validationService.validateSkillInput("This skill description is definitely more than thirty characters",
+                        "Required skills",
+                        true));
     }
 
     @Test
