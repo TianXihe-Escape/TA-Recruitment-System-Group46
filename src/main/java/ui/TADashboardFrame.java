@@ -18,6 +18,8 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.time.LocalDate;
@@ -206,6 +208,7 @@ public class TADashboardFrame extends JFrame {
         preferredDutiesField.setText(profile.getPreferredDuties());
         experienceArea.setText(profile.getExperienceSummary());
         cvPathField.setText(profile.getCvPath());
+        updateCvPathOpenState();
     }
 
     /**
@@ -459,6 +462,38 @@ public class TADashboardFrame extends JFrame {
                 return;
             }
             cvPathField.setText(selectedPath);
+            updateCvPathOpenState();
+        }
+    }
+
+    private void updateCvPathOpenState() {
+        String cvPath = cvPathField.getText().trim();
+        boolean hasCvPath = !cvPath.isBlank();
+        cvPathField.setCursor(Cursor.getPredefinedCursor(hasCvPath ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
+        cvPathField.setToolTipText(hasCvPath ? "Click to open " + cvPath : "Choose your CV file to fill this path automatically.");
+    }
+
+    private void openCvFile() {
+        String cvPath = cvPathField.getText().trim();
+        if (cvPath.isBlank()) {
+            UiMessage.error(this, "No CV file is available. Please choose a CV file first.");
+            return;
+        }
+        if (!Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
+            UiMessage.error(this, "This computer does not support opening files from the application.");
+            return;
+        }
+
+        File cvFile = new File(cvPath);
+        if (!cvFile.isFile()) {
+            UiMessage.error(this, "The CV file could not be found:\n" + cvPath);
+            return;
+        }
+
+        try {
+            Desktop.getDesktop().open(cvFile);
+        } catch (Exception ex) {
+            UiMessage.error(this, "Could not open the CV file:\n" + ex.getMessage());
         }
     }
 
@@ -475,6 +510,15 @@ public class TADashboardFrame extends JFrame {
         UiTheme.styleTextField(cvPathField);
         cvPathField.setEditable(false);
         cvPathField.setToolTipText("Choose your CV file to fill this path automatically.");
+        updateCvPathOpenState();
+        cvPathField.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                if (!cvPathField.getText().trim().isBlank()) {
+                    openCvFile();
+                }
+            }
+        });
         UiTheme.styleTextArea(experienceArea, 5);
         UiTheme.styleTable(jobTable);
         UiTheme.styleTable(applicationTable);
