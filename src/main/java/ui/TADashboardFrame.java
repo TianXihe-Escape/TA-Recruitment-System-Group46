@@ -6,6 +6,7 @@ import model.JobPosting;
 import model.User;
 import service.ApplicantService;
 import service.ApplicationService;
+import service.CvStorageService;
 import service.DataService;
 import service.JobService;
 import service.MatchingService;
@@ -18,6 +19,8 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.time.LocalDate;
@@ -56,6 +59,7 @@ public class TADashboardFrame extends JFrame {
      * Validation helper for parsing form input.
      */
     private final ValidationService validationService;
+    private final CvStorageService cvStorageService;
     /**
      * Current authenticated user.
      */
@@ -88,6 +92,7 @@ public class TADashboardFrame extends JFrame {
         this.dataService = dataService;
         this.currentUser = currentUser;
         this.validationService = new ValidationService();
+        this.cvStorageService = new CvStorageService();
         this.applicantService = new ApplicantService(dataService.getProfileRepository(), validationService);
         this.jobService = new JobService(dataService.getJobRepository(), validationService);
         this.applicationService = new ApplicationService(
@@ -206,6 +211,7 @@ public class TADashboardFrame extends JFrame {
         preferredDutiesField.setText(profile.getPreferredDuties());
         experienceArea.setText(profile.getExperienceSummary());
         cvPathField.setText(profile.getCvPath());
+        updateCvPathOpenState();
     }
 
     /**
@@ -225,8 +231,24 @@ public class TADashboardFrame extends JFrame {
             profile.setAvailability(availabilityField.getText().trim());
             profile.setPreferredDuties(preferredDutiesField.getText().trim());
             profile.setExperienceSummary(experienceArea.getText().trim());
-            profile.setCvPath(cvPathField.getText().trim());
+            List<String> profileErrors = validationService.validateApplicantProfile(
+                    profile.getName(),
+                    profile.getEmail(),
+                    profile.getPhone()
+            );
+            profileErrors.addAll(validationService.validateCvPath(cvPathField.getText().trim()));
+            if (!profileErrors.isEmpty()) {
+                throw new IllegalArgumentException(String.join("\n", profileErrors));
+            }
+            String storedCvPath = cvStorageService.storeCvForApplicant(
+                    profile.getApplicantId(),
+                    cvPathField.getText().trim(),
+                    profile.getCvPath()
+            );
+            profile.setCvPath(storedCvPath);
             applicantService.saveProfile(profile);
+            cvPathField.setText(profile.getCvPath());
+            updateCvPathOpenState();
             UiMessage.info(this, "Profile saved successfully.");
             refreshApplications();
         } catch (Exception ex) {
@@ -402,6 +424,7 @@ public class TADashboardFrame extends JFrame {
 
         try {
             applicationService.removeApplicationsForApplicant(profile.getApplicantId());
+            cvStorageService.deleteManagedCv(profile.getCvPath());
 
             List<ApplicantProfile> profiles = new ArrayList<>(dataService.getProfileRepository().findAll());
             profiles.removeIf(existingProfile -> profile.getApplicantId().equals(existingProfile.getApplicantId()));
@@ -444,7 +467,7 @@ public class TADashboardFrame extends JFrame {
 
         String existingPath = cvPathField.getText().trim();
         if (!existingPath.isBlank()) {
-            File existingFile = new File(existingPath);
+            File existingFile = cvStorageService.resolveCvPath(existingPath).toFile();
             if (existingFile.exists()) {
                 chooser.setSelectedFile(existingFile);
             }
@@ -459,6 +482,38 @@ public class TADashboardFrame extends JFrame {
                 return;
             }
             cvPathField.setText(selectedPath);
+            updateCvPathOpenState();
+        }
+    }
+
+    private void updateCvPathOpenState() {
+        String cvPath = cvPathField.getText().trim();
+        boolean hasCvPath = !cvPath.isBlank();
+        cvPathField.setCursor(Cursor.getPredefinedCursor(hasCvPath ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
+        cvPathField.setToolTipText(hasCvPath ? "Click to open " + cvPath : "Choose your CV file to fill this path automatically.");
+    }
+
+    private void openCvFile() {
+        String cvPath = cvPathField.getText().trim();
+        if (cvPath.isBlank()) {
+            UiMessage.error(this, "No CV file is available. Please choose a CV file first.");
+            return;
+        }
+        if (!Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
+            UiMessage.error(this, "This computer does not support opening files from the application.");
+            return;
+        }
+
+        File cvFile = cvStorageService.resolveCvPath(cvPath).toFile();
+        if (!cvFile.isFile()) {
+            UiMessage.error(this, "The CV file could not be found:\n" + cvPath);
+            return;
+        }
+
+        try {
+            Desktop.getDesktop().open(cvFile);
+        } catch (Exception ex) {
+            UiMessage.error(this, "Could not open the CV file:\n" + ex.getMessage());
         }
     }
 
@@ -475,6 +530,15 @@ public class TADashboardFrame extends JFrame {
         UiTheme.styleTextField(cvPathField);
         cvPathField.setEditable(false);
         cvPathField.setToolTipText("Choose your CV file to fill this path automatically.");
+        updateCvPathOpenState();
+        cvPathField.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                if (!cvPathField.getText().trim().isBlank()) {
+                    openCvFile();
+                }
+            }
+        });
         UiTheme.styleTextArea(experienceArea, 5);
         UiTheme.styleTable(jobTable);
         UiTheme.styleTable(applicationTable);

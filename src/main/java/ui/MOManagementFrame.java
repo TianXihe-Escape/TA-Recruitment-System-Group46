@@ -10,6 +10,7 @@ import model.SkillMatchResult;
 import model.User;
 import service.ApplicantService;
 import service.ApplicationService;
+import service.CvStorageService;
 import service.DataService;
 import service.JobService;
 import service.MatchingService;
@@ -21,6 +22,9 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.io.File;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.LinkedHashSet;
@@ -38,6 +42,7 @@ public class MOManagementFrame extends JFrame {
     private final JobService jobService;
     private final ApplicantService applicantService;
     private final ApplicationService applicationService;
+    private final CvStorageService cvStorageService;
     private final MatchingService matchingService;
     private final ValidationService validationService;
     private final User currentUser;
@@ -70,11 +75,13 @@ public class MOManagementFrame extends JFrame {
             new Object[]{"Application ID", "Applicant", "Status", "Match %", "Missing"}, 0);
     private final PlaceholderTable applicantTable = new PlaceholderTable(applicantTableModel, "Select a job and click Load Applicants to review submissions.");
     private String loadedApplicantJobId;
+    private String selectedApplicantCvPath;
 
     public MOManagementFrame(DataService dataService, User currentUser) {
         this.dataService = dataService;
         this.currentUser = currentUser;
         this.validationService = new ValidationService();
+        this.cvStorageService = new CvStorageService();
         this.jobService = new JobService(dataService.getJobRepository(), validationService);
         this.applicantService = new ApplicantService(dataService.getProfileRepository(), validationService);
         this.matchingService = new MatchingService();
@@ -177,6 +184,7 @@ public class MOManagementFrame extends JFrame {
             reviewArea.setText("");
             applicantSummaryArea.setText("");
             matchInfoArea.setText("");
+            clearSelectedApplicantCv();
             loadedApplicantJobId = null;
             updateApplicantEmptyState();
         });
@@ -284,6 +292,7 @@ public class MOManagementFrame extends JFrame {
         matchInfoArea.setText("");
         reviewArea.setText("");
         applicantSummaryArea.setText("");
+        clearSelectedApplicantCv();
         applicantTableModel.setRowCount(0);
         loadedApplicantJobId = null;
         updateApplicantEmptyState();
@@ -362,6 +371,7 @@ public class MOManagementFrame extends JFrame {
         int applicationRow = applicantTable.getSelectedRow();
         int jobRow = jobTable.getSelectedRow();
         if (applicationRow < 0 || jobRow < 0) {
+            clearSelectedApplicantCv();
             return;
         }
         String applicationId = String.valueOf(applicantTableModel.getValueAt(applicationRow, 0));
@@ -371,6 +381,7 @@ public class MOManagementFrame extends JFrame {
                 .findFirst()
                 .orElse(null);
         if (application == null) {
+            clearSelectedApplicantCv();
             return;
         }
         ApplicantProfile applicant = findApplicant(application.getApplicantId()).orElse(null);
@@ -379,9 +390,11 @@ public class MOManagementFrame extends JFrame {
             matchInfoArea.setText("The selected applicant or job record no longer exists. Refresh the review queue.");
             applicantSummaryArea.setText("");
             reviewArea.setText("");
+            clearSelectedApplicantCv();
             return;
         }
         SkillMatchResult matchResult = matchingService.calculateMatch(applicant.getSkills(), job.getRequiredSkills());
+        setSelectedApplicantCv(applicant.getCvPath());
         matchInfoArea.setText(
                 "Applicant: " + applicant.getName() + "\n" +
                         "Skills: " + String.join(", ", applicant.getSkills()) + "\n" +
@@ -454,6 +467,7 @@ public class MOManagementFrame extends JFrame {
             reviewArea.setText("");
             applicantSummaryArea.setText("");
             matchInfoArea.setText("");
+            clearSelectedApplicantCv();
             updateApplicantEmptyState();
             UiMessage.error(this, "This job no longer exists. Please refresh the job list.");
             refreshJobs();
@@ -468,6 +482,7 @@ public class MOManagementFrame extends JFrame {
         reviewArea.setText("");
         applicantSummaryArea.setText("");
         matchInfoArea.setText("");
+        clearSelectedApplicantCv();
         List<ApplicationRecord> applications = applicationService.getApplicationsForJob(jobId).stream()
                 .filter(this::matchesApplicantFilter)
                 .sorted(this::compareApplications)
@@ -533,6 +548,63 @@ public class MOManagementFrame extends JFrame {
         return value == null || value.isBlank() ? "-" : value;
     }
 
+    private void setSelectedApplicantCv(String cvPath) {
+        selectedApplicantCvPath = cvPath == null ? "" : cvPath.trim();
+        boolean hasCvPath = !selectedApplicantCvPath.isBlank();
+        matchInfoArea.setCursor(Cursor.getPredefinedCursor(hasCvPath ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
+        matchInfoArea.setToolTipText(hasCvPath
+                ? "Click the CV line to open " + selectedApplicantCvPath
+                : "The selected applicant has not uploaded a CV path.");
+    }
+
+    private void clearSelectedApplicantCv() {
+        selectedApplicantCvPath = "";
+        matchInfoArea.setCursor(Cursor.getDefaultCursor());
+        matchInfoArea.setToolTipText("Select an applicant to view CV details.");
+    }
+
+    private void openSelectedApplicantCv() {
+        if (selectedApplicantCvPath == null || selectedApplicantCvPath.isBlank()) {
+            UiMessage.error(this, "No CV file is available for the selected applicant.");
+            return;
+        }
+        if (!Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
+            UiMessage.error(this, "This computer does not support opening files from the application.");
+            return;
+        }
+
+        File cvFile = cvStorageService.resolveCvPath(selectedApplicantCvPath).toFile();
+        if (!cvFile.isFile()) {
+            UiMessage.error(this, "The CV file could not be found:\n" + selectedApplicantCvPath);
+            return;
+        }
+
+        try {
+            Desktop.getDesktop().open(cvFile);
+        } catch (Exception ex) {
+            UiMessage.error(this, "Could not open the CV file:\n" + ex.getMessage());
+        }
+    }
+
+    private void openCvFromMatchInfoClick(MouseEvent event) {
+        if (selectedApplicantCvPath == null || selectedApplicantCvPath.isBlank()) {
+            return;
+        }
+
+        int offset = matchInfoArea.viewToModel2D(event.getPoint());
+        try {
+            int line = matchInfoArea.getLineOfOffset(offset);
+            int lineStart = matchInfoArea.getLineStartOffset(line);
+            int lineEnd = matchInfoArea.getLineEndOffset(line);
+            String clickedLine = matchInfoArea.getText(lineStart, lineEnd - lineStart).trim();
+            if (clickedLine.startsWith("CV:")) {
+                openSelectedApplicantCv();
+            }
+        } catch (Exception ex) {
+            UiMessage.error(this, "Could not read the selected CV line:\n" + ex.getMessage());
+        }
+    }
+
     private void styleComponents() {
         UiTheme.styleTextField(jobIdField);
         UiTheme.styleComboBox(moduleCodeBox);
@@ -546,6 +618,13 @@ public class MOManagementFrame extends JFrame {
         UiTheme.styleTextArea(reviewArea, 4);
         UiTheme.styleTextArea(applicantSummaryArea, 8);
         UiTheme.styleTextArea(matchInfoArea, 8);
+        clearSelectedApplicantCv();
+        matchInfoArea.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                openCvFromMatchInfoClick(event);
+            }
+        });
         UiTheme.styleComboBox(applicantStatusFilter);
         UiTheme.styleComboBox(applicantSortBox);
         UiTheme.styleTable(jobTable);
@@ -655,6 +734,7 @@ public class MOManagementFrame extends JFrame {
         reviewArea.setText("");
         applicantSummaryArea.setText("");
         matchInfoArea.setText("");
+        clearSelectedApplicantCv();
         applicantTableModel.setRowCount(0);
         loadedApplicantJobId = null;
         updateApplicantEmptyState();
@@ -676,6 +756,7 @@ public class MOManagementFrame extends JFrame {
         matchInfoArea.setText("");
         applicantSummaryArea.setText("");
         reviewArea.setText("");
+        clearSelectedApplicantCv();
         applicantTableModel.setRowCount(0);
         loadedApplicantJobId = null;
         updateApplicantEmptyState();
