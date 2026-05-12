@@ -9,6 +9,7 @@ import model.WorkloadRecord;
 import service.ApplicantService;
 import service.ApplicationService;
 import service.AuthService;
+import service.CvStorageService;
 import service.DataService;
 import service.JobService;
 import service.MatchingService;
@@ -68,6 +69,7 @@ public class AdminDashboardFrame extends JFrame {
      * Auth service used by admins to create MO accounts.
      */
     private final AuthService authService;
+    private final CvStorageService cvStorageService;
     private final JLabel openJobsValue = createMetricValueLabel();
     private final JLabel closedJobsValue = createMetricValueLabel();
     private final JLabel applicationCountValue = createMetricValueLabel();
@@ -92,6 +94,7 @@ public class AdminDashboardFrame extends JFrame {
         this.dataService = dataService;
         this.currentUser = currentUser;
         this.validationService = new ValidationService();
+        this.cvStorageService = new CvStorageService();
         this.authService = new AuthService(
                 dataService.getUserRepository(),
                 dataService.getProfileRepository(),
@@ -618,6 +621,7 @@ public class AdminDashboardFrame extends JFrame {
             // Reuse the service-layer deletion path so removing a TA also reopens any
             // jobs whose accepted headcount drops below the required demand.
             applicationService.removeApplicationsForApplicant(profile.getApplicantId());
+            cvStorageService.deleteManagedCv(profile.getCvPath());
 
             List<ApplicantProfile> profiles = new ArrayList<>(dataService.getProfileRepository().findAll());
             profiles.removeIf(existingProfile -> profile.getApplicantId().equals(existingProfile.getApplicantId()));

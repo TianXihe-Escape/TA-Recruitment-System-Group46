@@ -10,6 +10,7 @@ import model.SkillMatchResult;
 import model.User;
 import service.ApplicantService;
 import service.ApplicationService;
+import service.CvStorageService;
 import service.DataService;
 import service.JobService;
 import service.MatchingService;
@@ -41,6 +42,7 @@ public class MOManagementFrame extends JFrame {
     private final JobService jobService;
     private final ApplicantService applicantService;
     private final ApplicationService applicationService;
+    private final CvStorageService cvStorageService;
     private final MatchingService matchingService;
     private final ValidationService validationService;
     private final User currentUser;
@@ -79,6 +81,7 @@ public class MOManagementFrame extends JFrame {
         this.dataService = dataService;
         this.currentUser = currentUser;
         this.validationService = new ValidationService();
+        this.cvStorageService = new CvStorageService();
         this.jobService = new JobService(dataService.getJobRepository(), validationService);
         this.applicantService = new ApplicantService(dataService.getProfileRepository(), validationService);
         this.matchingService = new MatchingService();
@@ -570,7 +573,7 @@ public class MOManagementFrame extends JFrame {
             return;
         }
 
-        File cvFile = new File(selectedApplicantCvPath);
+        File cvFile = cvStorageService.resolveCvPath(selectedApplicantCvPath).toFile();
         if (!cvFile.isFile()) {
             UiMessage.error(this, "The CV file could not be found:\n" + selectedApplicantCvPath);
             return;
