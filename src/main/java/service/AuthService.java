@@ -147,6 +147,32 @@ public class AuthService {
     }
 
     /**
+     * Resets a registered user's password after validating the replacement.
+     *
+     * @param username        account email
+     * @param newPassword     new password
+     * @param confirmPassword confirmation of the new password
+     */
+    public void resetPassword(String username, String newPassword, String confirmPassword) {
+        String normalizedUsername = validationService.normalizeEmail(username);
+        List<String> errors = validationService.validateRegistration(normalizedUsername, newPassword, confirmPassword);
+        List<model.User> users = new ArrayList<>(userRepository.findAll());
+        model.User user = users.stream()
+                .filter(item -> item.getUsername().equalsIgnoreCase(normalizedUsername))
+                .findFirst()
+                .orElse(null);
+        if (user == null) {
+            errors.add("No account exists for this email address.");
+        }
+        if (!errors.isEmpty()) {
+            throw new IllegalArgumentException(String.join("\n", errors));
+        }
+
+        user.setPassword(newPassword);
+        userRepository.saveAll(users);
+    }
+
+    /**
      * Private helper method that performs the actual user registration logic.
      * This method handles the common registration process for both TA and MO users,
      * including validation, duplicate checking, ID generation, and data persistence.

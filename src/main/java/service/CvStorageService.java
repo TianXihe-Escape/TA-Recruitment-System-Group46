@@ -16,18 +16,30 @@ public class CvStorageService {
     private static final List<String> ALLOWED_EXTENSIONS = List.of("pdf", "doc", "docx", "rtf", "txt");
 
     public String storeCvForApplicant(String applicantId, String sourceCvPath, String previousCvPath) {
-        if (sourceCvPath == null || sourceCvPath.isBlank()) {
-            deleteManagedCv(previousCvPath);
+        return storeDocumentForApplicant(applicantId, sourceCvPath, previousCvPath, Constants.CV_DIR, "");
+    }
+
+    public String storeSupportingDocumentForApplicant(String applicantId, String sourcePath, String previousPath) {
+        return storeDocumentForApplicant(applicantId, sourcePath, previousPath, Constants.SUPPORTING_DOC_DIR, "-supporting");
+    }
+
+    public String storeDocumentForApplicant(String applicantId,
+                                            String sourceDocumentPath,
+                                            String previousDocumentPath,
+                                            Path targetDirectory,
+                                            String suffix) {
+        if (sourceDocumentPath == null || sourceDocumentPath.isBlank()) {
+            deleteManagedDocument(previousDocumentPath, targetDirectory);
             return "";
         }
 
-        Path source = resolveCvPath(sourceCvPath);
-        if (isManagedCv(source)) {
-            deleteOldManagedCv(previousCvPath, source);
+        Path source = resolveCvPath(sourceDocumentPath);
+        if (isManagedDocument(source, targetDirectory)) {
+            deleteOldManagedDocument(previousDocumentPath, source, targetDirectory);
             return toProjectRelativePath(source);
         }
         if (!Files.isRegularFile(source)) {
-            throw new IllegalArgumentException("The selected CV file could not be found:\n" + sourceCvPath);
+            throw new IllegalArgumentException("The selected document file could not be found:\n" + sourceDocumentPath);
         }
 
         String fileName = source.getFileName().toString();
@@ -36,14 +48,14 @@ public class CvStorageService {
             throw new IllegalArgumentException("CV file must use a common resume format: PDF, DOC, DOCX, RTF, or TXT.");
         }
 
-        Path destination = Constants.CV_DIR.resolve(safeFileName(applicantId) + "." + extension).normalize();
+        Path destination = targetDirectory.resolve(safeFileName(applicantId) + suffix + "." + extension).normalize();
         try {
-            Files.createDirectories(Constants.CV_DIR);
+            Files.createDirectories(targetDirectory);
             Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);
-            deleteOldManagedCv(previousCvPath, destination);
+            deleteOldManagedDocument(previousDocumentPath, destination, targetDirectory);
             return toProjectRelativePath(destination);
         } catch (IOException e) {
-            throw new IllegalStateException("Could not store the CV file:\n" + e.getMessage(), e);
+            throw new IllegalStateException("Could not store the document file:\n" + e.getMessage(), e);
         }
     }
 
@@ -56,11 +68,19 @@ public class CvStorageService {
     }
 
     public void deleteManagedCv(String cvPath) {
-        if (cvPath == null || cvPath.isBlank()) {
+        deleteManagedDocument(cvPath, Constants.CV_DIR);
+    }
+
+    public void deleteManagedSupportingDocument(String documentPath) {
+        deleteManagedDocument(documentPath, Constants.SUPPORTING_DOC_DIR);
+    }
+
+    private void deleteManagedDocument(String documentPath, Path targetDirectory) {
+        if (documentPath == null || documentPath.isBlank()) {
             return;
         }
-        Path path = resolveCvPath(cvPath);
-        if (!isManagedCv(path)) {
+        Path path = resolveCvPath(documentPath);
+        if (!isManagedDocument(path, targetDirectory)) {
             return;
         }
         try {
@@ -70,18 +90,18 @@ public class CvStorageService {
         }
     }
 
-    private void deleteOldManagedCv(String previousCvPath, Path newCvPath) {
-        if (previousCvPath == null || previousCvPath.isBlank()) {
+    private void deleteOldManagedDocument(String previousDocumentPath, Path newDocumentPath, Path targetDirectory) {
+        if (previousDocumentPath == null || previousDocumentPath.isBlank()) {
             return;
         }
-        Path previous = resolveCvPath(previousCvPath);
-        if (!previous.equals(newCvPath.toAbsolutePath().normalize())) {
-            deleteManagedCv(previousCvPath);
+        Path previous = resolveCvPath(previousDocumentPath);
+        if (!previous.equals(newDocumentPath.toAbsolutePath().normalize())) {
+            deleteManagedDocument(previousDocumentPath, targetDirectory);
         }
     }
 
-    private boolean isManagedCv(Path path) {
-        return path.toAbsolutePath().normalize().startsWith(Constants.CV_DIR.toAbsolutePath().normalize());
+    private boolean isManagedDocument(Path path, Path targetDirectory) {
+        return path.toAbsolutePath().normalize().startsWith(targetDirectory.toAbsolutePath().normalize());
     }
 
     private String toProjectRelativePath(Path path) {

@@ -8,6 +8,7 @@ import model.JobStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import repository.AllocationRepository;
 import repository.ApplicationRepository;
 import repository.JobRepository;
 import repository.JsonDataStore;
@@ -28,6 +29,7 @@ class ApplicationServiceTest {
 
     private ApplicationRepository applicationRepository;
     private JobRepository jobRepository;
+    private AllocationRepository allocationRepository;
     private ApplicationService applicationService;
 
     @BeforeEach
@@ -35,7 +37,13 @@ class ApplicationServiceTest {
         JsonDataStore dataStore = new JsonDataStore();
         applicationRepository = new ApplicationRepository(dataStore, tempDir.resolve("applications.json"));
         jobRepository = new JobRepository(dataStore, tempDir.resolve("jobs.json"));
-        applicationService = new ApplicationService(applicationRepository, jobRepository, new MatchingService());
+        allocationRepository = new AllocationRepository(dataStore, tempDir.resolve("allocations.json"));
+        applicationService = new ApplicationService(
+                applicationRepository,
+                jobRepository,
+                new MatchingService(),
+                new AllocationService(allocationRepository)
+        );
     }
 
     @Test
@@ -132,6 +140,23 @@ class ApplicationServiceTest {
     }
 
     @Test
+    void shouldRemoveShortlistStatus() {
+        ApplicationRecord record = new ApplicationRecord();
+        record.setApplicationId("x1");
+        record.setApplicantId("a1");
+        record.setJobId("j1");
+        record.setStatus(ApplicationStatus.SHORTLISTED);
+        applicationRepository.saveAll(new ArrayList<>(List.of(record)));
+
+        applicationService.removeShortlist("x1", "not selected yet", "mo1");
+
+        ApplicationRecord updated = applicationRepository.findAll().get(0);
+        assertEquals(ApplicationStatus.SUBMITTED, updated.getStatus());
+        assertTrue(updated.getReviewerNotes().contains("Shortlist status removed"));
+        assertEquals(1, updated.getStatusHistory().size());
+    }
+
+    @Test
     void shouldGenerateNextSequentialApplicationId() {
         ApplicantProfile profile = buildProfile();
         profile.setApplicantId("a2");
@@ -183,6 +208,7 @@ class ApplicationServiceTest {
         assertEquals(ApplicationStatus.SHORTLISTED, records.get(0).getStatus());
         assertTrue(records.get(0).getReviewerNotes().contains("job was reopened"));
         assertEquals(JobStatus.OPEN, updatedJob.getStatus());
+        assertTrue(allocationRepository.findAll().stream().noneMatch(allocation -> allocation.isActive()));
     }
 
     @Test
@@ -237,6 +263,7 @@ class ApplicationServiceTest {
         JobPosting updatedJob = jobRepository.findById("j1").orElseThrow();
         // The second acceptance fills the final vacancy, so the job should become closed automatically.
         assertEquals(JobStatus.CLOSED, updatedJob.getStatus());
+        assertEquals(1, allocationRepository.findAll().stream().filter(allocation -> allocation.isActive()).count());
     }
 
     @Test
@@ -277,6 +304,22 @@ class ApplicationServiceTest {
         ApplicationRecord updated = applicationRepository.findAll().get(0);
         assertEquals(ApplicationStatus.WITHDRAWN, updated.getStatus());
         assertTrue(updated.getReviewerNotes().contains("Withdrawn by applicant"));
+    }
+
+    @Test
+    void shouldRejectWithdrawAfterDeadline() {
+        ApplicationRecord record = new ApplicationRecord();
+        record.setApplicationId("x1");
+        record.setApplicantId("a1");
+        record.setJobId("j1");
+        record.setStatus(ApplicationStatus.SUBMITTED);
+        applicationRepository.saveAll(new ArrayList<>(List.of(record)));
+
+        JobPosting job = buildJob();
+        job.setApplicationDeadline(LocalDate.now().minusDays(1));
+        jobRepository.saveAll(List.of(job));
+
+        assertThrows(IllegalStateException.class, () -> applicationService.withdrawApplication("x1"));
     }
 
     @Test

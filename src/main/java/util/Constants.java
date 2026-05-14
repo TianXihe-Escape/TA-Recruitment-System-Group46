@@ -48,6 +48,16 @@ public final class Constants {
     public static final Path CV_DIR = PROJECT_DIR.resolve("cv").normalize();
 
     /**
+     * The directory path where supporting documents are copied for stable review.
+     */
+    public static final Path SUPPORTING_DOC_DIR = PROJECT_DIR.resolve("supporting-documents").normalize();
+
+    /**
+     * The directory path where generated CSV reports are written.
+     */
+    public static final Path EXPORTS_DIR = PROJECT_DIR.resolve("exports").normalize();
+
+    /**
      * File path for storing user account information.
      * Contains all registered users with their authentication credentials,
      * personal details, and role assignments.
@@ -75,6 +85,16 @@ public final class Constants {
      * including application status, timestamps, and review notes.
      */
     public static final Path APPLICATIONS_FILE = DATA_DIR.resolve("applications.json");
+
+    /**
+     * File path for storing in-system notifications.
+     */
+    public static final Path NOTIFICATIONS_FILE = DATA_DIR.resolve("notifications.json");
+
+    /**
+     * File path for storing accepted applicant allocation records.
+     */
+    public static final Path ALLOCATIONS_FILE = DATA_DIR.resolve("allocations.json");
 
     /**
      * File path for storing system configuration settings.

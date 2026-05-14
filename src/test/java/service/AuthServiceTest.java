@@ -13,6 +13,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 class AuthServiceTest {
     @TempDir
@@ -61,5 +62,14 @@ class AuthServiceTest {
 
         assertEquals(Role.MO, user.getRole());
         assertEquals(List.of("COMP1001", "DATA2002"), user.getManagedModuleCodes());
+    }
+
+    @Test
+    void shouldResetExistingPassword() {
+        authService.registerTa("ta@bupt.edu.cn", "Li Hua", "oldpass", "oldpass");
+
+        authService.resetPassword("ta@bupt.edu.cn", "newpass", "newpass");
+
+        assertDoesNotThrow(() -> authService.login("ta@bupt.edu.cn", "newpass", Role.TA));
     }
 }

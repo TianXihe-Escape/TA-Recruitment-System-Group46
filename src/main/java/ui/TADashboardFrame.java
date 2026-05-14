@@ -2,7 +2,9 @@ package ui;
 
 import model.ApplicantProfile;
 import model.ApplicationRecord;
+import model.JobCategory;
 import model.JobPosting;
+import model.NotificationRecord;
 import model.User;
 import service.ApplicantService;
 import service.ApplicationService;
@@ -10,12 +12,15 @@ import service.CvStorageService;
 import service.DataService;
 import service.JobService;
 import service.MatchingService;
+import service.NotificationService;
 import service.ValidationService;
 import ui.dialogs.JobDetailsDialog;
 import ui.dialogs.UiMessage;
 import util.Constants;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
@@ -55,6 +60,7 @@ public class TADashboardFrame extends JFrame {
      * Service for submission and application workflow actions.
      */
     private final ApplicationService applicationService;
+    private final NotificationService notificationService;
     /**
      * Validation helper for parsing form input.
      */
@@ -72,18 +78,33 @@ public class TADashboardFrame extends JFrame {
     private final JTextField nameField = new JTextField();
     private final JTextField emailField = new JTextField();
     private final JTextField phoneField = new JTextField();
+    private final JTextField programmeField = new JTextField();
+    private final JTextField yearOfStudyField = new JTextField();
     private final JTextField skillsField = new JTextField();
     private final JTextField availabilityField = new JTextField();
     private final JTextField preferredDutiesField = new JTextField();
     private final JTextArea experienceArea = new JTextArea(3, 20);
     private final JTextField cvPathField = new JTextField();
+    private final JTextField supportingDocumentPathField = new JTextField();
     private final JButton chooseCvButton = UiTheme.createSecondaryButton("Choose File");
+    private final JButton chooseSupportingDocumentButton = UiTheme.createSecondaryButton("Choose File");
+    private final JTextField jobSearchField = new JTextField();
+    private final JComboBox<String> moduleFilterBox = new JComboBox<>();
+    private final JComboBox<String> categoryFilterBox = new JComboBox<>();
+    private boolean syncingJobFilters;
     private final DefaultTableModel jobTableModel = new DefaultTableModel(
-            new Object[]{"Job ID", "Module", "Hours", "TA Demand", "Deadline", "Skills", "Status"}, 0);
+            new Object[]{"Job ID", "Module", "Category", "Semester", "Hours", "TA Demand", "Deadline", "Skills", "Favourite", "Status"}, 0);
     private final JTable jobTable = new PlaceholderTable(jobTableModel, "No open jobs are available right now.");
+    private final DefaultTableModel favoriteJobTableModel = new DefaultTableModel(
+            new Object[]{"Job ID", "Module", "Category", "Semester", "Hours", "TA Demand", "Deadline", "Skills", "Favourite", "Status"}, 0);
+    private final JTable favoriteJobTable = new PlaceholderTable(favoriteJobTableModel, "No favourite jobs match the current filters.");
     private final DefaultTableModel applicationTableModel = new DefaultTableModel(
             new Object[]{"Application ID", "Job ID", "Status", "Match %", "Missing Skills", "Reviewer Notes"}, 0);
     private final JTable applicationTable = new PlaceholderTable(applicationTableModel, "You have not submitted any applications yet.");
+    private final DefaultTableModel notificationTableModel = new DefaultTableModel(
+            new Object[]{"Time", "Status", "Message"}, 0);
+    private final JTable notificationTable = new PlaceholderTable(notificationTableModel, "No notifications yet.");
+    private final JTabbedPane opportunityTabs = new JTabbedPane();
 
     /**
      * Constructs the TA dashboard and loads the initial data snapshot.
@@ -98,8 +119,10 @@ public class TADashboardFrame extends JFrame {
         this.applicationService = new ApplicationService(
                 dataService.getApplicationRepository(),
                 dataService.getJobRepository(),
-                new MatchingService()
+                new MatchingService(),
+                new service.AllocationService(dataService.getAllocationRepository())
         );
+        this.notificationService = new NotificationService(dataService.getNotificationRepository());
         this.profile = applicantService.getProfileByUserId(currentUser.getUserId());
 
         setTitle("TA Dashboard - " + Constants.APP_TITLE);
@@ -123,6 +146,7 @@ public class TADashboardFrame extends JFrame {
         loadProfile();
         refreshJobs();
         refreshApplications();
+        refreshNotifications();
     }
 
     /**
@@ -135,11 +159,14 @@ public class TADashboardFrame extends JFrame {
         UiTheme.addFormRow(form, 0, "Name", nameField);
         UiTheme.addFormRow(form, 2, "Email", emailField);
         UiTheme.addFormRow(form, 4, "Phone", phoneField);
-        UiTheme.addFormRow(form, 6, "Skills", skillsField);
-        UiTheme.addFormRow(form, 8, "Availability", availabilityField);
-        UiTheme.addFormRow(form, 10, "Preferred Duties", preferredDutiesField);
-        UiTheme.addFormRow(form, 12, "Experience Summary", wrapArea(experienceArea));
-        UiTheme.addFormRow(form, 14, "CV Path", buildCvPathPicker());
+        UiTheme.addFormRow(form, 6, "Programme", programmeField);
+        UiTheme.addFormRow(form, 8, "Year of Study", yearOfStudyField);
+        UiTheme.addFormRow(form, 10, "Skills", skillsField);
+        UiTheme.addFormRow(form, 12, "Availability", availabilityField);
+        UiTheme.addFormRow(form, 14, "Preferred Duties", preferredDutiesField);
+        UiTheme.addFormRow(form, 16, "Experience Summary", wrapArea(experienceArea));
+        UiTheme.addFormRow(form, 18, "CV Path", buildCvPathPicker());
+        UiTheme.addFormRow(form, 20, "Supporting Document", buildSupportingDocumentPicker());
 
         JButton saveProfileButton = UiTheme.createPrimaryButton("Save Profile");
         JButton deleteAccountButton = UiTheme.createDangerButton("Delete Account");
@@ -150,11 +177,13 @@ public class TADashboardFrame extends JFrame {
         backButton.addActionListener(event -> returnToLogin());
         saveProfileButton.addActionListener(event -> saveProfile());
         chooseCvButton.addActionListener(event -> chooseCvFile());
+        chooseSupportingDocumentButton.addActionListener(event -> chooseSupportingDocumentFile());
         refreshButton.addActionListener(event -> {
             profile = applicantService.getProfileByUserId(currentUser.getUserId());
             loadProfile();
             refreshJobs();
             refreshApplications();
+            refreshNotifications();
         });
 
         JPanel body = new JPanel(new BorderLayout(0, 18));
@@ -174,28 +203,97 @@ public class TADashboardFrame extends JFrame {
         JButton viewDetailsButton = UiTheme.createSecondaryButton("View Job Details");
         JButton viewApplicationButton = UiTheme.createSecondaryButton("View Application Details");
         JButton withdrawButton = UiTheme.createSecondaryButton("Withdraw Application");
+        JButton favouriteButton = UiTheme.createSecondaryButton("Toggle Favourite");
         JButton applyButton = UiTheme.createPrimaryButton("Apply");
         JButton refreshButton = UiTheme.createSecondaryButton("Refresh Tables");
+        JButton markReadButton = UiTheme.createSecondaryButton("Mark Notifications Read");
 
         viewDetailsButton.addActionListener(event -> viewSelectedJob());
         viewApplicationButton.addActionListener(event -> viewSelectedApplication());
         withdrawButton.addActionListener(event -> withdrawSelectedApplication());
+        favouriteButton.addActionListener(event -> toggleSelectedFavouriteJob());
         applyButton.addActionListener(event -> applyForSelectedJob());
+        markReadButton.addActionListener(event -> {
+            notificationService.markAllRead(currentUser.getUserId());
+            refreshNotifications();
+        });
         refreshButton.addActionListener(event -> {
             refreshJobs();
             refreshApplications();
+            refreshNotifications();
         });
 
-        JTabbedPane tabs = new JTabbedPane();
-        UiTheme.styleTabs(tabs);
-        tabs.addTab("Available Jobs", UiTheme.wrapTable(jobTable));
-        tabs.addTab("My Applications", UiTheme.wrapTable(applicationTable));
+        UiTheme.styleTabs(opportunityTabs);
+        opportunityTabs.addTab("Available Jobs", UiTheme.wrapTable(jobTable));
+        opportunityTabs.addTab("Favourite Jobs", UiTheme.wrapTable(favoriteJobTable));
+        opportunityTabs.addTab("My Applications", UiTheme.wrapTable(applicationTable));
+        opportunityTabs.addTab("Notifications", UiTheme.wrapTable(notificationTable));
 
         JPanel body = new JPanel(new BorderLayout(0, 18));
         body.setOpaque(false);
-        body.add(UiTheme.createButtonRow(FlowLayout.LEFT, viewDetailsButton, viewApplicationButton, withdrawButton, applyButton, refreshButton), BorderLayout.NORTH);
-        body.add(tabs, BorderLayout.CENTER);
+        JPanel controls = new JPanel(new BorderLayout(0, 10));
+        controls.setOpaque(false);
+        controls.add(buildJobFilterPanel(), BorderLayout.NORTH);
+        controls.add(UiTheme.createButtonRow(FlowLayout.LEFT, viewDetailsButton, viewApplicationButton, withdrawButton, favouriteButton, applyButton, markReadButton, refreshButton), BorderLayout.SOUTH);
+        body.add(controls, BorderLayout.NORTH);
+        body.add(opportunityTabs, BorderLayout.CENTER);
         panel.add(body, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JPanel buildJobFilterPanel() {
+        JPanel panel = new JPanel(new GridLayout(1, 3, 10, 0));
+        panel.setOpaque(false);
+
+        UiTheme.styleTextField(jobSearchField);
+        UiTheme.styleComboBox(moduleFilterBox);
+        UiTheme.styleComboBox(categoryFilterBox);
+
+        jobSearchField.setToolTipText("Search module, duties, semester, category, or required skills.");
+        moduleFilterBox.setToolTipText("Filter vacancies by module.");
+        categoryFilterBox.setToolTipText("Filter vacancies by activity type.");
+
+        jobSearchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent event) {
+                refreshJobs();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent event) {
+                refreshJobs();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent event) {
+                refreshJobs();
+            }
+        });
+        moduleFilterBox.addActionListener(event -> {
+            if (!syncingJobFilters) {
+                refreshJobs();
+            }
+        });
+        categoryFilterBox.addActionListener(event -> {
+            if (!syncingJobFilters) {
+                refreshJobs();
+            }
+        });
+
+        panel.add(labeledControl("Search", jobSearchField));
+        panel.add(labeledControl("Module", moduleFilterBox));
+        panel.add(labeledControl("Category", categoryFilterBox));
+        return panel;
+    }
+
+    private JPanel labeledControl(String labelText, JComponent control) {
+        JPanel panel = new JPanel(new BorderLayout(0, 4));
+        panel.setOpaque(false);
+        JLabel label = new JLabel(labelText);
+        label.setForeground(UiTheme.TEXT);
+        label.setFont(UiTheme.uiFont(Font.BOLD, 12));
+        panel.add(label, BorderLayout.NORTH);
+        panel.add(control, BorderLayout.CENTER);
         return panel;
     }
 
@@ -206,12 +304,16 @@ public class TADashboardFrame extends JFrame {
         nameField.setText(profile.getName());
         emailField.setText(profile.getEmail());
         phoneField.setText(profile.getPhone());
+        programmeField.setText(profile.getProgramme());
+        yearOfStudyField.setText(profile.getYearOfStudy());
         skillsField.setText(String.join(", ", profile.getSkills()));
         availabilityField.setText(profile.getAvailability());
         preferredDutiesField.setText(profile.getPreferredDuties());
         experienceArea.setText(profile.getExperienceSummary());
         cvPathField.setText(profile.getCvPath());
         updateCvPathOpenState();
+        supportingDocumentPathField.setText(profile.getSupportingDocumentPath());
+        updateSupportingDocumentOpenState();
     }
 
     /**
@@ -227,6 +329,8 @@ public class TADashboardFrame extends JFrame {
             profile.setName(nameField.getText().trim());
             profile.setEmail(emailField.getText().trim());
             profile.setPhone(phoneField.getText().trim());
+            profile.setProgramme(programmeField.getText().trim());
+            profile.setYearOfStudy(yearOfStudyField.getText().trim());
             profile.setSkills(validationService.parseSkills(skillsField.getText()));
             profile.setAvailability(availabilityField.getText().trim());
             profile.setPreferredDuties(preferredDutiesField.getText().trim());
@@ -236,7 +340,12 @@ public class TADashboardFrame extends JFrame {
                     profile.getEmail(),
                     profile.getPhone()
             );
+            profileErrors.addAll(validationService.validateAcademicProfile(
+                    profile.getProgramme(),
+                    profile.getYearOfStudy()
+            ));
             profileErrors.addAll(validationService.validateCvPath(cvPathField.getText().trim()));
+            profileErrors.addAll(validationService.validateSupportingDocumentPath(supportingDocumentPathField.getText().trim()));
             if (!profileErrors.isEmpty()) {
                 throw new IllegalArgumentException(String.join("\n", profileErrors));
             }
@@ -245,11 +354,20 @@ public class TADashboardFrame extends JFrame {
                     cvPathField.getText().trim(),
                     profile.getCvPath()
             );
+            String storedSupportingDocumentPath = cvStorageService.storeSupportingDocumentForApplicant(
+                    profile.getApplicantId(),
+                    supportingDocumentPathField.getText().trim(),
+                    profile.getSupportingDocumentPath()
+            );
             profile.setCvPath(storedCvPath);
+            profile.setSupportingDocumentPath(storedSupportingDocumentPath);
             applicantService.saveProfile(profile);
             cvPathField.setText(profile.getCvPath());
+            supportingDocumentPathField.setText(profile.getSupportingDocumentPath());
             updateCvPathOpenState();
+            updateSupportingDocumentOpenState();
             UiMessage.info(this, "Profile saved successfully.");
+            refreshJobs();
             refreshApplications();
         } catch (Exception ex) {
             UiMessage.error(this, ex.getMessage());
@@ -261,17 +379,86 @@ public class TADashboardFrame extends JFrame {
      */
     private void refreshJobs() {
         jobTableModel.setRowCount(0);
-        for (JobPosting job : jobService.getOpenJobs()) {
-            jobTableModel.addRow(new Object[]{
-                    job.getJobId(),
-                    job.getModuleCode() + " - " + job.getModuleTitle(),
-                    job.getHours(),
-                    buildTaDemandText(job),
-                    job.getApplicationDeadline(),
-                    String.join(", ", job.getRequiredSkills()),
-                    job.getStatus()
-            });
+        favoriteJobTableModel.setRowCount(0);
+        refreshJobFilterOptions();
+
+        String module = String.valueOf(moduleFilterBox.getSelectedItem());
+        if ("All Modules".equals(module)) {
+            module = "";
         }
+        JobCategory category = selectedCategoryFilter();
+        List<JobPosting> jobs = jobService.searchOpenJobs(jobSearchField.getText(), module, category).stream()
+                .filter(job -> job.getApplicationDeadline() == null || !job.getApplicationDeadline().isBefore(LocalDate.now()))
+                .toList();
+
+        for (JobPosting job : jobs) {
+            Object[] row = buildJobRow(job);
+            jobTableModel.addRow(row);
+            if (profile != null && profile.isFavoriteJob(job.getJobId())) {
+                favoriteJobTableModel.addRow(row);
+            }
+        }
+    }
+
+    private void refreshJobFilterOptions() {
+        syncingJobFilters = true;
+        String selectedModule = String.valueOf(moduleFilterBox.getSelectedItem());
+        String selectedCategory = String.valueOf(categoryFilterBox.getSelectedItem());
+
+        moduleFilterBox.removeAllItems();
+        moduleFilterBox.addItem("All Modules");
+        jobService.getOpenJobs().stream()
+                .map(JobPosting::getModuleCode)
+                .distinct()
+                .sorted()
+                .forEach(moduleFilterBox::addItem);
+        if (selectedModule != null && comboContains(moduleFilterBox, selectedModule)) {
+            moduleFilterBox.setSelectedItem(selectedModule);
+        }
+
+        categoryFilterBox.removeAllItems();
+        categoryFilterBox.addItem("All Categories");
+        for (JobCategory category : JobCategory.values()) {
+            categoryFilterBox.addItem(category.getDisplayName());
+        }
+        if (selectedCategory != null && comboContains(categoryFilterBox, selectedCategory)) {
+            categoryFilterBox.setSelectedItem(selectedCategory);
+        }
+        syncingJobFilters = false;
+    }
+
+    private boolean comboContains(JComboBox<String> comboBox, String value) {
+        for (int i = 0; i < comboBox.getItemCount(); i++) {
+            if (value.equals(comboBox.getItemAt(i))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private JobCategory selectedCategoryFilter() {
+        String selected = String.valueOf(categoryFilterBox.getSelectedItem());
+        for (JobCategory category : JobCategory.values()) {
+            if (category.getDisplayName().equals(selected)) {
+                return category;
+            }
+        }
+        return null;
+    }
+
+    private Object[] buildJobRow(JobPosting job) {
+        return new Object[]{
+                job.getJobId(),
+                job.getModuleCode() + " - " + job.getModuleTitle(),
+                job.getCategory() == null ? "-" : job.getCategory().getDisplayName(),
+                valueOrDash(job.getSemester()),
+                job.getHours(),
+                buildTaDemandText(job),
+                job.getApplicationDeadline(),
+                String.join(", ", job.getRequiredSkills()),
+                profile != null && profile.isFavoriteJob(job.getJobId()) ? "Yes" : "No",
+                job.getStatus()
+        };
     }
 
     /**
@@ -295,12 +482,11 @@ public class TADashboardFrame extends JFrame {
      * Opens the details dialog for the currently selected job.
      */
     private void viewSelectedJob() {
-        int row = jobTable.getSelectedRow();
-        if (row < 0) {
+        String jobId = selectedJobId();
+        if (jobId == null) {
             UiMessage.error(this, "Please select a job from the Available Jobs table before viewing details.");
             return;
         }
-        String jobId = String.valueOf(jobTableModel.getValueAt(row, 0));
         JobPosting job = findJob(jobId).orElse(null);
         if (job == null) {
             UiMessage.error(this, "This job is no longer available. Please refresh the table.");
@@ -338,8 +524,11 @@ public class TADashboardFrame extends JFrame {
                 "Job: " + (job == null ? "[Deleted Job]" : job.getModuleCode() + " - " + job.getModuleTitle()) + "\n" +
                 "Status: " + application.getStatus() + "\n" +
                 "Applied At: " + valueOrDash(application.getAppliedAt() == null ? null : application.getAppliedAt().toString()) + "\n" +
+                "Last Updated: " + valueOrDash(application.getLastUpdatedAt() == null ? null : application.getLastUpdatedAt().toString()) + "\n" +
+                "Decision At: " + valueOrDash(application.getDecisionAt() == null ? null : application.getDecisionAt().toString()) + "\n" +
                 "Match Score: " + application.getMatchScore() + "%\n" +
                 "Missing Skills: " + valueOrDash(String.join(", ", application.getMissingSkills())) + "\n" +
+                "Suggestion: " + buildMissingSkillSuggestion(application) + "\n" +
                 "Reviewer Notes: " + valueOrDash(application.getReviewerNotes()) + "\n" +
                 "TA Demand: " + (job == null ? "-" : buildTaDemandText(job)) + "\n" +
                 "Deadline: " + valueOrDash(job == null || job.getApplicationDeadline() == null ? null : job.getApplicationDeadline().toString());
@@ -350,8 +539,8 @@ public class TADashboardFrame extends JFrame {
      * Submits an application for the selected job.
      */
     private void applyForSelectedJob() {
-        int row = jobTable.getSelectedRow();
-        if (row < 0) {
+        String jobId = selectedJobId();
+        if (jobId == null) {
             UiMessage.error(this, "Please select a job from the Available Jobs table before applying.");
             return;
         }
@@ -365,19 +554,51 @@ public class TADashboardFrame extends JFrame {
         }
 
         try {
-            String jobId = String.valueOf(jobTableModel.getValueAt(row, 0));
             JobPosting job = findJob(jobId)
                     .orElseThrow(() -> new IllegalStateException("This job is no longer available. Please refresh the table."));
             ApplicationRecord record = applicationService.apply(profile, job);
+            notificationService.notifyUser(currentUser.getUserId(), "Application submitted for " + job.getModuleCode() + " " + job.getModuleTitle() + ".");
+            notificationService.notifyUser(job.getPostedBy(), profile.getName() + " submitted an application for " + job.getModuleCode() + " " + job.getModuleTitle() + ".");
             UiMessage.info(this,
                     "Application submitted for " + job.getModuleCode() + " - " + job.getModuleTitle()
                             + ".\nMatch score: " + record.getMatchScore()
                             + "%\nYou can track updates in My Applications.");
             refreshApplications();
             refreshJobs();
+            refreshNotifications();
         } catch (Exception ex) {
             UiMessage.error(this, ex.getMessage());
         }
+    }
+
+    private void refreshNotifications() {
+        notificationTableModel.setRowCount(0);
+        for (NotificationRecord notification : notificationService.getNotificationsForUser(currentUser.getUserId())) {
+            notificationTableModel.addRow(new Object[]{
+                    notification.getCreatedAt() == null ? "-" : notification.getCreatedAt(),
+                    notification.isRead() ? "Read" : "New",
+                    notification.getMessage()
+            });
+        }
+    }
+
+    private void toggleSelectedFavouriteJob() {
+        String jobId = selectedJobId();
+        if (jobId == null) {
+            UiMessage.error(this, "Please select a job before changing favourites.");
+            return;
+        }
+        List<String> favourites = new ArrayList<>(profile.getFavoriteJobIds());
+        if (favourites.contains(jobId)) {
+            favourites.remove(jobId);
+            UiMessage.info(this, "Job removed from favourites.");
+        } else {
+            favourites.add(jobId);
+            UiMessage.info(this, "Job saved to favourites.");
+        }
+        profile.setFavoriteJobIds(favourites);
+        saveProfileRecordWithoutValidation();
+        refreshJobs();
     }
 
     /**
@@ -395,12 +616,49 @@ public class TADashboardFrame extends JFrame {
         }
 
         try {
-            applicationService.withdrawApplication(applicationId);
+            ApplicationRecord selectedApplication = applicationService.getApplicationsForApplicant(profile.getApplicantId()).stream()
+                    .filter(record -> applicationId.equals(record.getApplicationId()))
+                    .findFirst()
+                    .orElse(null);
+            applicationService.withdrawApplication(applicationId, currentUser.getUserId());
+            if (selectedApplication != null) {
+                JobPosting job = findJob(selectedApplication.getJobId()).orElse(null);
+                if (job != null) {
+                    notificationService.notifyUser(currentUser.getUserId(), "Application withdrawn for " + job.getModuleCode() + " " + job.getModuleTitle() + ".");
+                    notificationService.notifyUser(job.getPostedBy(), profile.getName() + " withdrew an application for " + job.getModuleCode() + " " + job.getModuleTitle() + ".");
+                }
+            }
             UiMessage.info(this, "Application withdrawn.");
             refreshApplications();
             refreshJobs();
+            refreshNotifications();
         } catch (Exception ex) {
             UiMessage.error(this, ex.getMessage());
+        }
+    }
+
+    private String selectedJobId() {
+        int selectedTab = opportunityTabs.getSelectedIndex();
+        if (selectedTab != 0 && selectedTab != 1) {
+            return null;
+        }
+        JTable selectedTable = selectedTab == 1 ? favoriteJobTable : jobTable;
+        DefaultTableModel model = selectedTable == favoriteJobTable ? favoriteJobTableModel : jobTableModel;
+        int row = selectedTable.getSelectedRow();
+        if (row < 0) {
+            return null;
+        }
+        return String.valueOf(model.getValueAt(row, 0));
+    }
+
+    private void saveProfileRecordWithoutValidation() {
+        List<ApplicantProfile> profiles = new ArrayList<>(dataService.getProfileRepository().findAll());
+        for (int i = 0; i < profiles.size(); i++) {
+            if (profile.getApplicantId().equals(profiles.get(i).getApplicantId())) {
+                profiles.set(i, profile);
+                dataService.getProfileRepository().saveAll(profiles);
+                return;
+            }
         }
     }
 
@@ -451,21 +709,37 @@ public class TADashboardFrame extends JFrame {
         return panel;
     }
 
+    private JPanel buildSupportingDocumentPicker() {
+        JPanel panel = new JPanel(new BorderLayout(8, 0));
+        panel.setOpaque(false);
+        panel.add(supportingDocumentPathField, BorderLayout.CENTER);
+        panel.add(chooseSupportingDocumentButton, BorderLayout.EAST);
+        return panel;
+    }
+
     /**
      * Opens a file chooser and stores the selected CV path in the form.
      */
     private void chooseCvFile() {
+        chooseDocumentFile(cvPathField, true);
+    }
+
+    private void chooseSupportingDocumentFile() {
+        chooseDocumentFile(supportingDocumentPathField, false);
+    }
+
+    private void chooseDocumentFile(JTextField targetField, boolean cvFile) {
         JFileChooser chooser = new JFileChooser();
-        chooser.setDialogTitle("Select CV File");
+        chooser.setDialogTitle(cvFile ? "Select CV File" : "Select Supporting Document");
         chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
         chooser.setAcceptAllFileFilterUsed(false);
         chooser.setFileFilter(new FileNameExtensionFilter(
-                CV_FILE_DESCRIPTION,
+                cvFile ? CV_FILE_DESCRIPTION : "Supporting Documents (*.pdf, *.doc, *.docx, *.rtf, *.txt)",
                 "pdf", "doc", "docx", "rtf", "txt"
         ));
         UiTheme.styleFileChooser(chooser);
 
-        String existingPath = cvPathField.getText().trim();
+        String existingPath = targetField.getText().trim();
         if (!existingPath.isBlank()) {
             File existingFile = cvStorageService.resolveCvPath(existingPath).toFile();
             if (existingFile.exists()) {
@@ -477,12 +751,19 @@ public class TADashboardFrame extends JFrame {
         if (result == JFileChooser.APPROVE_OPTION && chooser.getSelectedFile() != null) {
             File selectedFile = chooser.getSelectedFile();
             String selectedPath = selectedFile.getAbsolutePath();
-            if (!validationService.validateCvPath(selectedPath).isEmpty()) {
-                UiMessage.error(this, "Please choose a CV in PDF, DOC, DOCX, RTF, or TXT format.");
+            List<String> errors = cvFile
+                    ? validationService.validateCvPath(selectedPath)
+                    : validationService.validateSupportingDocumentPath(selectedPath);
+            if (!errors.isEmpty()) {
+                UiMessage.error(this, String.join("\n", errors));
                 return;
             }
-            cvPathField.setText(selectedPath);
-            updateCvPathOpenState();
+            targetField.setText(selectedPath);
+            if (cvFile) {
+                updateCvPathOpenState();
+            } else {
+                updateSupportingDocumentOpenState();
+            }
         }
     }
 
@@ -493,10 +774,24 @@ public class TADashboardFrame extends JFrame {
         cvPathField.setToolTipText(hasCvPath ? "Click to open " + cvPath : "Choose your CV file to fill this path automatically.");
     }
 
+    private void updateSupportingDocumentOpenState() {
+        String documentPath = supportingDocumentPathField.getText().trim();
+        boolean hasDocument = !documentPath.isBlank();
+        supportingDocumentPathField.setCursor(Cursor.getPredefinedCursor(hasDocument ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
+        supportingDocumentPathField.setToolTipText(hasDocument ? "Click to open " + documentPath : "Optionally choose a transcript or supporting document.");
+    }
+
     private void openCvFile() {
-        String cvPath = cvPathField.getText().trim();
-        if (cvPath.isBlank()) {
-            UiMessage.error(this, "No CV file is available. Please choose a CV file first.");
+        openDocumentFile(cvPathField.getText().trim(), "CV file");
+    }
+
+    private void openSupportingDocumentFile() {
+        openDocumentFile(supportingDocumentPathField.getText().trim(), "supporting document");
+    }
+
+    private void openDocumentFile(String documentPath, String label) {
+        if (documentPath.isBlank()) {
+            UiMessage.error(this, "No " + label + " is available. Please choose a file first.");
             return;
         }
         if (!Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
@@ -504,16 +799,16 @@ public class TADashboardFrame extends JFrame {
             return;
         }
 
-        File cvFile = cvStorageService.resolveCvPath(cvPath).toFile();
+        File cvFile = cvStorageService.resolveCvPath(documentPath).toFile();
         if (!cvFile.isFile()) {
-            UiMessage.error(this, "The CV file could not be found:\n" + cvPath);
+            UiMessage.error(this, "The " + label + " could not be found:\n" + documentPath);
             return;
         }
 
         try {
             Desktop.getDesktop().open(cvFile);
         } catch (Exception ex) {
-            UiMessage.error(this, "Could not open the CV file:\n" + ex.getMessage());
+            UiMessage.error(this, "Could not open the " + label + ":\n" + ex.getMessage());
         }
     }
 
@@ -524,10 +819,13 @@ public class TADashboardFrame extends JFrame {
         UiTheme.styleTextField(nameField);
         UiTheme.styleTextField(emailField);
         UiTheme.styleTextField(phoneField);
+        UiTheme.styleTextField(programmeField);
+        UiTheme.styleTextField(yearOfStudyField);
         UiTheme.styleTextField(skillsField);
         UiTheme.styleTextField(availabilityField);
         UiTheme.styleTextField(preferredDutiesField);
         UiTheme.styleTextField(cvPathField);
+        UiTheme.styleTextField(supportingDocumentPathField);
         cvPathField.setEditable(false);
         cvPathField.setToolTipText("Choose your CV file to fill this path automatically.");
         updateCvPathOpenState();
@@ -539,14 +837,31 @@ public class TADashboardFrame extends JFrame {
                 }
             }
         });
+        supportingDocumentPathField.setEditable(false);
+        supportingDocumentPathField.setToolTipText("Optionally choose a transcript or supporting document.");
+        updateSupportingDocumentOpenState();
+        supportingDocumentPathField.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                if (!supportingDocumentPathField.getText().trim().isBlank()) {
+                    openSupportingDocumentFile();
+                }
+            }
+        });
         UiTheme.styleTextArea(experienceArea, 5);
         UiTheme.styleTable(jobTable);
+        UiTheme.styleTable(favoriteJobTable);
         UiTheme.styleTable(applicationTable);
-        jobTable.getColumnModel().getColumn(4).setCellRenderer(new DeadlineWarningRenderer());
-        jobTable.getColumnModel().getColumn(6).setCellRenderer(new StatusBadgeRenderer());
+        UiTheme.styleTable(notificationTable);
+        jobTable.getColumnModel().getColumn(6).setCellRenderer(new DeadlineWarningRenderer());
+        jobTable.getColumnModel().getColumn(9).setCellRenderer(new StatusBadgeRenderer());
+        favoriteJobTable.getColumnModel().getColumn(6).setCellRenderer(new DeadlineWarningRenderer());
+        favoriteJobTable.getColumnModel().getColumn(9).setCellRenderer(new StatusBadgeRenderer());
         applicationTable.getColumnModel().getColumn(2).setCellRenderer(new StatusBadgeRenderer());
-        UiTheme.setColumnWidths(jobTable, 90, 280, 80, 100, 130, 220, 100);
+        UiTheme.setColumnWidths(jobTable, 90, 260, 130, 110, 70, 100, 120, 220, 90, 90);
+        UiTheme.setColumnWidths(favoriteJobTable, 90, 260, 130, 110, 70, 100, 120, 220, 90, 90);
         UiTheme.setColumnWidths(applicationTable, 120, 90, 120, 90, 220, 280);
+        UiTheme.setColumnWidths(notificationTable, 160, 80, 560);
     }
 
     /**
@@ -554,6 +869,13 @@ public class TADashboardFrame extends JFrame {
      */
     private String valueOrDash(String value) {
         return value == null || value.isBlank() ? "-" : value;
+    }
+
+    private String buildMissingSkillSuggestion(ApplicationRecord application) {
+        if (application.getMissingSkills().isEmpty()) {
+            return "No missing skills were identified for this application.";
+        }
+        return "Consider strengthening or documenting: " + String.join(", ", application.getMissingSkills()) + ".";
     }
 
     /**
@@ -575,6 +897,8 @@ public class TADashboardFrame extends JFrame {
         String name = nameField.getText().trim();
         String email = emailField.getText().trim();
         String phone = phoneField.getText().trim();
+        String programme = programmeField.getText().trim();
+        String yearOfStudy = yearOfStudyField.getText().trim();
         String cvPath = cvPathField.getText().trim();
 
         if (name.isBlank()) {
@@ -585,6 +909,12 @@ public class TADashboardFrame extends JFrame {
         }
         if (phone.isBlank()) {
             issues.add("Phone number");
+        }
+        if (programme.isBlank()) {
+            issues.add("Programme");
+        }
+        if (yearOfStudy.isBlank()) {
+            issues.add("Year of study");
         }
         if (cvPath.isBlank()) {
             issues.add("CV file");
@@ -599,6 +929,7 @@ public class TADashboardFrame extends JFrame {
             }
             issues.add(error);
         }
+        issues.addAll(validationService.validateAcademicProfile(programme, yearOfStudy));
         issues.addAll(validationService.validateCvPath(cvPath));
         return issues;
     }

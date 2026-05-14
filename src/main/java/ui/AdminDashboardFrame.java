@@ -13,8 +13,10 @@ import service.CvStorageService;
 import service.DataService;
 import service.JobService;
 import service.MatchingService;
+import service.NotificationService;
 import service.ValidationService;
 import service.WorkloadService;
+import service.ExportService;
 import ui.dialogs.UiMessage;
 import util.Constants;
 
@@ -22,6 +24,7 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -57,6 +60,8 @@ public class AdminDashboardFrame extends JFrame {
      * Service used for application cleanup so job status stays synchronized.
      */
     private final ApplicationService applicationService;
+    private final NotificationService notificationService;
+    private final ExportService exportService;
     /**
      * Matching helper used for rebalance suggestions.
      */
@@ -105,8 +110,11 @@ public class AdminDashboardFrame extends JFrame {
         this.applicationService = new ApplicationService(
                 dataService.getApplicationRepository(),
                 dataService.getJobRepository(),
-                new MatchingService()
+                new MatchingService(),
+                new service.AllocationService(dataService.getAllocationRepository())
         );
+        this.notificationService = new NotificationService(dataService.getNotificationRepository());
+        this.exportService = new ExportService();
         this.workloadService = new WorkloadService();
         this.matchingService = new MatchingService();
 
@@ -143,6 +151,8 @@ public class AdminDashboardFrame extends JFrame {
         JButton loadSampleButton = UiTheme.createSecondaryButton("Load Demo Data");
         JButton resetButton = UiTheme.createDangerButton("Reset Demo Data");
         JButton suggestButton = UiTheme.createPrimaryButton("Rebalance Suggestion");
+        JButton exportButton = UiTheme.createSecondaryButton("Export CSV");
+        JButton notificationsButton = UiTheme.createSecondaryButton("View Notifications");
 
         backButton.addActionListener(event -> returnToLogin());
         refreshButton.addActionListener(event -> refreshData());
@@ -161,6 +171,8 @@ public class AdminDashboardFrame extends JFrame {
             UiMessage.info(this, "Demo data reset.");
         });
         suggestButton.addActionListener(event -> generateSuggestions());
+        exportButton.addActionListener(event -> exportCsvReport());
+        notificationsButton.addActionListener(event -> showNotifications());
 
         JPanel centerPanel = new JPanel(new BorderLayout(0, 12));
         centerPanel.setOpaque(false);
@@ -169,7 +181,7 @@ public class AdminDashboardFrame extends JFrame {
 
         JPanel body = new JPanel(new BorderLayout(0, 18));
         body.setOpaque(false);
-        body.add(UiTheme.createButtonRow(FlowLayout.LEFT, backButton, refreshButton, hiringButton, loadSampleButton, resetButton, suggestButton), BorderLayout.NORTH);
+        body.add(UiTheme.createButtonRow(FlowLayout.LEFT, backButton, refreshButton, hiringButton, loadSampleButton, resetButton, suggestButton, exportButton, notificationsButton), BorderLayout.NORTH);
         body.add(centerPanel, BorderLayout.CENTER);
         panel.add(body, BorderLayout.CENTER);
         return panel;
@@ -306,6 +318,8 @@ public class AdminDashboardFrame extends JFrame {
                     .count();
             builder.append(job.getJobId()).append(" | ")
                     .append(job.getModuleCode()).append(" ").append(job.getModuleTitle())
+                    .append(" | ").append(job.getCategory() == null ? "-" : job.getCategory().getDisplayName())
+                    .append(" | ").append(valueOrDash(job.getSemester()))
                     .append(" | ").append(job.getStatus())
                     .append(" | ").append(job.getHours()).append("h")
                     .append(" | applicants ").append(applicationCount).append("/").append(job.getRequiredTaCount())
@@ -434,6 +448,38 @@ public class AdminDashboardFrame extends JFrame {
         suggestionArea.setText(builder.toString());
     }
 
+    private void exportCsvReport() {
+        try {
+            List<ApplicantProfile> profiles = dataService.getProfileRepository().findAll();
+            List<JobPosting> jobs = dataService.getJobRepository().findAll();
+            List<ApplicationRecord> applications = dataService.getApplicationRepository().findAll();
+            int threshold = dataService.getConfig().getWorkloadThreshold();
+            List<WorkloadRecord> workloads = workloadService.buildWorkloadRecords(profiles, jobs, applications, threshold);
+            Path output = exportService.exportRecruitmentReport(profiles, jobs, applications, workloads);
+            notificationService.notifyUser(currentUser.getUserId(), "Recruitment CSV report exported to " + output + ".");
+            UiMessage.info(this, "CSV report exported:\n" + output);
+        } catch (Exception ex) {
+            UiMessage.error(this, ex.getMessage());
+        }
+    }
+
+    private void showNotifications() {
+        StringBuilder builder = new StringBuilder();
+        for (model.NotificationRecord notification : notificationService.getNotificationsForUser(currentUser.getUserId())) {
+            builder.append(notification.getCreatedAt() == null ? "-" : notification.getCreatedAt())
+                    .append(" | ")
+                    .append(notification.isRead() ? "Read" : "New")
+                    .append("\n")
+                    .append(notification.getMessage())
+                    .append("\n\n");
+        }
+        if (builder.isEmpty()) {
+            builder.append("No notifications yet.");
+        }
+        notificationService.markAllRead(currentUser.getUserId());
+        UiMessage.info(this, builder.toString());
+    }
+
     /**
      * Returns to the login frame and closes the admin dashboard.
      */
@@ -463,6 +509,8 @@ public class AdminDashboardFrame extends JFrame {
             );
             refreshData();
             clearMoAccountForm();
+            notificationService.notifyUser(currentUser.getUserId(), "MO account created for " + user.getUsername() + ".");
+            notificationService.notifyUser(user.getUserId(), "Your MO account has been created for modules: " + String.join(", ", user.getManagedModuleCodes()) + ".");
             UiMessage.info(this, "MO account created for " + user.getUsername() + ".");
         } catch (Exception ex) {
             UiMessage.error(this, ex.getMessage());
