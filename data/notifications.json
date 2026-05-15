@@ -5,5 +5,12 @@
     "message" : "Your application for COMP1001 Programming Fundamentals was accepted.",
     "createdAt" : "2026-05-14T21:36:14.414390800",
     "read" : false
+  },
+  {
+    "notificationId" : "note-02",
+    "userId" : "user-admin-01",
+    "message" : "Recruitment CSV report exported to D:\\CODE\\Test\\exports\\recruitment-report-20260516-001045.csv.",
+    "createdAt" : "2026-05-16T00:10:45.848033500",
+    "read" : false
   }
 ]

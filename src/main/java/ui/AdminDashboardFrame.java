@@ -361,7 +361,6 @@ public class AdminDashboardFrame extends JFrame {
     private JPanel buildTopPanel() {
         JPanel panel = UiTheme.createCard("Workload Monitor", "Track assigned hours across TAs and quickly reset or repopulate the demo environment.");
 
-        JButton backButton = UiTheme.createSecondaryButton("Back to Login");
         JButton refreshButton = UiTheme.createSecondaryButton("Refresh");
         JButton hiringButton = UiTheme.createSecondaryButton("Open Hiring Management");
         JButton loadSampleButton = UiTheme.createSecondaryButton("Load Demo Data");
@@ -369,7 +368,6 @@ public class AdminDashboardFrame extends JFrame {
         JButton suggestButton = UiTheme.createPrimaryButton("Rebalance Suggestion");
         JButton exportButton = UiTheme.createSecondaryButton("Export CSV");
         JButton notificationsButton = UiTheme.createSecondaryButton("View Notifications");
-        decorateButton(backButton, SimpleLineIcon.Type.LOGOUT);
         decorateButton(refreshButton, SimpleLineIcon.Type.REFRESH);
         decorateButton(hiringButton, SimpleLineIcon.Type.EDIT);
         decorateButton(loadSampleButton, SimpleLineIcon.Type.FILE);
@@ -378,7 +376,6 @@ public class AdminDashboardFrame extends JFrame {
         decorateButton(exportButton, SimpleLineIcon.Type.SAVE);
         decorateButton(notificationsButton, SimpleLineIcon.Type.BELL);
 
-        backButton.addActionListener(event -> returnToLogin());
         refreshButton.addActionListener(event -> refreshData());
         hiringButton.addActionListener(event -> openHiringManagement());
         loadSampleButton.addActionListener(event -> {
@@ -405,7 +402,7 @@ public class AdminDashboardFrame extends JFrame {
 
         JPanel body = new JPanel(new BorderLayout(0, 18));
         body.setOpaque(false);
-        body.add(UiTheme.createButtonRow(FlowLayout.LEFT, backButton, refreshButton, hiringButton, loadSampleButton, resetButton, suggestButton, exportButton, notificationsButton), BorderLayout.NORTH);
+        body.add(UiTheme.createButtonRow(FlowLayout.LEFT, refreshButton, hiringButton, loadSampleButton, resetButton, suggestButton, exportButton, notificationsButton), BorderLayout.NORTH);
         body.add(centerPanel, BorderLayout.CENTER);
         panel.add(body, BorderLayout.CENTER);
         return panel;
