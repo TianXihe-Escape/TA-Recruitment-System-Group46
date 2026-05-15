@@ -1,1 +1,11 @@
-[ ]
+[
+  {
+    "allocationId" : "alloc-01",
+    "applicationId" : "apply-01",
+    "applicantId" : "applicant-01",
+    "jobId" : "job-01",
+    "allocatedByUserId" : "user-mo-01",
+    "allocatedAt" : "2026-05-14T21:36:14.413390400",
+    "active" : true
+  }
+]

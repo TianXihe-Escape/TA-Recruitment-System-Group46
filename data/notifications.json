@@ -1,1 +1,9 @@
-[ ]
+[
+  {
+    "notificationId" : "note-01",
+    "userId" : "user-ta-01",
+    "message" : "Your application for COMP1001 Programming Fundamentals was accepted.",
+    "createdAt" : "2026-05-14T21:36:14.414390800",
+    "read" : false
+  }
+]

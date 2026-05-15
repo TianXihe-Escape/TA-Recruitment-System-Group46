@@ -76,7 +76,6 @@ public class LoginFrame extends JFrame {
         JComboBox<Role> roleBox = new JComboBox<>(Role.values());  // Dropdown for role selection
         JButton loginButton = UiTheme.createPrimaryButton("Login");  // Primary login button
         JButton registerButton = UiTheme.createSecondaryButton("Create TA Account");  // Button to open registration
-        JButton resetPasswordButton = UiTheme.createSecondaryButton("Reset Password");
         JButton loadSampleButton = UiTheme.createSecondaryButton("Load Demo Data");  // Button to load sample data
         JCheckBox showPasswordBox = new JCheckBox("Show Password");  // Checkbox to toggle password visibility
 
@@ -138,11 +137,10 @@ public class LoginFrame extends JFrame {
         actionRow.setOpaque(false);  // Transparent background
 
         // Panel for secondary action buttons (load sample data and register)
-        JPanel secondaryActions = new JPanel(new GridLayout(1, 3, 10, 0));
+        JPanel secondaryActions = new JPanel(new GridLayout(1, 2, 10, 0));
         secondaryActions.setOpaque(false);  // Transparent background
         secondaryActions.add(loadSampleButton);
         secondaryActions.add(registerButton);
-        secondaryActions.add(resetPasswordButton);
 
         // Arrange action buttons: secondary actions on top, login button below
         actionRow.add(secondaryActions, BorderLayout.NORTH);
@@ -186,7 +184,6 @@ public class LoginFrame extends JFrame {
 
         // Add event listener for register button - opens registration frame
         registerButton.addActionListener(event -> new RegisterFrame(authService).setVisible(true));
-        resetPasswordButton.addActionListener(event -> new ResetPasswordFrame(authService).setVisible(true));
 
         // Add event listener for load sample data button
         loadSampleButton.addActionListener(event -> {

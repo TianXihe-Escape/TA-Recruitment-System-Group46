@@ -8,12 +8,12 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Local password reset dialog for registered accounts.
+ * Administrator-only reset dialog for TA/MO/Admin local accounts.
  */
-public class ResetPasswordFrame extends JFrame {
-    public ResetPasswordFrame(AuthService authService) {
-        setTitle("Reset Password - " + Constants.APP_TITLE);
-        setSize(560, 420);
+public class AdminResetPasswordFrame extends JFrame {
+    public AdminResetPasswordFrame(AuthService authService) {
+        setTitle("Admin Reset Password - " + Constants.APP_TITLE);
+        setSize(560, 440);
         setMinimumSize(new Dimension(520, 400));
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
@@ -27,6 +27,10 @@ public class ResetPasswordFrame extends JFrame {
         JCheckBox showPasswordsBox = new JCheckBox("Show Passwords");
         JButton resetButton = UiTheme.createPrimaryButton("Reset Password");
         JButton cancelButton = UiTheme.createSecondaryButton("Cancel");
+        resetButton.setIcon(new SimpleLineIcon(SimpleLineIcon.Type.SAVE, Color.WHITE));
+        resetButton.setIconTextGap(8);
+        cancelButton.setIcon(new SimpleLineIcon(SimpleLineIcon.Type.LOGOUT, Color.WHITE));
+        cancelButton.setIconTextGap(8);
 
         UiTheme.styleTextField(emailField);
         UiTheme.styleTextField(passwordField);
@@ -34,9 +38,9 @@ public class ResetPasswordFrame extends JFrame {
         UiTheme.styleCheckBox(showPasswordsBox);
 
         JPanel root = UiTheme.createPagePanel();
-        JPanel card = UiTheme.createCard("Reset Password", "Update the password for an existing local account.");
+        JPanel card = UiTheme.createCard("Admin Reset Password", "Reset a local account password after signing in as Admin.");
         JPanel form = UiTheme.createFormGrid();
-        UiTheme.addFormRow(form, 0, "Email", emailField);
+        UiTheme.addFormRow(form, 0, "Account Email", emailField);
         UiTheme.addFormRow(form, 2, "New Password", passwordField);
         UiTheme.addFormRow(form, 4, "Confirm Password", confirmField);
         UiTheme.addFormRow(form, 6, "", showPasswordsBox);
@@ -53,7 +57,7 @@ public class ResetPasswordFrame extends JFrame {
                         new String(passwordField.getPassword()),
                         new String(confirmField.getPassword())
                 );
-                UiMessage.info(this, "Password reset successfully. You can now log in with the new password.");
+                UiMessage.info(this, "Password reset successfully.");
                 dispose();
             } catch (Exception ex) {
                 UiMessage.error(this, ex.getMessage());

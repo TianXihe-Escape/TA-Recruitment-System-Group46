@@ -12,6 +12,7 @@ import model.User;
 import model.WorkloadRecord;
 import service.ApplicantService;
 import service.ApplicationService;
+import service.AuthService;
 import service.CvStorageService;
 import service.DataService;
 import service.JobService;
@@ -31,6 +32,7 @@ import java.awt.event.MouseEvent;
 import java.io.File;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
@@ -41,9 +43,13 @@ import java.util.stream.Collectors;
  */
 public class MOManagementFrame extends JFrame {
     private static final String NEW_JOB_PLACEHOLDER = "AUTO-GENERATED ON SAVE";
+    private static final int VIEW_JOB_EDITOR = 0;
+    private static final int VIEW_REVIEW_QUEUE = 1;
+    private static final String[] VIEW_KEYS = {"job-editor", "review-queue"};
 
     private final DataService dataService;
     private final JobService jobService;
+    private final AuthService authService;
     private final ApplicantService applicantService;
     private final ApplicationService applicationService;
     private final CvStorageService cvStorageService;
@@ -82,6 +88,14 @@ public class MOManagementFrame extends JFrame {
     private final DefaultTableModel applicantTableModel = new DefaultTableModel(
             new Object[]{"Application ID", "Applicant", "Status", "Match %", "Missing"}, 0);
     private final PlaceholderTable applicantTable = new PlaceholderTable(applicantTableModel, "Select a job and click Load Applicants to review submissions.");
+    private final JPanel workspaceCards = new JPanel(new CardLayout());
+    private final List<JToggleButton> navigationButtons = new ArrayList<>();
+    private final AvatarButton avatarButton = new AvatarButton("MO");
+    private final JLabel sidebarNameLabel = new JLabel();
+    private final JLabel sidebarRoleLabel = new JLabel();
+    private final JLabel workspaceTitleLabel = new JLabel();
+    private final JLabel workspaceSubtitleLabel = new JLabel();
+    private int currentWorkspaceView = VIEW_JOB_EDITOR;
     private String loadedApplicantJobId;
     private String selectedApplicantCvPath;
     private String selectedApplicantSupportingDocumentPath;
@@ -91,6 +105,11 @@ public class MOManagementFrame extends JFrame {
         this.currentUser = currentUser;
         this.validationService = new ValidationService();
         this.cvStorageService = new CvStorageService();
+        this.authService = new AuthService(
+                dataService.getUserRepository(),
+                dataService.getProfileRepository(),
+                validationService
+        );
         this.notificationService = new NotificationService(dataService.getNotificationRepository());
         this.workloadService = new WorkloadService();
         this.jobService = new JobService(dataService.getJobRepository(), validationService);
@@ -112,26 +131,229 @@ public class MOManagementFrame extends JFrame {
         setLocationRelativeTo(null);
         UiTheme.styleFrame(this);
         styleComponents();
+        avatarButton.addActionListener(event -> showAccountMenu());
 
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, buildFormPanel(), buildTablesPanel());
-        splitPane.setResizeWeight(0.4);
-        UiTheme.styleSplitPane(splitPane);
-
-        JPanel root = UiTheme.createPagePanel();
-        root.add(UiTheme.createHeader(
-                adminMode ? "Admin Hiring Console" : "Module Organiser Console",
-                buildScopeSummary()
-        ), BorderLayout.NORTH);
-        root.add(splitPane, BorderLayout.CENTER);
-        add(UiTheme.wrapPage(root));
+        JPanel root = new JPanel(new BorderLayout(18, 0));
+        root.setBackground(UiTheme.BACKGROUND);
+        root.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+        root.add(buildSidebar(), BorderLayout.WEST);
+        root.add(UiTheme.wrapPage(buildWorkspacePanel()), BorderLayout.CENTER);
+        add(root);
 
         refreshJobs();
         clearForm();
         bindFormSync();
+        showWorkspace(VIEW_JOB_EDITOR);
+    }
+
+    private JPanel buildSidebar() {
+        JPanel sidebar = new JPanel(new BorderLayout(0, 18));
+        sidebar.setPreferredSize(new Dimension(226, 0));
+        sidebar.setBackground(new Color(235, 242, 252));
+        sidebar.setBorder(BorderFactory.createEmptyBorder(14, 12, 14, 12));
+
+        JPanel accountPanel = new JPanel(new BorderLayout(10, 0));
+        accountPanel.setOpaque(false);
+        avatarButton.setInitials(initialsFor(displayName()));
+        accountPanel.add(avatarButton, BorderLayout.WEST);
+
+        JPanel identity = new JPanel();
+        identity.setOpaque(false);
+        identity.setLayout(new BoxLayout(identity, BoxLayout.Y_AXIS));
+        sidebarNameLabel.setText(displayName());
+        sidebarNameLabel.setFont(UiTheme.uiFont(Font.BOLD, 15));
+        sidebarNameLabel.setForeground(UiTheme.TEXT);
+        sidebarRoleLabel.setText(adminMode ? "Admin Hiring" : "Module Organiser");
+        sidebarRoleLabel.setFont(UiTheme.uiFont(Font.PLAIN, 12));
+        sidebarRoleLabel.setForeground(UiTheme.MUTED_TEXT);
+        identity.add(sidebarNameLabel);
+        identity.add(Box.createVerticalStrut(4));
+        identity.add(sidebarRoleLabel);
+        accountPanel.add(identity, BorderLayout.CENTER);
+        sidebar.add(accountPanel, BorderLayout.NORTH);
+
+        JPanel navigation = new JPanel();
+        navigation.setOpaque(false);
+        navigation.setLayout(new BoxLayout(navigation, BoxLayout.Y_AXIS));
+        navigation.add(createNavButton("Job Editor", SimpleLineIcon.Type.EDIT, VIEW_JOB_EDITOR));
+        navigation.add(Box.createVerticalStrut(8));
+        navigation.add(createNavButton("Review Queue", SimpleLineIcon.Type.DOCUMENT, VIEW_REVIEW_QUEUE));
+        sidebar.add(navigation, BorderLayout.CENTER);
+        return sidebar;
+    }
+
+    private JPanel buildWorkspacePanel() {
+        JPanel shell = new JPanel(new BorderLayout(0, 14));
+        shell.setBackground(UiTheme.SURFACE);
+        shell.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(UiTheme.BORDER),
+                BorderFactory.createEmptyBorder(18, 18, 18, 18)
+        ));
+
+        JPanel titlePanel = new JPanel();
+        titlePanel.setOpaque(false);
+        titlePanel.setLayout(new BoxLayout(titlePanel, BoxLayout.Y_AXIS));
+        workspaceTitleLabel.setFont(UiTheme.uiFont(Font.BOLD, 22));
+        workspaceTitleLabel.setForeground(UiTheme.TEXT);
+        workspaceSubtitleLabel.setFont(UiTheme.uiFont(Font.PLAIN, 13));
+        workspaceSubtitleLabel.setForeground(UiTheme.MUTED_TEXT);
+        workspaceSubtitleLabel.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
+        titlePanel.add(workspaceTitleLabel);
+        titlePanel.add(workspaceSubtitleLabel);
+
+        workspaceCards.setOpaque(false);
+        workspaceCards.add(buildFormPanel(), VIEW_KEYS[VIEW_JOB_EDITOR]);
+        workspaceCards.add(buildTablesPanel(), VIEW_KEYS[VIEW_REVIEW_QUEUE]);
+
+        shell.add(titlePanel, BorderLayout.NORTH);
+        shell.add(workspaceCards, BorderLayout.CENTER);
+        return shell;
+    }
+
+    private JToggleButton createNavButton(String text, SimpleLineIcon.Type iconType, int viewIndex) {
+        JToggleButton button = new JToggleButton(text);
+        button.setIcon(new SimpleLineIcon(iconType, UiTheme.MUTED_TEXT));
+        button.setIconTextGap(10);
+        button.setHorizontalAlignment(SwingConstants.LEFT);
+        button.setFont(UiTheme.uiFont(Font.BOLD, 14));
+        button.setForeground(UiTheme.TEXT);
+        button.setBackground(new Color(235, 242, 252));
+        button.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        button.setFocusPainted(false);
+        button.setContentAreaFilled(true);
+        button.setOpaque(true);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
+        button.addActionListener(event -> showWorkspace(viewIndex));
+        navigationButtons.add(button);
+        return button;
+    }
+
+    private void showWorkspace(int viewIndex) {
+        currentWorkspaceView = viewIndex;
+        ((CardLayout) workspaceCards.getLayout()).show(workspaceCards, VIEW_KEYS[viewIndex]);
+        for (int i = 0; i < navigationButtons.size(); i++) {
+            JToggleButton button = navigationButtons.get(i);
+            boolean selected = i == viewIndex;
+            button.setSelected(selected);
+            button.setBackground(selected ? Color.WHITE : new Color(235, 242, 252));
+            button.setForeground(selected ? UiTheme.PRIMARY : UiTheme.TEXT);
+        }
+        if (viewIndex == VIEW_JOB_EDITOR) {
+            workspaceTitleLabel.setText(adminMode ? "Admin Hiring Console" : "Job Posting Editor");
+            workspaceSubtitleLabel.setText(buildScopeSummary());
+        } else {
+            workspaceTitleLabel.setText("Review Queue");
+            workspaceSubtitleLabel.setText("Inspect postings, load applicants, review match details, and update hiring decisions.");
+        }
+    }
+
+    private void showAccountMenu() {
+        JPopupMenu menu = new JPopupMenu();
+        menu.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(UiTheme.BORDER),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        menu.add(buildAccountHeader());
+        menu.addSeparator();
+        menu.add(menuItem("Job Editor", SimpleLineIcon.Type.EDIT, () -> showWorkspace(VIEW_JOB_EDITOR)));
+        menu.add(menuItem("Review Queue", SimpleLineIcon.Type.DOCUMENT, () -> showWorkspace(VIEW_REVIEW_QUEUE)));
+        menu.add(menuItem("Change Password", SimpleLineIcon.Type.SAVE, this::showChangePasswordDialog));
+        menu.add(menuItem("View Notifications", SimpleLineIcon.Type.BELL, this::showNotifications));
+        menu.add(menuItem("Refresh", SimpleLineIcon.Type.REFRESH, this::refreshWorkspace));
+        menu.addSeparator();
+        menu.add(menuItem(adminMode ? "Back to Admin" : "Logout", SimpleLineIcon.Type.LOGOUT, this::goBack));
+        menu.show(avatarButton, 0, avatarButton.getHeight() + 6);
+    }
+
+    private JPanel buildAccountHeader() {
+        JPanel panel = new JPanel(new BorderLayout(12, 0));
+        panel.setBackground(UiTheme.SURFACE);
+        AvatarButton preview = new AvatarButton(initialsFor(displayName()));
+        preview.setEnabled(false);
+        panel.add(preview, BorderLayout.WEST);
+        JPanel text = new JPanel();
+        text.setOpaque(false);
+        text.setLayout(new BoxLayout(text, BoxLayout.Y_AXIS));
+        JLabel name = new JLabel(displayName());
+        name.setFont(UiTheme.uiFont(Font.BOLD, 16));
+        name.setForeground(UiTheme.TEXT);
+        JLabel username = new JLabel(currentUser.getUsername());
+        username.setFont(UiTheme.uiFont(Font.PLAIN, 12));
+        username.setForeground(UiTheme.MUTED_TEXT);
+        JLabel role = new JLabel(adminMode ? "Admin access" : "Modules: " + String.join(", ", managedModuleCodes));
+        role.setFont(UiTheme.uiFont(Font.PLAIN, 12));
+        role.setForeground(UiTheme.MUTED_TEXT);
+        text.add(name);
+        text.add(Box.createVerticalStrut(4));
+        text.add(username);
+        text.add(Box.createVerticalStrut(3));
+        text.add(role);
+        panel.add(text, BorderLayout.CENTER);
+        panel.setPreferredSize(new Dimension(340, 74));
+        return panel;
+    }
+
+    private JMenuItem menuItem(String text, SimpleLineIcon.Type iconType, Runnable action) {
+        JMenuItem item = new JMenuItem(text);
+        item.setIcon(new SimpleLineIcon(iconType, UiTheme.MUTED_TEXT));
+        item.setFont(UiTheme.uiFont(Font.PLAIN, 14));
+        item.setForeground(UiTheme.TEXT);
+        item.setIconTextGap(10);
+        item.setBorder(BorderFactory.createEmptyBorder(9, 8, 9, 8));
+        item.addActionListener(event -> action.run());
+        return item;
+    }
+
+    private void decorateButton(AbstractButton button, SimpleLineIcon.Type iconType) {
+        button.setIcon(new SimpleLineIcon(iconType, Color.WHITE));
+        button.setIconTextGap(8);
+    }
+
+    private void showChangePasswordDialog() {
+        new ChangePasswordFrame(authService, currentUser).setVisible(true);
+    }
+
+    private void refreshWorkspace() {
+        refreshJobs();
+        if (loadedApplicantJobId != null) {
+            loadApplicantsForJob(loadedApplicantJobId);
+        }
+    }
+
+    private String displayName() {
+        if (currentUser.getName() != null && !currentUser.getName().isBlank()) {
+            return currentUser.getName();
+        }
+        if (currentUser.getUsername() != null && !currentUser.getUsername().isBlank()) {
+            return currentUser.getUsername();
+        }
+        return adminMode ? "Admin" : "MO";
+    }
+
+    private String initialsFor(String value) {
+        if (value == null || value.isBlank()) {
+            return adminMode ? "AD" : "MO";
+        }
+        String trimmed = value.trim();
+        if (trimmed.contains(" ")) {
+            String[] parts = trimmed.split("\\s+");
+            StringBuilder builder = new StringBuilder();
+            for (String part : parts) {
+                if (!part.isBlank()) {
+                    builder.append(part.charAt(0));
+                }
+                if (builder.length() == 2) {
+                    break;
+                }
+            }
+            return builder.isEmpty() ? "MO" : builder.toString();
+        }
+        return trimmed.length() <= 2 ? trimmed : trimmed.substring(0, 2);
     }
 
     private JPanel buildFormPanel() {
-        JPanel panel = UiTheme.createCard("Job Posting Editor", "Select an existing job to revise it, or start a new vacancy from a clean form.");
+        JPanel panel = UiTheme.createCard(null, null);
 
         JPanel form = UiTheme.createFormGrid();
         jobIdField.setEditable(false);
@@ -158,6 +380,9 @@ public class MOManagementFrame extends JFrame {
                 : UiTheme.createSecondaryButton("Back to Login");
         JButton newButton = UiTheme.createSecondaryButton("New Job");
         JButton saveButton = UiTheme.createPrimaryButton("Save Job");
+        decorateButton(backButton, SimpleLineIcon.Type.LOGOUT);
+        decorateButton(newButton, SimpleLineIcon.Type.EDIT);
+        decorateButton(saveButton, SimpleLineIcon.Type.SAVE);
 
         boolean hasManagedModules = !managedModuleCodes.isEmpty();
         newButton.setEnabled(hasManagedModules);
@@ -178,7 +403,7 @@ public class MOManagementFrame extends JFrame {
     }
 
     private JPanel buildTablesPanel() {
-        JPanel panel = UiTheme.createCard("Review Queue", "Inspect job postings on the top table and applicant submissions below.");
+        JPanel panel = UiTheme.createCard(null, null);
 
         JButton loadApplicantsButton = UiTheme.createSecondaryButton("Load Applicants");
         JButton shortlistButton = UiTheme.createSecondaryButton("Shortlist");
@@ -188,6 +413,14 @@ public class MOManagementFrame extends JFrame {
         JButton rejectButton = UiTheme.createDangerButton("Reject");
         JButton refreshButton = UiTheme.createSecondaryButton("Refresh");
         JButton notificationsButton = UiTheme.createSecondaryButton("View Notifications");
+        decorateButton(loadApplicantsButton, SimpleLineIcon.Type.DOCUMENT);
+        decorateButton(shortlistButton, SimpleLineIcon.Type.STAR);
+        decorateButton(removeShortlistButton, SimpleLineIcon.Type.LOGOUT);
+        decorateButton(acceptButton, SimpleLineIcon.Type.CHECK);
+        decorateButton(cancelAcceptanceButton, SimpleLineIcon.Type.REFRESH);
+        decorateButton(rejectButton, SimpleLineIcon.Type.TRASH);
+        decorateButton(refreshButton, SimpleLineIcon.Type.REFRESH);
+        decorateButton(notificationsButton, SimpleLineIcon.Type.BELL);
 
         loadApplicantsButton.addActionListener(event -> loadApplicantsForSelectedJob());
         shortlistButton.addActionListener(event -> updateApplicationStatus(ApplicationStatus.SHORTLISTED));
@@ -238,17 +471,19 @@ public class MOManagementFrame extends JFrame {
         sortLabel.setForeground(UiTheme.TEXT);
         sortLabel.setFont(UiTheme.uiFont(Font.BOLD, 13));
 
-        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         filterPanel.setOpaque(false);
         filterPanel.add(sortLabel);
         filterPanel.add(applicantSortBox);
         filterPanel.add(filterLabel);
         filterPanel.add(applicantStatusFilter);
 
-        JPanel topControls = new JPanel(new BorderLayout(12, 0));
+        JPanel topControls = new JPanel();
         topControls.setOpaque(false);
-        topControls.add(UiTheme.createButtonRow(FlowLayout.LEFT, loadApplicantsButton, shortlistButton, removeShortlistButton, acceptButton, cancelAcceptanceButton, rejectButton, notificationsButton, refreshButton), BorderLayout.WEST);
-        topControls.add(filterPanel, BorderLayout.EAST);
+        topControls.setLayout(new BoxLayout(topControls, BoxLayout.Y_AXIS));
+        topControls.add(UiTheme.createButtonRow(FlowLayout.LEFT, loadApplicantsButton, shortlistButton, removeShortlistButton, acceptButton, cancelAcceptanceButton, rejectButton, notificationsButton, refreshButton));
+        topControls.add(Box.createVerticalStrut(8));
+        topControls.add(filterPanel);
 
         JPanel body = new JPanel(new BorderLayout(0, 18));
         body.setOpaque(false);

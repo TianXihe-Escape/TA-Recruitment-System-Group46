@@ -5,6 +5,8 @@
     "name" : "Li Hua",
     "email" : "ta1@bupt.edu.cn",
     "phone" : "13800000001",
+    "programme" : "Software Engineering",
+    "yearOfStudy" : "Year 3",
     "skills" : [
       "Java",
       "Communication",
@@ -14,7 +16,11 @@
     "availability" : "Mon/Wed afternoon",
     "experienceSummary" : "Supported Java lab sessions and peer tutoring.",
     "preferredDuties" : "Lab support, marking",
-    "cvPath" : "cv\\applicant-01.docx"
+    "cvPath" : "sample-cv/li-hua-cv.pdf",
+    "supportingDocumentPath" : "",
+    "favoriteJobIds" : [
+      "job-02"
+    ]
   },
   {
     "applicantId" : "applicant-02",
@@ -22,6 +28,8 @@
     "name" : "Zhang Wei",
     "email" : "ta2@bupt.edu.cn",
     "phone" : "13800000002",
+    "programme" : "Data Science",
+    "yearOfStudy" : "Year 2",
     "skills" : [
       "Python",
       "Data Analysis",
@@ -30,7 +38,11 @@
     "availability" : "Tue/Thu full day",
     "experienceSummary" : "Assisted with data science tutorials.",
     "preferredDuties" : "Tutorial support",
-    "cvPath" : "sample-cv/zhang-wei-cv.pdf"
+    "cvPath" : "sample-cv/zhang-wei-cv.pdf",
+    "supportingDocumentPath" : "",
+    "favoriteJobIds" : [
+      "job-03"
+    ]
   },
   {
     "applicantId" : "applicant-03",
@@ -38,6 +50,8 @@
     "name" : "Chen Yu",
     "email" : "ta3@bupt.edu.cn",
     "phone" : "13800000003",
+    "programme" : "Artificial Intelligence",
+    "yearOfStudy" : "Year 3",
     "skills" : [
       "Python",
       "SQL",
@@ -47,20 +61,8 @@
     "availability" : "Fri afternoon and weekend",
     "experienceSummary" : "Helped grade quizzes and maintain course datasets.",
     "preferredDuties" : "Marking, office hours",
-    "cvPath" : "sample-cv/chen-yu-cv.pdf"
-  },
-  {
-    "applicantId" : "applicant-57e7d242",
-    "userId" : "user-64b92970",
-    "name" : "aaa",
-    "email" : "ta4@bupt.edu.cn",
-    "phone" : "11111111111",
-    "skills" : [
-      "python"
-    ],
-    "availability" : "",
-    "experienceSummary" : "",
-    "preferredDuties" : "",
-    "cvPath" : "C:\\Users\\18130\\Pictures\\Cyberpunk 2077\\photomode_13012026_132608.png"
+    "cvPath" : "sample-cv/chen-yu-cv.pdf",
+    "supportingDocumentPath" : "",
+    "favoriteJobIds" : [ ]
   }
 ]

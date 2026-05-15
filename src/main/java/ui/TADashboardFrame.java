@@ -6,6 +6,7 @@ import model.JobCategory;
 import model.JobPosting;
 import model.NotificationRecord;
 import model.User;
+import service.AuthService;
 import service.ApplicantService;
 import service.ApplicationService;
 import service.CvStorageService;
@@ -52,6 +53,7 @@ public class TADashboardFrame extends JFrame {
      * Service for loading and saving applicant profiles.
      */
     private final ApplicantService applicantService;
+    private final AuthService authService;
     /**
      * Service for querying jobs.
      */
@@ -104,7 +106,28 @@ public class TADashboardFrame extends JFrame {
     private final DefaultTableModel notificationTableModel = new DefaultTableModel(
             new Object[]{"Time", "Status", "Message"}, 0);
     private final JTable notificationTable = new PlaceholderTable(notificationTableModel, "No notifications yet.");
-    private final JTabbedPane opportunityTabs = new JTabbedPane();
+    private static final int VIEW_AVAILABLE_JOBS = 0;
+    private static final int VIEW_FAVOURITE_JOBS = 1;
+    private static final int VIEW_APPLICATIONS = 2;
+    private static final int VIEW_NOTIFICATIONS = 3;
+    private static final String[] VIEW_KEYS = {"available", "favourites", "applications", "notifications"};
+    private final JPanel workspaceCards = new JPanel(new CardLayout());
+    private final JPanel contextualActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+    private final JPanel jobFilterContainer = new JPanel(new BorderLayout());
+    private final JLabel workspaceTitleLabel = new JLabel();
+    private final JLabel workspaceSubtitleLabel = new JLabel();
+    private final JLabel sidebarNameLabel = new JLabel();
+    private final JLabel sidebarRoleLabel = new JLabel("Teaching Assistant");
+    private final List<JToggleButton> navigationButtons = new ArrayList<>();
+    private final AvatarButton avatarButton = new AvatarButton("TA");
+    private int currentWorkspaceView = VIEW_AVAILABLE_JOBS;
+    private final JButton viewDetailsButton = createIconButton("View Job Details", SimpleLineIcon.Type.EYE, false);
+    private final JButton viewApplicationButton = createIconButton("View Application Details", SimpleLineIcon.Type.DOCUMENT, false);
+    private final JButton withdrawButton = createIconButton("Withdraw Application", SimpleLineIcon.Type.LOGOUT, false);
+    private final JButton favouriteButton = createIconButton("Toggle Favourite", SimpleLineIcon.Type.STAR, false);
+    private final JButton applyButton = createIconButton("Apply", SimpleLineIcon.Type.SEND, true);
+    private final JButton refreshButton = createIconButton("Refresh", SimpleLineIcon.Type.REFRESH, false);
+    private final JButton markReadButton = createIconButton("Mark Notifications Read", SimpleLineIcon.Type.CHECK, false);
 
     /**
      * Constructs the TA dashboard and loads the initial data snapshot.
@@ -114,6 +137,11 @@ public class TADashboardFrame extends JFrame {
         this.currentUser = currentUser;
         this.validationService = new ValidationService();
         this.cvStorageService = new CvStorageService();
+        this.authService = new AuthService(
+                dataService.getUserRepository(),
+                dataService.getProfileRepository(),
+                validationService
+        );
         this.applicantService = new ApplicantService(dataService.getProfileRepository(), validationService);
         this.jobService = new JobService(dataService.getJobRepository(), validationService);
         this.applicationService = new ApplicationService(
@@ -133,28 +161,301 @@ public class TADashboardFrame extends JFrame {
         UiTheme.styleFrame(this);
 
         styleComponents();
+        wireActions();
 
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, buildLeftPanel(), buildRightPanel());
-        splitPane.setResizeWeight(0.38);
-        UiTheme.styleSplitPane(splitPane);
+        JPanel root = new JPanel(new BorderLayout(18, 0));
+        root.setBackground(UiTheme.BACKGROUND);
+        root.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+        root.add(buildSidebar(), BorderLayout.WEST);
+        root.add(buildWorkspacePanel(), BorderLayout.CENTER);
+        add(root);
 
-        JPanel root = UiTheme.createPagePanel();
-        root.add(UiTheme.createHeader("TA Workspace", "Complete your profile, review open modules, and track application outcomes."), BorderLayout.NORTH);
-        root.add(splitPane, BorderLayout.CENTER);
-        add(UiTheme.wrapPage(root));
+        loadProfile();
+        refreshJobs();
+        refreshApplications();
+        refreshNotifications();
+        showWorkspace(VIEW_AVAILABLE_JOBS);
+    }
 
+    private void wireActions() {
+        avatarButton.addActionListener(event -> showProfileMenu());
+        viewDetailsButton.addActionListener(event -> viewSelectedJob());
+        viewApplicationButton.addActionListener(event -> viewSelectedApplication());
+        withdrawButton.addActionListener(event -> withdrawSelectedApplication());
+        favouriteButton.addActionListener(event -> toggleSelectedFavouriteJob());
+        applyButton.addActionListener(event -> applyForSelectedJob());
+        markReadButton.addActionListener(event -> {
+            notificationService.markAllRead(currentUser.getUserId());
+            refreshNotifications();
+        });
+        refreshButton.addActionListener(event -> refreshCurrentWorkspace());
+        chooseCvButton.addActionListener(event -> chooseCvFile());
+        chooseSupportingDocumentButton.addActionListener(event -> chooseSupportingDocumentFile());
+    }
+
+    private JPanel buildSidebar() {
+        JPanel sidebar = new JPanel(new BorderLayout(0, 18));
+        sidebar.setPreferredSize(new Dimension(214, 0));
+        sidebar.setBackground(new Color(235, 242, 252));
+        sidebar.setBorder(BorderFactory.createEmptyBorder(14, 12, 14, 12));
+
+        JPanel accountPanel = new JPanel(new BorderLayout(10, 0));
+        accountPanel.setOpaque(false);
+        accountPanel.add(avatarButton, BorderLayout.WEST);
+
+        JPanel identity = new JPanel();
+        identity.setOpaque(false);
+        identity.setLayout(new BoxLayout(identity, BoxLayout.Y_AXIS));
+        sidebarNameLabel.setFont(UiTheme.uiFont(Font.BOLD, 15));
+        sidebarNameLabel.setForeground(UiTheme.TEXT);
+        sidebarRoleLabel.setFont(UiTheme.uiFont(Font.PLAIN, 12));
+        sidebarRoleLabel.setForeground(UiTheme.MUTED_TEXT);
+        identity.add(sidebarNameLabel);
+        identity.add(Box.createVerticalStrut(4));
+        identity.add(sidebarRoleLabel);
+        accountPanel.add(identity, BorderLayout.CENTER);
+        sidebar.add(accountPanel, BorderLayout.NORTH);
+
+        JPanel navigation = new JPanel();
+        navigation.setOpaque(false);
+        navigation.setLayout(new BoxLayout(navigation, BoxLayout.Y_AXIS));
+        navigation.add(createNavButton("Opportunities", SimpleLineIcon.Type.BRIEFCASE, VIEW_AVAILABLE_JOBS));
+        navigation.add(Box.createVerticalStrut(8));
+        navigation.add(createNavButton("Favourite Jobs", SimpleLineIcon.Type.STAR, VIEW_FAVOURITE_JOBS));
+        navigation.add(Box.createVerticalStrut(8));
+        navigation.add(createNavButton("My Applications", SimpleLineIcon.Type.DOCUMENT, VIEW_APPLICATIONS));
+        navigation.add(Box.createVerticalStrut(8));
+        navigation.add(createNavButton("Notifications", SimpleLineIcon.Type.BELL, VIEW_NOTIFICATIONS));
+        sidebar.add(navigation, BorderLayout.CENTER);
+        return sidebar;
+    }
+
+    private JPanel buildWorkspacePanel() {
+        JPanel shell = new JPanel(new BorderLayout(0, 14));
+        shell.setBackground(UiTheme.SURFACE);
+        shell.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(UiTheme.BORDER),
+                BorderFactory.createEmptyBorder(18, 18, 18, 18)
+        ));
+
+        JPanel header = new JPanel(new BorderLayout(0, 12));
+        header.setOpaque(false);
+        JPanel titlePanel = new JPanel();
+        titlePanel.setOpaque(false);
+        titlePanel.setLayout(new BoxLayout(titlePanel, BoxLayout.Y_AXIS));
+        workspaceTitleLabel.setFont(UiTheme.uiFont(Font.BOLD, 22));
+        workspaceTitleLabel.setForeground(UiTheme.TEXT);
+        workspaceSubtitleLabel.setFont(UiTheme.uiFont(Font.PLAIN, 13));
+        workspaceSubtitleLabel.setForeground(UiTheme.MUTED_TEXT);
+        workspaceSubtitleLabel.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
+        titlePanel.add(workspaceTitleLabel);
+        titlePanel.add(workspaceSubtitleLabel);
+        contextualActions.setOpaque(false);
+        JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        actionRow.setOpaque(false);
+        actionRow.add(contextualActions);
+        header.add(titlePanel, BorderLayout.NORTH);
+        header.add(actionRow, BorderLayout.SOUTH);
+
+        jobFilterContainer.setOpaque(false);
+        jobFilterContainer.add(buildJobFilterPanel(), BorderLayout.CENTER);
+
+        workspaceCards.setOpaque(false);
+        workspaceCards.add(UiTheme.wrapTable(jobTable), VIEW_KEYS[VIEW_AVAILABLE_JOBS]);
+        workspaceCards.add(UiTheme.wrapTable(favoriteJobTable), VIEW_KEYS[VIEW_FAVOURITE_JOBS]);
+        workspaceCards.add(UiTheme.wrapTable(applicationTable), VIEW_KEYS[VIEW_APPLICATIONS]);
+        workspaceCards.add(UiTheme.wrapTable(notificationTable), VIEW_KEYS[VIEW_NOTIFICATIONS]);
+
+        JPanel top = new JPanel(new BorderLayout(0, 12));
+        top.setOpaque(false);
+        top.add(header, BorderLayout.NORTH);
+        top.add(jobFilterContainer, BorderLayout.SOUTH);
+        shell.add(top, BorderLayout.NORTH);
+        shell.add(workspaceCards, BorderLayout.CENTER);
+        return shell;
+    }
+
+    private JToggleButton createNavButton(String text, SimpleLineIcon.Type iconType, int viewIndex) {
+        JToggleButton button = new JToggleButton(text);
+        button.setIcon(new SimpleLineIcon(iconType, UiTheme.MUTED_TEXT));
+        button.setIconTextGap(10);
+        button.setHorizontalAlignment(SwingConstants.LEFT);
+        button.setFont(UiTheme.uiFont(Font.BOLD, 14));
+        button.setForeground(UiTheme.TEXT);
+        button.setBackground(new Color(235, 242, 252));
+        button.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        button.setFocusPainted(false);
+        button.setContentAreaFilled(true);
+        button.setOpaque(true);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
+        button.addActionListener(event -> showWorkspace(viewIndex));
+        navigationButtons.add(button);
+        return button;
+    }
+
+    private JButton createIconButton(String text, SimpleLineIcon.Type iconType, boolean primary) {
+        JButton button = primary ? UiTheme.createPrimaryButton(text) : UiTheme.createSecondaryButton(text);
+        button.setIcon(new SimpleLineIcon(iconType, Color.WHITE));
+        button.setIconTextGap(8);
+        return button;
+    }
+
+    private void showWorkspace(int viewIndex) {
+        currentWorkspaceView = viewIndex;
+        CardLayout cardLayout = (CardLayout) workspaceCards.getLayout();
+        cardLayout.show(workspaceCards, VIEW_KEYS[viewIndex]);
+        for (int i = 0; i < navigationButtons.size(); i++) {
+            JToggleButton button = navigationButtons.get(i);
+            boolean selected = i == viewIndex;
+            button.setSelected(selected);
+            button.setBackground(selected ? Color.WHITE : new Color(235, 242, 252));
+            button.setForeground(selected ? UiTheme.PRIMARY : UiTheme.TEXT);
+            button.setIcon(new SimpleLineIcon(
+                    switch (i) {
+                        case VIEW_AVAILABLE_JOBS -> SimpleLineIcon.Type.BRIEFCASE;
+                        case VIEW_FAVOURITE_JOBS -> SimpleLineIcon.Type.STAR;
+                        case VIEW_APPLICATIONS -> SimpleLineIcon.Type.DOCUMENT;
+                        default -> SimpleLineIcon.Type.BELL;
+                    },
+                    selected ? UiTheme.PRIMARY : UiTheme.MUTED_TEXT
+            ));
+        }
+        updateWorkspaceHeader();
+        updateContextualActions();
+    }
+
+    private void updateWorkspaceHeader() {
+        switch (currentWorkspaceView) {
+            case VIEW_AVAILABLE_JOBS -> {
+                workspaceTitleLabel.setText("Opportunities");
+                workspaceSubtitleLabel.setText("Search open activities, review requirements, and apply from one focused list.");
+                jobFilterContainer.setVisible(true);
+            }
+            case VIEW_FAVOURITE_JOBS -> {
+                workspaceTitleLabel.setText("Favourite Jobs");
+                workspaceSubtitleLabel.setText("Keep saved opportunities separate from the full vacancy list.");
+                jobFilterContainer.setVisible(true);
+            }
+            case VIEW_APPLICATIONS -> {
+                workspaceTitleLabel.setText("My Applications");
+                workspaceSubtitleLabel.setText("Track submitted applications, review decisions, and withdraw eligible records.");
+                jobFilterContainer.setVisible(false);
+            }
+            case VIEW_NOTIFICATIONS -> {
+                workspaceTitleLabel.setText("Notifications");
+                workspaceSubtitleLabel.setText("Read application, review, and account updates.");
+                jobFilterContainer.setVisible(false);
+            }
+            default -> {
+                workspaceTitleLabel.setText("TA Workspace");
+                workspaceSubtitleLabel.setText("");
+                jobFilterContainer.setVisible(false);
+            }
+        }
+    }
+
+    private void updateContextualActions() {
+        contextualActions.removeAll();
+        switch (currentWorkspaceView) {
+            case VIEW_AVAILABLE_JOBS -> addActions(viewDetailsButton, favouriteButton, applyButton, refreshButton);
+            case VIEW_FAVOURITE_JOBS -> addActions(viewDetailsButton, favouriteButton, applyButton, refreshButton);
+            case VIEW_APPLICATIONS -> addActions(viewApplicationButton, withdrawButton, refreshButton);
+            case VIEW_NOTIFICATIONS -> addActions(markReadButton, refreshButton);
+            default -> addActions(refreshButton);
+        }
+        contextualActions.revalidate();
+        contextualActions.repaint();
+    }
+
+    private void addActions(JButton... buttons) {
+        for (JButton button : buttons) {
+            contextualActions.add(button);
+        }
+    }
+
+    private void refreshCurrentWorkspace() {
+        profile = applicantService.getProfileByUserId(currentUser.getUserId());
         loadProfile();
         refreshJobs();
         refreshApplications();
         refreshNotifications();
     }
 
-    /**
-     * Builds the profile-editing side of the split layout.
-     */
-    private JPanel buildLeftPanel() {
-        JPanel panel = UiTheme.createCard("Applicant Profile", "Keep this profile current so matching and review decisions stay accurate.");
+    private void showProfileMenu() {
+        JPopupMenu menu = new JPopupMenu();
+        menu.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(UiTheme.BORDER),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        menu.add(buildProfileMenuHeader());
+        menu.addSeparator();
+        menu.add(menuItem("Edit Profile", SimpleLineIcon.Type.EDIT, this::showProfileDialog));
+        menu.add(menuItem("Change Password", SimpleLineIcon.Type.SAVE, this::showChangePasswordDialog));
+        menu.add(menuItem("Open CV", SimpleLineIcon.Type.FILE, this::openCvFile));
+        menu.add(menuItem("Open Supporting Document", SimpleLineIcon.Type.DOCUMENT, this::openSupportingDocumentFile));
+        menu.addSeparator();
+        menu.add(menuItem("Refresh Workspace", SimpleLineIcon.Type.REFRESH, this::refreshCurrentWorkspace));
+        menu.add(menuItem("Logout", SimpleLineIcon.Type.LOGOUT, this::returnToLogin));
+        menu.addSeparator();
+        JMenuItem deleteItem = menuItem("Delete Account", SimpleLineIcon.Type.TRASH, this::deleteCurrentAccount);
+        deleteItem.setForeground(UiTheme.DANGER);
+        menu.add(deleteItem);
+        menu.show(avatarButton, 0, avatarButton.getHeight() + 6);
+    }
 
+    private JPanel buildProfileMenuHeader() {
+        JPanel panel = new JPanel(new BorderLayout(12, 0));
+        panel.setBackground(UiTheme.SURFACE);
+        AvatarButton preview = new AvatarButton(initialsForProfile());
+        preview.setEnabled(false);
+        panel.add(preview, BorderLayout.WEST);
+
+        JPanel text = new JPanel();
+        text.setOpaque(false);
+        text.setLayout(new BoxLayout(text, BoxLayout.Y_AXIS));
+        JLabel name = new JLabel(valueOrDash(profile.getName()));
+        name.setFont(UiTheme.uiFont(Font.BOLD, 16));
+        name.setForeground(UiTheme.TEXT);
+        JLabel email = new JLabel(valueOrDash(profile.getEmail()));
+        email.setFont(UiTheme.uiFont(Font.PLAIN, 12));
+        email.setForeground(UiTheme.MUTED_TEXT);
+        JLabel programme = new JLabel(valueOrDash(profile.getProgramme()));
+        programme.setFont(UiTheme.uiFont(Font.PLAIN, 12));
+        programme.setForeground(UiTheme.MUTED_TEXT);
+        text.add(name);
+        text.add(Box.createVerticalStrut(4));
+        text.add(email);
+        text.add(Box.createVerticalStrut(3));
+        text.add(programme);
+        panel.add(text, BorderLayout.CENTER);
+        panel.setPreferredSize(new Dimension(320, 74));
+        return panel;
+    }
+
+    private JMenuItem menuItem(String text, SimpleLineIcon.Type iconType, Runnable action) {
+        JMenuItem item = new JMenuItem(text);
+        item.setIcon(new SimpleLineIcon(iconType, UiTheme.MUTED_TEXT));
+        item.setFont(UiTheme.uiFont(Font.PLAIN, 14));
+        item.setForeground(UiTheme.TEXT);
+        item.setIconTextGap(10);
+        item.setBorder(BorderFactory.createEmptyBorder(9, 8, 9, 8));
+        item.addActionListener(event -> action.run());
+        return item;
+    }
+
+    private void showChangePasswordDialog() {
+        new ChangePasswordFrame(authService, currentUser).setVisible(true);
+    }
+
+    private void showProfileDialog() {
+        loadProfile();
+        JDialog dialog = new JDialog(this, "Edit Profile", true);
+        dialog.setSize(600, 720);
+        dialog.setMinimumSize(new Dimension(520, 560));
+        dialog.setLocationRelativeTo(this);
+
+        JPanel content = UiTheme.createCard("Applicant Profile", "Update your contact, academic, skills, and document information.");
         JPanel form = UiTheme.createFormGrid();
         UiTheme.addFormRow(form, 0, "Name", nameField);
         UiTheme.addFormRow(form, 2, "Email", emailField);
@@ -168,77 +469,18 @@ public class TADashboardFrame extends JFrame {
         UiTheme.addFormRow(form, 18, "CV Path", buildCvPathPicker());
         UiTheme.addFormRow(form, 20, "Supporting Document", buildSupportingDocumentPicker());
 
-        JButton saveProfileButton = UiTheme.createPrimaryButton("Save Profile");
-        JButton deleteAccountButton = UiTheme.createDangerButton("Delete Account");
-        JButton backButton = UiTheme.createSecondaryButton("Back to Login");
-        JButton refreshButton = UiTheme.createSecondaryButton("Refresh");
+        JButton closeButton = createIconButton("Close", SimpleLineIcon.Type.LOGOUT, false);
+        JButton saveButton = createIconButton("Save Profile", SimpleLineIcon.Type.SAVE, true);
+        closeButton.addActionListener(event -> dialog.dispose());
+        saveButton.addActionListener(event -> saveProfile());
 
-        deleteAccountButton.addActionListener(event -> deleteCurrentAccount());
-        backButton.addActionListener(event -> returnToLogin());
-        saveProfileButton.addActionListener(event -> saveProfile());
-        chooseCvButton.addActionListener(event -> chooseCvFile());
-        chooseSupportingDocumentButton.addActionListener(event -> chooseSupportingDocumentFile());
-        refreshButton.addActionListener(event -> {
-            profile = applicantService.getProfileByUserId(currentUser.getUserId());
-            loadProfile();
-            refreshJobs();
-            refreshApplications();
-            refreshNotifications();
-        });
-
-        JPanel body = new JPanel(new BorderLayout(0, 18));
+        JPanel body = new JPanel(new BorderLayout(0, 14));
         body.setOpaque(false);
         body.add(UiTheme.wrapPage(form), BorderLayout.CENTER);
-        body.add(UiTheme.createButtonRow(FlowLayout.RIGHT, deleteAccountButton, backButton, refreshButton, saveProfileButton), BorderLayout.SOUTH);
-        panel.add(body, BorderLayout.CENTER);
-        return panel;
-    }
-
-    /**
-     * Builds the jobs and applications side of the split layout.
-     */
-    private JPanel buildRightPanel() {
-        JPanel panel = UiTheme.createCard("Opportunities", "Browse available jobs and monitor the progress of your submissions.");
-
-        JButton viewDetailsButton = UiTheme.createSecondaryButton("View Job Details");
-        JButton viewApplicationButton = UiTheme.createSecondaryButton("View Application Details");
-        JButton withdrawButton = UiTheme.createSecondaryButton("Withdraw Application");
-        JButton favouriteButton = UiTheme.createSecondaryButton("Toggle Favourite");
-        JButton applyButton = UiTheme.createPrimaryButton("Apply");
-        JButton refreshButton = UiTheme.createSecondaryButton("Refresh Tables");
-        JButton markReadButton = UiTheme.createSecondaryButton("Mark Notifications Read");
-
-        viewDetailsButton.addActionListener(event -> viewSelectedJob());
-        viewApplicationButton.addActionListener(event -> viewSelectedApplication());
-        withdrawButton.addActionListener(event -> withdrawSelectedApplication());
-        favouriteButton.addActionListener(event -> toggleSelectedFavouriteJob());
-        applyButton.addActionListener(event -> applyForSelectedJob());
-        markReadButton.addActionListener(event -> {
-            notificationService.markAllRead(currentUser.getUserId());
-            refreshNotifications();
-        });
-        refreshButton.addActionListener(event -> {
-            refreshJobs();
-            refreshApplications();
-            refreshNotifications();
-        });
-
-        UiTheme.styleTabs(opportunityTabs);
-        opportunityTabs.addTab("Available Jobs", UiTheme.wrapTable(jobTable));
-        opportunityTabs.addTab("Favourite Jobs", UiTheme.wrapTable(favoriteJobTable));
-        opportunityTabs.addTab("My Applications", UiTheme.wrapTable(applicationTable));
-        opportunityTabs.addTab("Notifications", UiTheme.wrapTable(notificationTable));
-
-        JPanel body = new JPanel(new BorderLayout(0, 18));
-        body.setOpaque(false);
-        JPanel controls = new JPanel(new BorderLayout(0, 10));
-        controls.setOpaque(false);
-        controls.add(buildJobFilterPanel(), BorderLayout.NORTH);
-        controls.add(UiTheme.createButtonRow(FlowLayout.LEFT, viewDetailsButton, viewApplicationButton, withdrawButton, favouriteButton, applyButton, markReadButton, refreshButton), BorderLayout.SOUTH);
-        body.add(controls, BorderLayout.NORTH);
-        body.add(opportunityTabs, BorderLayout.CENTER);
-        panel.add(body, BorderLayout.CENTER);
-        return panel;
+        body.add(UiTheme.createButtonRow(FlowLayout.RIGHT, closeButton, saveButton), BorderLayout.SOUTH);
+        content.add(body, BorderLayout.CENTER);
+        dialog.setContentPane(UiTheme.wrapPage(content));
+        dialog.setVisible(true);
     }
 
     private JPanel buildJobFilterPanel() {
@@ -314,6 +556,9 @@ public class TADashboardFrame extends JFrame {
         updateCvPathOpenState();
         supportingDocumentPathField.setText(profile.getSupportingDocumentPath());
         updateSupportingDocumentOpenState();
+        avatarButton.setInitials(initialsForProfile());
+        sidebarNameLabel.setText(valueOrDash(profile.getName()));
+        sidebarRoleLabel.setText(valueOrDash(profile.getProgramme()));
     }
 
     /**
@@ -366,6 +611,9 @@ public class TADashboardFrame extends JFrame {
             supportingDocumentPathField.setText(profile.getSupportingDocumentPath());
             updateCvPathOpenState();
             updateSupportingDocumentOpenState();
+            avatarButton.setInitials(initialsForProfile());
+            sidebarNameLabel.setText(valueOrDash(profile.getName()));
+            sidebarRoleLabel.setText(valueOrDash(profile.getProgramme()));
             UiMessage.info(this, "Profile saved successfully.");
             refreshJobs();
             refreshApplications();
@@ -638,11 +886,10 @@ public class TADashboardFrame extends JFrame {
     }
 
     private String selectedJobId() {
-        int selectedTab = opportunityTabs.getSelectedIndex();
-        if (selectedTab != 0 && selectedTab != 1) {
+        if (currentWorkspaceView != VIEW_AVAILABLE_JOBS && currentWorkspaceView != VIEW_FAVOURITE_JOBS) {
             return null;
         }
-        JTable selectedTable = selectedTab == 1 ? favoriteJobTable : jobTable;
+        JTable selectedTable = currentWorkspaceView == VIEW_FAVOURITE_JOBS ? favoriteJobTable : jobTable;
         DefaultTableModel model = selectedTable == favoriteJobTable ? favoriteJobTableModel : jobTableModel;
         int row = selectedTable.getSelectedRow();
         if (row < 0) {
@@ -683,6 +930,7 @@ public class TADashboardFrame extends JFrame {
         try {
             applicationService.removeApplicationsForApplicant(profile.getApplicantId());
             cvStorageService.deleteManagedCv(profile.getCvPath());
+            cvStorageService.deleteManagedSupportingDocument(profile.getSupportingDocumentPath());
 
             List<ApplicantProfile> profiles = new ArrayList<>(dataService.getProfileRepository().findAll());
             profiles.removeIf(existingProfile -> profile.getApplicantId().equals(existingProfile.getApplicantId()));
@@ -826,6 +1074,10 @@ public class TADashboardFrame extends JFrame {
         UiTheme.styleTextField(preferredDutiesField);
         UiTheme.styleTextField(cvPathField);
         UiTheme.styleTextField(supportingDocumentPathField);
+        chooseCvButton.setIcon(new SimpleLineIcon(SimpleLineIcon.Type.FILE, Color.WHITE));
+        chooseCvButton.setIconTextGap(8);
+        chooseSupportingDocumentButton.setIcon(new SimpleLineIcon(SimpleLineIcon.Type.DOCUMENT, Color.WHITE));
+        chooseSupportingDocumentButton.setIconTextGap(8);
         cvPathField.setEditable(false);
         cvPathField.setToolTipText("Choose your CV file to fill this path automatically.");
         updateCvPathOpenState();
@@ -869,6 +1121,31 @@ public class TADashboardFrame extends JFrame {
      */
     private String valueOrDash(String value) {
         return value == null || value.isBlank() ? "-" : value;
+    }
+
+    private String initialsForProfile() {
+        String displayName = profile == null ? null : profile.getName();
+        if (displayName == null || displayName.isBlank()) {
+            displayName = currentUser.getUsername();
+        }
+        if (displayName == null || displayName.isBlank()) {
+            return "TA";
+        }
+        String trimmed = displayName.trim();
+        if (trimmed.contains(" ")) {
+            String[] parts = trimmed.split("\\s+");
+            StringBuilder builder = new StringBuilder();
+            for (String part : parts) {
+                if (!part.isBlank()) {
+                    builder.append(part.charAt(0));
+                }
+                if (builder.length() == 2) {
+                    break;
+                }
+            }
+            return builder.isEmpty() ? "TA" : builder.toString();
+        }
+        return trimmed.length() <= 2 ? trimmed : trimmed.substring(0, 2);
     }
 
     private String buildMissingSkillSuggestion(ApplicationRecord application) {

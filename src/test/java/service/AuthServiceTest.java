@@ -72,4 +72,24 @@ class AuthServiceTest {
 
         assertDoesNotThrow(() -> authService.login("ta@bupt.edu.cn", "newpass", Role.TA));
     }
+
+    @Test
+    void shouldChangePasswordWithOldPassword() {
+        authService.registerTa("ta@bupt.edu.cn", "Li Hua", "oldpass", "oldpass");
+
+        authService.changePassword("ta@bupt.edu.cn", "oldpass", "newpass", "newpass");
+
+        assertDoesNotThrow(() -> authService.login("ta@bupt.edu.cn", "newpass", Role.TA));
+    }
+
+    @Test
+    void shouldRejectPasswordChangeWithWrongOldPassword() {
+        authService.registerTa("ta@bupt.edu.cn", "Li Hua", "oldpass", "oldpass");
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> authService.changePassword("ta@bupt.edu.cn", "wrongpass", "newpass", "newpass"));
+
+        org.junit.jupiter.api.Assertions.assertTrue(exception.getMessage().contains("Old password is incorrect"));
+        assertDoesNotThrow(() -> authService.login("ta@bupt.edu.cn", "oldpass", Role.TA));
+    }
 }
