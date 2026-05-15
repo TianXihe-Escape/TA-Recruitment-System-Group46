@@ -98,7 +98,7 @@ public class AdminDashboardFrame extends JFrame {
     private final List<JToggleButton> navigationButtons = new ArrayList<>();
     private final AvatarButton avatarButton = new AvatarButton("AD");
     private final JLabel sidebarNameLabel = new JLabel();
-    private final JLabel sidebarRoleLabel = new JLabel("Administrator");
+    private final JLabel sidebarRoleLabel = new JLabel("System Administrator");
     private final JLabel workspaceTitleLabel = new JLabel();
     private final JLabel workspaceSubtitleLabel = new JLabel();
     private int currentWorkspaceView = VIEW_DASHBOARD;
@@ -287,7 +287,7 @@ public class AdminDashboardFrame extends JFrame {
         JLabel username = new JLabel(currentUser.getUsername());
         username.setFont(UiTheme.uiFont(Font.PLAIN, 12));
         username.setForeground(UiTheme.MUTED_TEXT);
-        JLabel role = new JLabel("Administrator");
+        JLabel role = new JLabel("Role: Administrator");
         role.setFont(UiTheme.uiFont(Font.PLAIN, 12));
         role.setForeground(UiTheme.MUTED_TEXT);
         text.add(name);
@@ -692,7 +692,7 @@ public class AdminDashboardFrame extends JFrame {
     private void showNotifications() {
         StringBuilder builder = new StringBuilder();
         for (model.NotificationRecord notification : notificationService.getNotificationsForUser(currentUser.getUserId())) {
-            builder.append(notification.getCreatedAt() == null ? "-" : notification.getCreatedAt())
+            builder.append(UiFormat.dateTime(notification.getCreatedAt()))
                     .append(" | ")
                     .append(notification.isRead() ? "Read" : "New")
                     .append("\n")

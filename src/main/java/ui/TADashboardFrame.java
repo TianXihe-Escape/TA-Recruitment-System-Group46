@@ -117,7 +117,7 @@ public class TADashboardFrame extends JFrame {
     private final JLabel workspaceTitleLabel = new JLabel();
     private final JLabel workspaceSubtitleLabel = new JLabel();
     private final JLabel sidebarNameLabel = new JLabel();
-    private final JLabel sidebarRoleLabel = new JLabel("Teaching Assistant");
+    private final JLabel sidebarRoleLabel = new JLabel("TA Applicant");
     private final List<JToggleButton> navigationButtons = new ArrayList<>();
     private final AvatarButton avatarButton = new AvatarButton("TA");
     private int currentWorkspaceView = VIEW_AVAILABLE_JOBS;
@@ -420,7 +420,7 @@ public class TADashboardFrame extends JFrame {
         JLabel email = new JLabel(valueOrDash(profile.getEmail()));
         email.setFont(UiTheme.uiFont(Font.PLAIN, 12));
         email.setForeground(UiTheme.MUTED_TEXT);
-        JLabel programme = new JLabel(valueOrDash(profile.getProgramme()));
+        JLabel programme = new JLabel("Programme: " + valueOrDash(profile.getProgramme()));
         programme.setFont(UiTheme.uiFont(Font.PLAIN, 12));
         programme.setForeground(UiTheme.MUTED_TEXT);
         text.add(name);
@@ -558,7 +558,7 @@ public class TADashboardFrame extends JFrame {
         updateSupportingDocumentOpenState();
         avatarButton.setInitials(initialsForProfile());
         sidebarNameLabel.setText(valueOrDash(profile.getName()));
-        sidebarRoleLabel.setText(valueOrDash(profile.getProgramme()));
+        sidebarRoleLabel.setText("TA Applicant");
     }
 
     /**
@@ -613,7 +613,7 @@ public class TADashboardFrame extends JFrame {
             updateSupportingDocumentOpenState();
             avatarButton.setInitials(initialsForProfile());
             sidebarNameLabel.setText(valueOrDash(profile.getName()));
-            sidebarRoleLabel.setText(valueOrDash(profile.getProgramme()));
+            sidebarRoleLabel.setText("TA Applicant");
             UiMessage.info(this, "Profile saved successfully.");
             refreshJobs();
             refreshApplications();
@@ -771,15 +771,15 @@ public class TADashboardFrame extends JFrame {
         String details = "Application ID: " + application.getApplicationId() + "\n" +
                 "Job: " + (job == null ? "[Deleted Job]" : job.getModuleCode() + " - " + job.getModuleTitle()) + "\n" +
                 "Status: " + application.getStatus() + "\n" +
-                "Applied At: " + valueOrDash(application.getAppliedAt() == null ? null : application.getAppliedAt().toString()) + "\n" +
-                "Last Updated: " + valueOrDash(application.getLastUpdatedAt() == null ? null : application.getLastUpdatedAt().toString()) + "\n" +
-                "Decision At: " + valueOrDash(application.getDecisionAt() == null ? null : application.getDecisionAt().toString()) + "\n" +
+                "Applied At: " + UiFormat.dateTime(application.getAppliedAt()) + "\n" +
+                "Last Updated: " + UiFormat.dateTime(application.getLastUpdatedAt()) + "\n" +
+                "Decision At: " + UiFormat.dateTime(application.getDecisionAt()) + "\n" +
                 "Match Score: " + application.getMatchScore() + "%\n" +
                 "Missing Skills: " + valueOrDash(String.join(", ", application.getMissingSkills())) + "\n" +
                 "Suggestion: " + buildMissingSkillSuggestion(application) + "\n" +
                 "Reviewer Notes: " + valueOrDash(application.getReviewerNotes()) + "\n" +
                 "TA Demand: " + (job == null ? "-" : buildTaDemandText(job)) + "\n" +
-                "Deadline: " + valueOrDash(job == null || job.getApplicationDeadline() == null ? null : job.getApplicationDeadline().toString());
+                "Deadline: " + (job == null ? "-" : UiFormat.date(job.getApplicationDeadline()));
         UiMessage.info(this, details);
     }
 
@@ -823,7 +823,7 @@ public class TADashboardFrame extends JFrame {
         notificationTableModel.setRowCount(0);
         for (NotificationRecord notification : notificationService.getNotificationsForUser(currentUser.getUserId())) {
             notificationTableModel.addRow(new Object[]{
-                    notification.getCreatedAt() == null ? "-" : notification.getCreatedAt(),
+                    UiFormat.dateTime(notification.getCreatedAt()),
                     notification.isRead() ? "Read" : "New",
                     notification.getMessage()
             });

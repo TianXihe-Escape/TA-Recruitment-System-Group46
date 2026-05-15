@@ -18,9 +18,7 @@
     "preferredDuties" : "Lab support, marking",
     "cvPath" : "sample-cv/li-hua-cv.pdf",
     "supportingDocumentPath" : "",
-    "favoriteJobIds" : [
-      "job-02"
-    ]
+    "favoriteJobIds" : [ ]
   },
   {
     "applicantId" : "applicant-02",

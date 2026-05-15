@@ -163,7 +163,7 @@ public class MOManagementFrame extends JFrame {
         sidebarNameLabel.setText(displayName());
         sidebarNameLabel.setFont(UiTheme.uiFont(Font.BOLD, 15));
         sidebarNameLabel.setForeground(UiTheme.TEXT);
-        sidebarRoleLabel.setText(adminMode ? "Admin Hiring" : "Module Organiser");
+        sidebarRoleLabel.setText(adminMode ? "System Administrator" : "Module Organiser");
         sidebarRoleLabel.setFont(UiTheme.uiFont(Font.PLAIN, 12));
         sidebarRoleLabel.setForeground(UiTheme.MUTED_TEXT);
         identity.add(sidebarNameLabel);
@@ -281,7 +281,7 @@ public class MOManagementFrame extends JFrame {
         JLabel username = new JLabel(currentUser.getUsername());
         username.setFont(UiTheme.uiFont(Font.PLAIN, 12));
         username.setForeground(UiTheme.MUTED_TEXT);
-        JLabel role = new JLabel(adminMode ? "Admin access" : "Modules: " + String.join(", ", managedModuleCodes));
+        JLabel role = new JLabel(adminMode ? "Role: Administrator" : "Modules: " + String.join(", ", managedModuleCodes));
         role.setFont(UiTheme.uiFont(Font.PLAIN, 12));
         role.setForeground(UiTheme.MUTED_TEXT);
         text.add(name);
@@ -794,7 +794,7 @@ public class MOManagementFrame extends JFrame {
     private void showNotifications() {
         StringBuilder builder = new StringBuilder();
         for (model.NotificationRecord notification : notificationService.getNotificationsForUser(currentUser.getUserId())) {
-            builder.append(notification.getCreatedAt() == null ? "-" : notification.getCreatedAt())
+            builder.append(UiFormat.dateTime(notification.getCreatedAt()))
                     .append(" | ")
                     .append(notification.isRead() ? "Read" : "New")
                     .append("\n")
@@ -888,8 +888,8 @@ public class MOManagementFrame extends JFrame {
                 "Availability: " + valueOrDash(applicant.getAvailability()) + "\n" +
                 "Preferred Duties: " + valueOrDash(applicant.getPreferredDuties()) + "\n" +
                 "Application Status: " + application.getStatus() + "\n" +
-                "Last Updated: " + valueOrDash(application.getLastUpdatedAt() == null ? null : application.getLastUpdatedAt().toString()) + "\n" +
-                "Decision At: " + valueOrDash(application.getDecisionAt() == null ? null : application.getDecisionAt().toString()) + "\n" +
+                "Last Updated: " + UiFormat.dateTime(application.getLastUpdatedAt()) + "\n" +
+                "Decision At: " + UiFormat.dateTime(application.getDecisionAt()) + "\n" +
                 "Match Score: " + application.getMatchScore() + "%\n" +
                 "Missing Skills: " + valueOrDash(String.join(", ", application.getMissingSkills())) + "\n" +
                 "CV Path: " + valueOrDash(applicant.getCvPath()) + "\n" +
