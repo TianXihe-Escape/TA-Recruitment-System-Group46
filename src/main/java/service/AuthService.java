@@ -146,6 +146,55 @@ public class AuthService {
         return registerUser(username, name, password, confirmPassword, Role.MO, managedModuleCodes);
     }
 
+    public void changePassword(String username, String oldPassword, String newPassword, String confirmPassword) {
+        String normalizedUsername = validationService.normalizeEmail(username);
+        List<String> errors = validationService.validateLogin(normalizedUsername, oldPassword);
+        errors.addAll(validationService.validateRegistration(normalizedUsername, newPassword, confirmPassword));
+        List<model.User> users = new ArrayList<>(userRepository.findAll());
+        model.User user = users.stream()
+                .filter(item -> item.getUsername().equalsIgnoreCase(normalizedUsername))
+                .findFirst()
+                .orElse(null);
+        if (user == null) {
+            errors.add("No account exists for this email address.");
+        } else if (!user.getPassword().equals(oldPassword)) {
+            errors.add("Old password is incorrect.");
+        }
+        if (!errors.isEmpty()) {
+            throw new IllegalArgumentException(String.join("\n", errors));
+        }
+
+        user.setPassword(newPassword);
+        userRepository.saveAll(users);
+    }
+
+    /**
+     * Resets a registered user's password after validating the replacement.
+     * This method is intended for authenticated administrator workflows only.
+     *
+     * @param username        account email
+     * @param newPassword     new password
+     * @param confirmPassword confirmation of the new password
+     */
+    public void resetPassword(String username, String newPassword, String confirmPassword) {
+        String normalizedUsername = validationService.normalizeEmail(username);
+        List<String> errors = validationService.validateRegistration(normalizedUsername, newPassword, confirmPassword);
+        List<model.User> users = new ArrayList<>(userRepository.findAll());
+        model.User user = users.stream()
+                .filter(item -> item.getUsername().equalsIgnoreCase(normalizedUsername))
+                .findFirst()
+                .orElse(null);
+        if (user == null) {
+            errors.add("No account exists for this email address.");
+        }
+        if (!errors.isEmpty()) {
+            throw new IllegalArgumentException(String.join("\n", errors));
+        }
+
+        user.setPassword(newPassword);
+        userRepository.saveAll(users);
+    }
+
     /**
      * Private helper method that performs the actual user registration logic.
      * This method handles the common registration process for both TA and MO users,

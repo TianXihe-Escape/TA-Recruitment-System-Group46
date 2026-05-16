@@ -39,6 +39,13 @@ public class ApplicationService {
      * Service used to calculate skill-match scores during submission.
      */
     private final MatchingService matchingService;
+    private final ValidationService validationService = new ValidationService();
+
+    /**
+     * Optional allocation writer used by the UI runtime. Tests can construct the
+     * service without it when allocation persistence is not under test.
+     */
+    private final AllocationService allocationService;
 
     /**
      * Creates the application service with its dependencies.
@@ -46,9 +53,17 @@ public class ApplicationService {
     public ApplicationService(ApplicationRepository applicationRepository,
                               JobRepository jobRepository,
                               MatchingService matchingService) {
+        this(applicationRepository, jobRepository, matchingService, null);
+    }
+
+    public ApplicationService(ApplicationRepository applicationRepository,
+                              JobRepository jobRepository,
+                              MatchingService matchingService,
+                              AllocationService allocationService) {
         this.applicationRepository = applicationRepository;
         this.jobRepository = jobRepository;
         this.matchingService = matchingService;
+        this.allocationService = allocationService;
     }
 
     /**
@@ -77,11 +92,20 @@ public class ApplicationService {
             applications.add(record);
         }
         // Refresh all submission-state fields so a resubmission behaves like a clean retry.
-        record.setAppliedAt(LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        record.setAppliedAt(now);
+        record.setLastUpdatedAt(now);
+        record.setDecisionAt(null);
         record.setStatus(ApplicationStatus.SUBMITTED);
         record.setMatchScore(matchResult.getScorePercentage());
         record.setMissingSkills(matchResult.getMissingSkills());
         record.setReviewerNotes(null);
+        record.addStatusHistory(new StatusHistoryEntry(
+                ApplicationStatus.SUBMITTED,
+                now,
+                applicantProfile.getUserId(),
+                "Application submitted."
+        ));
         applicationRepository.saveAll(applications);
         return record;
     }
@@ -125,6 +149,10 @@ public class ApplicationService {
      * Accepting an application may close the job if the required TA count is met.
      */
     public void updateStatus(String applicationId, ApplicationStatus status, String reviewerNotes) {
+        updateStatus(applicationId, status, reviewerNotes, null);
+    }
+
+    public void updateStatus(String applicationId, ApplicationStatus status, String reviewerNotes, String actorUserId) {
         List<ApplicationRecord> applications = new ArrayList<>(applicationRepository.findAll());
         ApplicationRecord record = applications.stream()
                 .filter(item -> item.getApplicationId().equals(applicationId))
@@ -137,11 +165,24 @@ public class ApplicationService {
             throw new IllegalStateException("Finalized applications cannot be changed.");
         }
 
+        if (status == ApplicationStatus.ACCEPTED) {
+            validateAcceptanceCapacity(record, applications);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
         record.setStatus(status);
         record.setReviewerNotes(reviewerNotes);
+        record.setLastUpdatedAt(now);
+        if (status == ApplicationStatus.ACCEPTED || status == ApplicationStatus.REJECTED) {
+            record.setDecisionAt(now);
+        }
+        record.addStatusHistory(new StatusHistoryEntry(status, now, actorUserId, reviewerNotes));
 
         if (status == ApplicationStatus.ACCEPTED) {
             // An accepted offer consumes one slot on the job and may close hiring immediately.
+            if (allocationService != null) {
+                allocationService.activateAllocation(record, actorUserId);
+            }
             syncJobStatus(record.getJobId(), applications);
         }
 
@@ -158,10 +199,21 @@ public class ApplicationService {
             if (jobId.equals(application.getJobId()) && application.getStatus() == ApplicationStatus.ACCEPTED) {
                 // Reopening puts accepted applicants back into the reviewable pool instead of deleting history.
                 application.setStatus(ApplicationStatus.SHORTLISTED);
+                application.setLastUpdatedAt(LocalDateTime.now());
+                application.setDecisionAt(null);
                 application.setReviewerNotes(appendNote(
                         application.getReviewerNotes(),
                         "Acceptance cleared because the job was reopened."
                 ));
+                application.addStatusHistory(new StatusHistoryEntry(
+                        ApplicationStatus.SHORTLISTED,
+                        application.getLastUpdatedAt(),
+                        null,
+                        "Acceptance cleared because the job was reopened."
+                ));
+                if (allocationService != null) {
+                    allocationService.deactivateAllocationForApplication(application.getApplicationId());
+                }
                 updated = true;
             }
         }
@@ -175,6 +227,10 @@ public class ApplicationService {
      * Cancels a single accepted application and returns it to the shortlist state.
      */
     public void cancelAcceptance(String applicationId, String reviewerNotes) {
+        cancelAcceptance(applicationId, reviewerNotes, null);
+    }
+
+    public void cancelAcceptance(String applicationId, String reviewerNotes, String actorUserId) {
         List<ApplicationRecord> applications = new ArrayList<>(applicationRepository.findAll());
         ApplicationRecord record = applications.stream()
                 .filter(item -> item.getApplicationId().equals(applicationId))
@@ -185,11 +241,23 @@ public class ApplicationService {
             throw new IllegalStateException("Only accepted applications can be cancelled.");
         }
 
+        LocalDateTime now = LocalDateTime.now();
         record.setStatus(ApplicationStatus.SHORTLISTED);
+        record.setLastUpdatedAt(now);
+        record.setDecisionAt(null);
         record.setReviewerNotes(appendNote(
                 reviewerNotes,
                 "Acceptance cancelled and the job was reopened."
         ));
+        record.addStatusHistory(new StatusHistoryEntry(
+                ApplicationStatus.SHORTLISTED,
+                now,
+                actorUserId,
+                "Acceptance cancelled and the job was reopened."
+        ));
+        if (allocationService != null) {
+            allocationService.deactivateAllocationForApplication(applicationId);
+        }
 
         applicationRepository.saveAll(applications);
         syncJobStatus(record.getJobId(), applications);
@@ -199,6 +267,10 @@ public class ApplicationService {
      * Allows applicants to withdraw an active application.
      */
     public void withdrawApplication(String applicationId) {
+        withdrawApplication(applicationId, null);
+    }
+
+    public void withdrawApplication(String applicationId, String actorUserId) {
         List<ApplicationRecord> applications = new ArrayList<>(applicationRepository.findAll());
         ApplicationRecord record = applications.stream()
                 .filter(item -> item.getApplicationId().equals(applicationId))
@@ -211,9 +283,47 @@ public class ApplicationService {
         if (record.getStatus() == ApplicationStatus.WITHDRAWN) {
             throw new IllegalStateException("This application has already been withdrawn.");
         }
+        JobPosting job = jobRepository.findById(record.getJobId()).orElse(null);
+        if (job != null && job.getApplicationDeadline() != null && job.getApplicationDeadline().isBefore(LocalDate.now())) {
+            throw new IllegalStateException("Applications cannot be withdrawn after the deadline.");
+        }
 
+        LocalDateTime now = LocalDateTime.now();
         record.setStatus(ApplicationStatus.WITHDRAWN);
+        record.setLastUpdatedAt(now);
         record.setReviewerNotes(appendNote(record.getReviewerNotes(), "Withdrawn by applicant."));
+        record.addStatusHistory(new StatusHistoryEntry(
+                ApplicationStatus.WITHDRAWN,
+                now,
+                actorUserId,
+                "Withdrawn by applicant."
+        ));
+        applicationRepository.saveAll(applications);
+    }
+
+    /**
+     * Moves a shortlisted application back to submitted so MOs can remove a shortlist marker.
+     */
+    public void removeShortlist(String applicationId, String reviewerNotes, String actorUserId) {
+        List<ApplicationRecord> applications = new ArrayList<>(applicationRepository.findAll());
+        ApplicationRecord record = applications.stream()
+                .filter(item -> item.getApplicationId().equals(applicationId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Application not found."));
+
+        if (record.getStatus() != ApplicationStatus.SHORTLISTED) {
+            throw new IllegalStateException("Only shortlisted applications can be returned to submitted.");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        record.setStatus(ApplicationStatus.SUBMITTED);
+        record.setLastUpdatedAt(now);
+        record.setReviewerNotes(appendNote(reviewerNotes, "Shortlist status removed."));
+        record.addStatusHistory(new StatusHistoryEntry(
+                ApplicationStatus.SUBMITTED,
+                now,
+                actorUserId,
+                "Shortlist status removed."
+        ));
         applicationRepository.saveAll(applications);
     }
 
@@ -235,11 +345,17 @@ public class ApplicationService {
         }
 
         if (affectedJobIds.isEmpty()) {
+            if (allocationService != null) {
+                allocationService.deactivateAllocationsForApplicant(applicantId);
+            }
             return;
         }
 
         applications.removeIf(record -> applicantId.equals(record.getApplicantId()));
         applicationRepository.saveAll(applications);
+        if (allocationService != null) {
+            allocationService.deactivateAllocationsForApplicant(applicantId);
+        }
         for (String jobId : affectedJobIds) {
             syncJobStatus(jobId, applications);
         }
@@ -257,6 +373,10 @@ public class ApplicationService {
         }
         if (applicantProfile.getCvPath() == null || applicantProfile.getCvPath().isBlank()) {
             throw new IllegalStateException("Please provide a CV path before applying.");
+        }
+        List<String> cvErrors = validationService.validateCvPath(applicantProfile.getCvPath());
+        if (!cvErrors.isEmpty()) {
+            throw new IllegalStateException(String.join("\n", cvErrors));
         }
         boolean duplicate = applicationRepository.findByApplicantId(applicantProfile.getApplicantId()).stream()
                 .anyMatch(existing -> existing.getJobId().equals(jobPosting.getJobId())
@@ -333,6 +453,20 @@ public class ApplicationService {
             }
         }
         jobRepository.saveAll(jobs);
+    }
+
+    private void validateAcceptanceCapacity(ApplicationRecord record, List<ApplicationRecord> applications) {
+        JobPosting job = jobRepository.findById(record.getJobId())
+                .orElseThrow(() -> new IllegalArgumentException("Job not found."));
+
+        long acceptedCount = applications.stream()
+                .filter(application -> record.getJobId().equals(application.getJobId()))
+                .filter(application -> application.getStatus() == ApplicationStatus.ACCEPTED)
+                .count();
+
+        if (acceptedCount >= job.getRequiredTaCount()) {
+            throw new IllegalStateException("This job already has the required number of accepted TAs.");
+        }
     }
 
     /**

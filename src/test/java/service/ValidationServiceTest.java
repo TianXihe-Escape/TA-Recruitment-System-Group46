@@ -1,4 +1,4 @@
-﻿package service;
+package service;
 
 import model.JobPosting;
 import model.JobStatus;
@@ -27,6 +27,19 @@ class ValidationServiceTest {
     @Test
     void shouldRejectInvalidPhoneNumber() {
         assertFalse(validationService.validateApplicantProfile("Li Hua", "li@bupt.edu.cn", "12-abc").isEmpty());
+    }
+
+    @Test
+    void shouldValidateAcademicProfileFields() {
+        assertTrue(validationService.validateAcademicProfile("Software Engineering", "Year 3").isEmpty());
+        assertFalse(validationService.validateAcademicProfile("", "Year 3").isEmpty());
+        assertFalse(validationService.validateAcademicProfile("Software Engineering", "").isEmpty());
+    }
+
+    @Test
+    void shouldValidateSupportingDocumentExtensions() {
+        assertTrue(validationService.validateSupportingDocumentPath("transcript.pdf").isEmpty());
+        assertFalse(validationService.validateSupportingDocumentPath("transcript.exe").isEmpty());
     }
 
     @Test
@@ -70,6 +83,7 @@ class ValidationServiceTest {
         JobPosting job = new JobPosting();
         job.setModuleCode("comp1001");
         job.setModuleTitle("Intro to Programming");
+        job.setSemester("2026 Spring");
         job.setHours(6);
         job.setStatus(JobStatus.OPEN);
         job.setApplicationDeadline(LocalDate.now().minusDays(1));

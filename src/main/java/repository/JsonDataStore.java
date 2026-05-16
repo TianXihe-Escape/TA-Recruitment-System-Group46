@@ -3,9 +3,14 @@ package repository;
 import model.ApplicantProfile;
 import model.ApplicationRecord;
 import model.ApplicationStatus;
+import model.AllocationRecord;
+import model.JobCategory;
 import model.JobPosting;
 import model.JobStatus;
+import model.MessageRecord;
+import model.NotificationRecord;
 import model.Role;
+import model.StatusHistoryEntry;
 import model.SystemConfig;
 import model.User;
 import util.JsonUtil;
@@ -154,11 +159,15 @@ public class JsonDataStore {
             profile.setName(stringValue(map.get("name")));
             profile.setEmail(stringValue(map.get("email")));
             profile.setPhone(stringValue(map.get("phone")));
+            profile.setProgramme(stringValue(map.get("programme")));
+            profile.setYearOfStudy(stringValue(map.get("yearOfStudy")));
             profile.setSkills(stringList(map.get("skills")));
             profile.setAvailability(stringValue(map.get("availability")));
             profile.setExperienceSummary(stringValue(map.get("experienceSummary")));
             profile.setPreferredDuties(stringValue(map.get("preferredDuties")));
             profile.setCvPath(stringValue(map.get("cvPath")));
+            profile.setSupportingDocumentPath(stringValue(map.get("supportingDocumentPath")));
+            profile.setFavoriteJobIds(stringList(map.get("favoriteJobIds")));
             return (T) profile;
         }
         if (clazz == JobPosting.class) {
@@ -166,6 +175,8 @@ public class JsonDataStore {
             job.setJobId(stringValue(map.get("jobId")));
             job.setModuleCode(stringValue(map.get("moduleCode")));
             job.setModuleTitle(stringValue(map.get("moduleTitle")));
+            job.setCategory(enumValueOrDefault(JobCategory.class, map.get("category"), JobCategory.MODULE_TA));
+            job.setSemester(stringValue(map.get("semester")));
             job.setDuties(stringValue(map.get("duties")));
             job.setHours(intValue(map.get("hours")));
             Object requiredTaCount = map.get("requiredTaCount");
@@ -184,11 +195,51 @@ public class JsonDataStore {
             record.setJobId(stringValue(map.get("jobId")));
             String appliedAt = stringValue(map.get("appliedAt"));
             record.setAppliedAt(appliedAt == null || appliedAt.isBlank() ? null : LocalDateTime.parse(appliedAt));
+            String lastUpdatedAt = stringValue(map.get("lastUpdatedAt"));
+            record.setLastUpdatedAt(lastUpdatedAt == null || lastUpdatedAt.isBlank() ? null : LocalDateTime.parse(lastUpdatedAt));
+            String decisionAt = stringValue(map.get("decisionAt"));
+            record.setDecisionAt(decisionAt == null || decisionAt.isBlank() ? null : LocalDateTime.parse(decisionAt));
             record.setStatus(enumValue(ApplicationStatus.class, map.get("status")));
             record.setReviewerNotes(stringValue(map.get("reviewerNotes")));
             record.setMatchScore(intValue(map.get("matchScore")));
             record.setMissingSkills(stringList(map.get("missingSkills")));
+            record.setStatusHistory(statusHistoryList(map.get("statusHistory")));
             return (T) record;
+        }
+        if (clazz == NotificationRecord.class) {
+            NotificationRecord notification = new NotificationRecord();
+            notification.setNotificationId(stringValue(map.get("notificationId")));
+            notification.setUserId(stringValue(map.get("userId")));
+            notification.setMessage(stringValue(map.get("message")));
+            String createdAt = stringValue(map.get("createdAt"));
+            notification.setCreatedAt(createdAt == null || createdAt.isBlank() ? null : LocalDateTime.parse(createdAt));
+            notification.setRead(booleanValue(map.get("read")));
+            return (T) notification;
+        }
+        if (clazz == MessageRecord.class) {
+            MessageRecord message = new MessageRecord();
+            message.setMessageId(stringValue(map.get("messageId")));
+            message.setJobId(stringValue(map.get("jobId")));
+            message.setApplicationId(stringValue(map.get("applicationId")));
+            message.setSenderUserId(stringValue(map.get("senderUserId")));
+            message.setRecipientUserId(stringValue(map.get("recipientUserId")));
+            message.setBody(stringValue(map.get("body")));
+            String createdAt = stringValue(map.get("createdAt"));
+            message.setCreatedAt(createdAt == null || createdAt.isBlank() ? null : LocalDateTime.parse(createdAt));
+            message.setRead(booleanValue(map.get("read")));
+            return (T) message;
+        }
+        if (clazz == AllocationRecord.class) {
+            AllocationRecord allocation = new AllocationRecord();
+            allocation.setAllocationId(stringValue(map.get("allocationId")));
+            allocation.setApplicationId(stringValue(map.get("applicationId")));
+            allocation.setApplicantId(stringValue(map.get("applicantId")));
+            allocation.setJobId(stringValue(map.get("jobId")));
+            allocation.setAllocatedByUserId(stringValue(map.get("allocatedByUserId")));
+            String allocatedAt = stringValue(map.get("allocatedAt"));
+            allocation.setAllocatedAt(allocatedAt == null || allocatedAt.isBlank() ? null : LocalDateTime.parse(allocatedAt));
+            allocation.setActive(map.get("active") == null || booleanValue(map.get("active")));
+            return (T) allocation;
         }
         if (clazz == SystemConfig.class) {
             SystemConfig config = new SystemConfig();
@@ -223,11 +274,15 @@ public class JsonDataStore {
             map.put("name", profile.getName());
             map.put("email", profile.getEmail());
             map.put("phone", profile.getPhone());
+            map.put("programme", profile.getProgramme());
+            map.put("yearOfStudy", profile.getYearOfStudy());
             map.put("skills", new ArrayList<>(profile.getSkills()));
             map.put("availability", profile.getAvailability());
             map.put("experienceSummary", profile.getExperienceSummary());
             map.put("preferredDuties", profile.getPreferredDuties());
             map.put("cvPath", profile.getCvPath());
+            map.put("supportingDocumentPath", profile.getSupportingDocumentPath());
+            map.put("favoriteJobIds", new ArrayList<>(profile.getFavoriteJobIds()));
             return map;
         }
         if (value instanceof JobPosting job) {
@@ -235,6 +290,8 @@ public class JsonDataStore {
             map.put("jobId", job.getJobId());
             map.put("moduleCode", job.getModuleCode());
             map.put("moduleTitle", job.getModuleTitle());
+            map.put("category", job.getCategory() == null ? null : job.getCategory().name());
+            map.put("semester", job.getSemester());
             map.put("duties", job.getDuties());
             map.put("hours", job.getHours());
             map.put("requiredTaCount", job.getRequiredTaCount());
@@ -250,10 +307,49 @@ public class JsonDataStore {
             map.put("applicantId", record.getApplicantId());
             map.put("jobId", record.getJobId());
             map.put("appliedAt", record.getAppliedAt() == null ? null : record.getAppliedAt().toString());
+            map.put("lastUpdatedAt", record.getLastUpdatedAt() == null ? null : record.getLastUpdatedAt().toString());
+            map.put("decisionAt", record.getDecisionAt() == null ? null : record.getDecisionAt().toString());
             map.put("status", record.getStatus() == null ? null : record.getStatus().name());
             map.put("reviewerNotes", record.getReviewerNotes());
             map.put("matchScore", record.getMatchScore());
             map.put("missingSkills", new ArrayList<>(record.getMissingSkills()));
+            List<Object> history = new ArrayList<>();
+            for (StatusHistoryEntry entry : record.getStatusHistory()) {
+                history.add(serializeStatusHistoryEntry(entry));
+            }
+            map.put("statusHistory", history);
+            return map;
+        }
+        if (value instanceof NotificationRecord notification) {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("notificationId", notification.getNotificationId());
+            map.put("userId", notification.getUserId());
+            map.put("message", notification.getMessage());
+            map.put("createdAt", notification.getCreatedAt() == null ? null : notification.getCreatedAt().toString());
+            map.put("read", notification.isRead());
+            return map;
+        }
+        if (value instanceof MessageRecord message) {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("messageId", message.getMessageId());
+            map.put("jobId", message.getJobId());
+            map.put("applicationId", message.getApplicationId());
+            map.put("senderUserId", message.getSenderUserId());
+            map.put("recipientUserId", message.getRecipientUserId());
+            map.put("body", message.getBody());
+            map.put("createdAt", message.getCreatedAt() == null ? null : message.getCreatedAt().toString());
+            map.put("read", message.isRead());
+            return map;
+        }
+        if (value instanceof AllocationRecord allocation) {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("allocationId", allocation.getAllocationId());
+            map.put("applicationId", allocation.getApplicationId());
+            map.put("applicantId", allocation.getApplicantId());
+            map.put("jobId", allocation.getJobId());
+            map.put("allocatedByUserId", allocation.getAllocatedByUserId());
+            map.put("allocatedAt", allocation.getAllocatedAt() == null ? null : allocation.getAllocatedAt().toString());
+            map.put("active", allocation.isActive());
             return map;
         }
         if (value instanceof SystemConfig config) {
@@ -294,12 +390,57 @@ public class JsonDataStore {
         return results;
     }
 
+    private List<StatusHistoryEntry> statusHistoryList(Object value) {
+        List<StatusHistoryEntry> results = new ArrayList<>();
+        if (!(value instanceof List<?> items)) {
+            return results;
+        }
+        for (Object item : items) {
+            if (!(item instanceof Map<?, ?> rawMap)) {
+                continue;
+            }
+            @SuppressWarnings("unchecked")
+            Map<String, Object> map = (Map<String, Object>) rawMap;
+            StatusHistoryEntry entry = new StatusHistoryEntry();
+            entry.setStatus(enumValueOrDefault(ApplicationStatus.class, map.get("status"), ApplicationStatus.SUBMITTED));
+            String changedAt = stringValue(map.get("changedAt"));
+            entry.setChangedAt(changedAt == null || changedAt.isBlank() ? null : LocalDateTime.parse(changedAt));
+            entry.setActorUserId(stringValue(map.get("actorUserId")));
+            entry.setNote(stringValue(map.get("note")));
+            results.add(entry);
+        }
+        return results;
+    }
+
+    private Map<String, Object> serializeStatusHistoryEntry(StatusHistoryEntry entry) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("status", entry.getStatus() == null ? null : entry.getStatus().name());
+        map.put("changedAt", entry.getChangedAt() == null ? null : entry.getChangedAt().toString());
+        map.put("actorUserId", entry.getActorUserId());
+        map.put("note", entry.getNote());
+        return map;
+    }
+
+    private boolean booleanValue(Object value) {
+        if (value instanceof Boolean bool) {
+            return bool;
+        }
+        return Boolean.parseBoolean(String.valueOf(value));
+    }
+
     /**
      * Converts a stored enum name back into the target enum constant.
      */
     private <E extends Enum<E>> E enumValue(Class<E> enumClass, Object value) {
         if (value == null) {
             return null;
+        }
+        return Enum.valueOf(enumClass, String.valueOf(value));
+    }
+
+    private <E extends Enum<E>> E enumValueOrDefault(Class<E> enumClass, Object value, E defaultValue) {
+        if (value == null || String.valueOf(value).isBlank()) {
+            return defaultValue;
         }
         return Enum.valueOf(enumClass, String.valueOf(value));
     }

@@ -111,6 +111,17 @@ public class WorkloadService {
                 .collect(Collectors.toList());
     }
 
+    public int projectedHours(String applicantId, JobPosting jobPosting, List<WorkloadRecord> workloadRecords) {
+        return findHours(applicantId, workloadRecords) + (jobPosting == null ? 0 : jobPosting.getHours());
+    }
+
+    public boolean wouldExceedThreshold(String applicantId,
+                                        JobPosting jobPosting,
+                                        List<WorkloadRecord> workloadRecords,
+                                        int threshold) {
+        return projectedHours(applicantId, jobPosting, workloadRecords) > threshold;
+    }
+
     /**
      * Looks up current assigned hours for a specific applicant from prebuilt workload records.
      */

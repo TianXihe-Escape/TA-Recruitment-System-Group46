@@ -35,6 +35,16 @@ public class ApplicantProfile {
     private String phone;
 
     /**
+     * Academic programme or major entered by the applicant.
+     */
+    private String programme;
+
+    /**
+     * Current year of study.
+     */
+    private String yearOfStudy;
+
+    /**
      * Skills entered by the applicant for matching against job requirements.
      */
     private List<String> skills = new ArrayList<>();
@@ -58,6 +68,16 @@ public class ApplicantProfile {
      * Local file path to the applicant CV selected in the UI.
      */
     private String cvPath;
+
+    /**
+     * Optional supporting document, such as a transcript or certificate.
+     */
+    private String supportingDocumentPath;
+
+    /**
+     * Jobs saved by the applicant for later review.
+     */
+    private List<String> favoriteJobIds = new ArrayList<>();
 
     /**
      * No-args constructor used by JSON deserialization and empty object creation.
@@ -116,6 +136,22 @@ public class ApplicantProfile {
         this.phone = phone;
     }
 
+    public String getProgramme() {
+        return programme;
+    }
+
+    public void setProgramme(String programme) {
+        this.programme = programme;
+    }
+
+    public String getYearOfStudy() {
+        return yearOfStudy;
+    }
+
+    public void setYearOfStudy(String yearOfStudy) {
+        this.yearOfStudy = yearOfStudy;
+    }
+
     public List<String> getSkills() {
         return skills;
     }
@@ -155,5 +191,25 @@ public class ApplicantProfile {
 
     public void setCvPath(String cvPath) {
         this.cvPath = cvPath;
+    }
+
+    public String getSupportingDocumentPath() {
+        return supportingDocumentPath;
+    }
+
+    public void setSupportingDocumentPath(String supportingDocumentPath) {
+        this.supportingDocumentPath = supportingDocumentPath;
+    }
+
+    public List<String> getFavoriteJobIds() {
+        return new ArrayList<>(favoriteJobIds);
+    }
+
+    public void setFavoriteJobIds(List<String> favoriteJobIds) {
+        this.favoriteJobIds = favoriteJobIds == null ? new ArrayList<>() : new ArrayList<>(favoriteJobIds);
+    }
+
+    public boolean isFavoriteJob(String jobId) {
+        return jobId != null && favoriteJobIds.contains(jobId);
     }
 }
