@@ -84,10 +84,10 @@ public class AdminDashboardFrame extends JFrame {
     private final JLabel applicationCountValue = createMetricValueLabel();
     private final JLabel acceptedCountValue = createMetricValueLabel();
     private final DefaultTableModel workloadTableModel = new DefaultTableModel(
-            new Object[]{"TA", "Modules", "Total Hours", "Overload"}, 0);
+            new Object[]{"TA Name", "Email", "Weekly Workload", "One-off Workload", "Threshold", "Status / Warning"}, 0);
     private final JTable workloadTable = new PlaceholderTable(workloadTableModel, "No workload records are available yet.");
     private final DefaultTableModel applicationReviewTableModel = new DefaultTableModel(
-            new Object[]{"Application ID", "TA", "TA Email", "Course", "Course Name", "MO", "Status", "Match Score", "Missing Skills", "Reviewer Notes"}, 0) {
+            new Object[]{"Application ID", "TA", "TA Email", "Course", "Course Name", "Job Type", "Period / Schedule", "Location", "Workload", "MO", "Status", "Match Score", "Missing Skills", "Reviewer Notes"}, 0) {
         @Override
         public boolean isCellEditable(int row, int column) {
             return false;
@@ -552,9 +552,11 @@ public class AdminDashboardFrame extends JFrame {
         for (WorkloadRecord record : workloads) {
             workloadTableModel.addRow(new Object[]{
                     record.getApplicantName(),
-                    String.join("; ", record.getAssignedModules()),
-                    record.getTotalHours(),
-                    record.isOverload() ? "YES" : "NO"
+                    valueOrDash(record.getEmail()),
+                    record.getWeeklyHours() + " h/week",
+                    record.getOneOffHours() + " h total",
+                    threshold + " h/week",
+                    record.getWarningMessage()
             });
         }
 
@@ -584,9 +586,12 @@ public class AdminDashboardFrame extends JFrame {
             builder.append(job.getJobId()).append(" | ")
                     .append(job.getModuleCode()).append(" ").append(job.getModuleTitle())
                     .append(" | ").append(job.getCategory() == null ? "-" : job.getCategory().getDisplayName())
+                    .append(" | ").append(UiFormat.valueOrDash(job.getJobType()))
                     .append(" | ").append(valueOrDash(job.getSemester()))
                     .append(" | ").append(job.getStatus())
-                    .append(" | ").append(job.getHours()).append("h")
+                    .append(" | ").append(UiFormat.period(job))
+                    .append(" | ").append(UiFormat.scheduleLocation(job))
+                    .append(" | ").append(UiFormat.workload(job))
                     .append(" | applicants ").append(applicationCount).append("/").append(job.getRequiredTaCount())
                     .append(" | accepted ").append(acceptedCount).append("/").append(job.getRequiredTaCount())
                     .append("\n");
@@ -666,6 +671,10 @@ public class AdminDashboardFrame extends JFrame {
                     profile == null ? "-" : valueOrDash(profile.getEmail()),
                     job == null ? "[Deleted Job]" : valueOrDash(job.getModuleCode()),
                     job == null ? "-" : valueOrDash(job.getModuleTitle()),
+                    job == null ? "-" : UiFormat.valueOrDash(job.getJobType()),
+                    job == null ? "-" : UiFormat.period(job) + " | " + UiFormat.valueOrDash(job.getSchedule()),
+                    job == null ? "-" : UiFormat.valueOrDash(job.getLocation()),
+                    job == null ? "-" : UiFormat.workload(job),
                     mo == null ? "-" : valueOrDash(mo.getName()),
                     application.getStatus() == null ? "-" : application.getStatus().name(),
                     application.getMatchScore() + "%",
@@ -692,11 +701,15 @@ public class AdminDashboardFrame extends JFrame {
                 + " <" + applicationReviewTableModel.getValueAt(modelRow, 2) + ">\n"
                 + "Course: " + applicationReviewTableModel.getValueAt(modelRow, 3)
                 + " - " + applicationReviewTableModel.getValueAt(modelRow, 4) + "\n"
-                + "MO: " + applicationReviewTableModel.getValueAt(modelRow, 5) + "\n"
-                + "Status: " + applicationReviewTableModel.getValueAt(modelRow, 6) + "\n"
-                + "Match Score: " + applicationReviewTableModel.getValueAt(modelRow, 7) + "\n"
-                + "Missing Skills: " + applicationReviewTableModel.getValueAt(modelRow, 8) + "\n\n"
-                + "Reviewer Notes:\n" + applicationReviewTableModel.getValueAt(modelRow, 9);
+                + "Job Type: " + applicationReviewTableModel.getValueAt(modelRow, 5) + "\n"
+                + "Period / Schedule: " + applicationReviewTableModel.getValueAt(modelRow, 6) + "\n"
+                + "Location: " + applicationReviewTableModel.getValueAt(modelRow, 7) + "\n"
+                + "Workload: " + applicationReviewTableModel.getValueAt(modelRow, 8) + "\n"
+                + "MO: " + applicationReviewTableModel.getValueAt(modelRow, 9) + "\n"
+                + "Status: " + applicationReviewTableModel.getValueAt(modelRow, 10) + "\n"
+                + "Match Score: " + applicationReviewTableModel.getValueAt(modelRow, 11) + "\n"
+                + "Missing Skills: " + applicationReviewTableModel.getValueAt(modelRow, 12) + "\n\n"
+                + "Reviewer Notes:\n" + applicationReviewTableModel.getValueAt(modelRow, 13);
         applicationReviewDetailArea.setText(details);
         applicationReviewDetailArea.setCaretPosition(0);
     }
@@ -887,8 +900,8 @@ public class AdminDashboardFrame extends JFrame {
         UiTheme.styleTextArea(jobSummaryArea, 14);
         UiTheme.styleTextArea(suggestionArea, 14);
         UiTheme.styleTextArea(applicationReviewDetailArea, 14);
-        UiTheme.setColumnWidths(workloadTable, 180, 420, 120, 100);
-        UiTheme.setColumnWidths(applicationReviewTable, 110, 140, 190, 90, 260, 150, 120, 80, 220, 360);
+        UiTheme.setColumnWidths(workloadTable, 160, 210, 130, 130, 120, 220);
+        UiTheme.setColumnWidths(applicationReviewTable, 110, 140, 190, 90, 240, 140, 260, 190, 110, 150, 120, 80, 220, 360);
         jobSummaryArea.setEditable(false);
         suggestionArea.setEditable(false);
         applicationReviewDetailArea.setEditable(false);
@@ -1130,9 +1143,11 @@ public class AdminDashboardFrame extends JFrame {
                                                        boolean hasFocus, int row, int column) {
             Component component = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
             // A single red-tinted row is enough to surface overload risk without introducing another status widget.
-            Object overloadFlag = table.getValueAt(row, 3);
-            if (!isSelected && "YES".equals(overloadFlag)) {
+            Object status = table.getValueAt(row, 5);
+            if (!isSelected && status != null && String.valueOf(status).contains("Over weekly threshold")) {
                 component.setBackground(new Color(255, 224, 224));
+            } else if (!isSelected && status != null && String.valueOf(status).contains("Check event workload")) {
+                component.setBackground(new Color(255, 246, 217));
             } else if (!isSelected) {
                 component.setBackground(Color.WHITE);
             }

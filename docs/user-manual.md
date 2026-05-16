@@ -57,7 +57,7 @@ mvn test
 
 All sample accounts are local coursework-demo accounts only. The application does not send real email.
 
-The final demo dataset contains 7 courses, 7 MO accounts, 10 fictional TA accounts, sample applications with reviewer notes, notifications/messages, and workload examples. The demo workload threshold is 10 hours/week; Frank Zhao is intentionally accepted for EBU6475 and EBU6366 so his 11 hours/week assigned workload demonstrates Admin workload balancing.
+The final demo dataset contains 7 course support jobs, 2 one-off event jobs, 7 MO accounts, 10 fictional TA accounts, sample applications with reviewer notes, notifications/messages, and workload examples. The demo workload threshold is 10 hours/week; Frank Zhao is intentionally accepted for EBU6475 and EBU6366 so his 11 hours/week accepted weekly workload demonstrates Admin workload balancing. Alice Chen's 3 h total invigilation and Jason Wu's 4 h total demo support are displayed separately as event workload.
 
 ## Demo Course Set
 - `EBU6304`: Software Engineering - 2025/26, Module Organiser Dr Ling Ma.
@@ -163,7 +163,7 @@ The Admin dashboard is used to monitor TA workloads, inspect jobs, view all appl
 - total applications
 - accepted TAs
 3. Use `Refresh` to reload current workload data.
-4. Open `Application Reviews` to view all applications with TA name, course, MO, status, match score, missing skills, and MO reviewer notes.
+4. Open `Application Reviews` to view all applications with TA name, course, job type, period/schedule, location, workload, MO, status, match score, missing skills, and MO reviewer notes.
 5. Use `Open Hiring Management` to access all MO job-posting and applicant-review functions across all known modules.
 6. Use `Create MO Account` to add a new MO login and assign one or more module codes.
 7. Use `Load Demo Data` to repopulate the sample dataset.
@@ -175,10 +175,19 @@ The Admin dashboard is used to monitor TA workloads, inspect jobs, view all appl
 
 ### Admin Application Reviews
 - The table is read-only.
+- It includes job type, period/schedule, location, and workload so Admin can distinguish weekly course support from one-off invigilation or demo support.
 - Empty reviewer notes show as `Not yet reviewed`.
 - Empty missing skills show as `None`.
 - The detail panel below the table shows the selected application's full reviewer notes, so long MO comments remain readable.
 - This overview helps Admin identify Emma Liu and Jason Wu as missing-skill examples and Alice Chen, Ben Wang, Grace Xu, Henry Sun, and Ivy Huang as strong matches without switching accounts.
+
+### Job Schedule And Workload
+- Job schedule explains when and where the work happens.
+- Course support jobs use `WEEKLY` workload, shown as values such as `6 h/week`.
+- One-off jobs such as invigilation and demo support use `TOTAL` workload, shown as values such as `3 h total`.
+- The Admin workload monitor calculates accepted weekly jobs separately from accepted one-off jobs. Weekly workload is compared with the threshold; one-off workload is displayed as event workload and is not mixed with weekly threshold calculation.
+- The demo threshold is 10 h/week. Frank Zhao exceeds it because `EBU6475` is 6 h/week and `EBU6366` is 5 h/week, totalling 11 h/week. Alice Chen has one-off EBU6304 invigilation at 3 h total, which is displayed separately and does not trigger weekly overload.
+- Future work could expand the lightweight schedule conflict check into calendar-based workload planning.
 
 ## Data Files
 The application stores all data in:

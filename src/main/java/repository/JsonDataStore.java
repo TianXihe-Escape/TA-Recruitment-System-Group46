@@ -203,6 +203,12 @@ public class JsonDataStore {
             job.setSemester(stringValue(map.get("semester")));
             job.setDuties(stringValue(map.get("duties")));
             job.setHours(intValue(map.get("hours")));
+            job.setJobType(stringValue(map.get("jobType")));
+            job.setStartDate(stringValue(map.get("startDate")));
+            job.setEndDate(stringValue(map.get("endDate")));
+            job.setSchedule(stringValue(map.get("schedule")));
+            job.setLocation(stringValue(map.get("location")));
+            job.setWorkloadType(stringValue(map.get("workloadType")));
             Object requiredTaCount = map.get("requiredTaCount");
             job.setRequiredTaCount(requiredTaCount == null ? 1 : intValue(requiredTaCount));
             job.setRequiredSkills(stringList(map.get("requiredSkills")));
@@ -318,6 +324,12 @@ public class JsonDataStore {
             map.put("semester", job.getSemester());
             map.put("duties", job.getDuties());
             map.put("hours", job.getHours());
+            map.put("jobType", job.getJobType());
+            map.put("startDate", job.getStartDate());
+            map.put("endDate", job.getEndDate());
+            map.put("schedule", job.getSchedule());
+            map.put("location", job.getLocation());
+            map.put("workloadType", job.getWorkloadType());
             map.put("requiredTaCount", job.getRequiredTaCount());
             map.put("requiredSkills", new ArrayList<>(job.getRequiredSkills()));
             map.put("applicationDeadline", job.getApplicationDeadline() == null ? null : job.getApplicationDeadline().toString());

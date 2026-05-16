@@ -99,7 +99,7 @@ class SampleDataLoaderTest {
         assertCourseOwner("CBU5201", "Dr Chao Liu", "chao.liu@qmul.ac.uk");
         assertCourseOwner("EBU6335", "Dr Athen Ma", "a.ma@qmul.ac.uk");
 
-        assertEquals(7, jobRepository.findAll().size());
+        assertEquals(9, jobRepository.findAll().size());
         assertEquals(Set.of("EBU6304", "EBU6475", "EBU6366", "EBU5606", "EBU5042", "CBU5201", "EBU6335"),
                 jobRepository.findAll().stream().map(JobPosting::getModuleCode).collect(Collectors.toSet()));
 
@@ -218,17 +218,50 @@ class SampleDataLoaderTest {
 
         assertEquals(2, frankAcceptedApplications);
         assertEquals(2, frankAllocations);
+        assertEquals(11, frank.getWeeklyHours());
         assertEquals(11, frank.getTotalHours());
+        assertEquals(0, frank.getOneOffHours());
         assertTrue(frank.isOverload());
         assertTrue(records.stream().anyMatch(record -> !"applicant-frank".equals(record.getApplicantId()) && !record.isOverload()));
+
+        WorkloadRecord alice = records.stream()
+                .filter(record -> "applicant-alice".equals(record.getApplicantId()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(0, alice.getWeeklyHours());
+        assertEquals(3, alice.getOneOffHours());
+        assertFalse(alice.isOverload());
 
         WorkloadRecord jason = records.stream()
                 .filter(record -> "applicant-jason".equals(record.getApplicantId()))
                 .findFirst()
                 .orElseThrow();
         JobPosting ebu6366 = jobRepository.findById("job-ebu6366").orElseThrow();
-        assertEquals(4, jason.getTotalHours());
+        assertEquals(4, jason.getWeeklyHours());
+        assertEquals(4, jason.getOneOffHours());
         assertEquals(9, workloadService.projectedHours("applicant-jason", ebu6366, records));
+    }
+
+    @Test
+    void shouldIncludeScheduleAndWorkloadTypesInSampleJobs() {
+        List<JobPosting> jobs = jobRepository.findAll();
+
+        assertEquals(7, jobs.stream()
+                .filter(job -> JobPosting.WORKLOAD_TYPE_WEEKLY.equals(job.getWorkloadType()))
+                .count());
+        assertEquals(2, jobs.stream()
+                .filter(job -> JobPosting.WORKLOAD_TYPE_TOTAL.equals(job.getWorkloadType()))
+                .count());
+        assertTrue(jobs.stream().allMatch(job -> !job.getStartDate().isBlank()
+                && !job.getEndDate().isBlank()
+                && !job.getSchedule().isBlank()
+                && !job.getLocation().isBlank()));
+
+        JobPosting invigilation = jobRepository.findById("job-ebu6304-invigilation").orElseThrow();
+        JobPosting demo = jobRepository.findById("job-ebu6304-demo").orElseThrow();
+        assertEquals(JobPosting.JOB_TYPE_INVIGILATION, invigilation.getJobType());
+        assertEquals(JobPosting.JOB_TYPE_DEMO_SUPPORT, demo.getJobType());
+        assertEquals(10, configRepository.load().getWorkloadThreshold());
     }
 
     @Test
@@ -283,7 +316,7 @@ class SampleDataLoaderTest {
         assertTrue(statuses.contains(ApplicationStatus.INTERVIEW_INVITED));
         assertTrue(statuses.contains(ApplicationStatus.ACCEPTED));
         assertTrue(statuses.contains(ApplicationStatus.REJECTED));
-        assertEquals(13, applicationRepository.findAll().size());
+        assertEquals(15, applicationRepository.findAll().size());
     }
 
     @Test

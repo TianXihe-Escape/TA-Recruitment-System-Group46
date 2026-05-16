@@ -139,6 +139,10 @@ public class JobService {
                 valueOrEmpty(job.getModuleTitle()),
                 valueOrEmpty(job.getSemester()),
                 job.getCategory() == null ? "" : job.getCategory().getDisplayName(),
+                valueOrEmpty(job.getJobType()),
+                valueOrEmpty(job.getWorkloadType()),
+                valueOrEmpty(job.getSchedule()),
+                valueOrEmpty(job.getLocation()),
                 valueOrEmpty(job.getDuties()),
                 String.join(" ", job.getRequiredSkills())
         ).toLowerCase(Locale.ROOT);

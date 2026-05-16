@@ -160,31 +160,48 @@ public class SampleDataLoader {
                 job("job-ebu6304", "EBU6304", "Software Engineering - 2025/26",
                         "Support software engineering labs, answer student questions, assist with Java project issues, help review Agile artefacts, and support coursework demonstrations. Module Organiser: Dr Ling Ma. Teaching team: Dr Gokop Goteng; Dr Riasat Islam; Dr Salman Haleem; Dr Alan Wong.",
                         6, 3, List.of("Java", "Software Engineering", "Agile Development", "GitHub", "Testing"),
-                        LocalDate.now().plusDays(28), "user-mo-ling"),
+                        LocalDate.now().plusDays(28), "user-mo-ling",
+                        "Friday 14:00-16:00 lab support; flexible coursework support", "Software Engineering Lab"),
                 job("job-ebu6475", "EBU6475", "Microprocessor Systems Design - 2025/26",
                         "Support embedded systems labs, help students with microcontroller programming, assist debugging hardware/software issues, and support lab demonstrations. Module Organiser: Dr Chao Shu.",
                         6, 2, List.of("C Programming", "Microcontrollers", "Embedded Systems", "Digital Systems", "Debugging"),
-                        LocalDate.now().plusDays(26), "user-mo-chao-shu"),
+                        LocalDate.now().plusDays(26), "user-mo-chao-shu",
+                        "Tuesday 10:00-12:00 lab support", "Embedded Systems Lab"),
                 job("job-ebu6366", "EBU6366", "Microwave, Millimeterwave and Optical Transmission - 2025/26",
                         "Support tutorials and lab preparation for microwave, millimeterwave and optical transmission topics, assist students with RF concepts, MATLAB exercises, and coursework questions. Related staff: Dr Fatma Benkhelifa.",
                         5, 2, List.of("Microwave Engineering", "RF Systems", "Optical Transmission", "MATLAB", "Signal Analysis"),
-                        LocalDate.now().plusDays(24), "user-mo-jin-zhang"),
+                        LocalDate.now().plusDays(24), "user-mo-jin-zhang",
+                        "Wednesday 15:00-17:00 tutorial support", "RF and Microwave Lab"),
                 job("job-ebu5606", "EBU5606", "Product Development and Marketing - 2025/26",
                         "Support product development workshops, help students refine business reports and presentation materials, assist with customer needs analysis, concept testing, and marketing coursework activities.",
                         4, 2, List.of("Product Development", "Marketing", "Business Analysis", "Report Writing", "Presentation"),
-                        LocalDate.now().plusDays(30), "user-mo-nickos"),
+                        LocalDate.now().plusDays(30), "user-mo-nickos",
+                        "Monday 13:00-15:00 workshop support", "Business Innovation Classroom"),
                 job("job-ebu5042", "EBU5042", "Advanced Network Programming - 2025/26",
                         "Support advanced network programming labs, help students debug socket-based applications, answer questions about client-server architecture, and assist with coursework support. Related staff: Prof Gareth Tyson.",
                         5, 2, List.of("Java", "Network Programming", "Socket Programming", "Client Server Architecture", "Debugging"),
-                        LocalDate.now().plusDays(25), "user-mo-paula"),
+                        LocalDate.now().plusDays(25), "user-mo-paula",
+                        "Thursday 10:00-12:00 programming lab", "Network Programming Lab"),
                 job("job-cbu5201", "CBU5201", "Machine Learning - 2025/26",
                         "Support machine learning tutorials, help students understand basic models, assist with Python notebooks, and answer questions about coursework tasks.",
                         5, 2, List.of("Python", "Machine Learning", "Data Analysis", "Mathematics", "Jupyter Notebook"),
-                        LocalDate.now().plusDays(29), "user-mo-chao-liu"),
+                        LocalDate.now().plusDays(29), "user-mo-chao-liu",
+                        "Tuesday 15:00-17:00 tutorial support", "AI Teaching Lab"),
                 job("job-ebu6335", "EBU6335", "Digital Systems Design - 2025/26",
                         "Support digital systems design labs, help students understand digital logic, Verilog and FPGA workflows, and assist with debugging design exercises.",
                         5, 2, List.of("Digital Logic", "Verilog", "FPGA", "Circuit Design", "Debugging"),
-                        LocalDate.now().plusDays(27), "user-mo-athen")
+                        LocalDate.now().plusDays(27), "user-mo-athen",
+                        "Friday 10:00-12:00 digital systems lab", "Digital Systems Lab"),
+                oneOffJob("job-ebu6304-invigilation", "EBU6304", "Invigilation Assistant for EBU6304 Final Assessment",
+                        "Assist with exam room preparation, student check-in, invigilation support, and post-exam material collection.",
+                        3, List.of("Responsibility", "Communication", "Time Management", "Exam Procedure Awareness"),
+                        LocalDate.now().plusDays(28), "user-mo-ling", JobPosting.JOB_TYPE_INVIGILATION,
+                        "2026-05-24", "2026-05-24", "09:00-12:00", "Teaching Building Room 302", JobCategory.INVIGILATION),
+                oneOffJob("job-ebu6304-demo", "EBU6304", "Demo Support Assistant for EBU6304 Final Assessment",
+                        "Support final coursework demonstration sessions, help organise demo order, assist with technical checks, and support marking logistics.",
+                        4, List.of("Software Engineering", "Communication", "Java", "Testing"),
+                        LocalDate.now().plusDays(28), "user-mo-ling", JobPosting.JOB_TYPE_DEMO_SUPPORT,
+                        "2026-05-24", "2026-05-24", "13:00-17:00", "Software Engineering Lab", JobCategory.OTHER_ACTIVITY)
         );
     }
 
@@ -228,7 +245,13 @@ public class SampleDataLoader {
                         LocalDateTime.now().minusDays(1), "user-mo-jin-zhang", profiles, jobs),
                 application("apply-13", "applicant-emma", "job-cbu5201", ApplicationStatus.SHORTLISTED,
                         "Strong fit for machine learning tutorials. Good Python, mathematics and data analysis background.",
-                        LocalDateTime.now().minusHours(20), "user-mo-chao-liu", profiles, jobs)
+                        LocalDateTime.now().minusHours(20), "user-mo-chao-liu", profiles, jobs),
+                application("apply-14", "applicant-alice", "job-ebu6304-invigilation", ApplicationStatus.ACCEPTED,
+                        "Reliable candidate with strong communication skills. Accepted for the final assessment invigilation event.",
+                        LocalDateTime.now().minusHours(12), "user-mo-ling", profiles, jobs),
+                application("apply-15", "applicant-jason", "job-ebu6304-demo", ApplicationStatus.ACCEPTED,
+                        "Broad technical background and presentation support experience. Accepted for final demo logistics and technical checks.",
+                        LocalDateTime.now().minusHours(10), "user-mo-ling", profiles, jobs)
         );
     }
 
@@ -341,7 +364,9 @@ public class SampleDataLoader {
                            int requiredTaCount,
                            List<String> skills,
                            LocalDate deadline,
-                           String postedBy) {
+                           String postedBy,
+                           String schedule,
+                           String location) {
         JobPosting job = new JobPosting();
         job.setJobId(jobId);
         job.setModuleCode(code);
@@ -350,7 +375,49 @@ public class SampleDataLoader {
         job.setSemester("2025/26");
         job.setDuties(duties);
         job.setHours(hours);
+        job.setJobType(JobPosting.JOB_TYPE_COURSE_SUPPORT);
+        job.setStartDate("2026-03-06");
+        job.setEndDate("2026-05-24");
+        job.setSchedule(schedule);
+        job.setLocation(location);
+        job.setWorkloadType(JobPosting.WORKLOAD_TYPE_WEEKLY);
         job.setRequiredTaCount(requiredTaCount);
+        job.setRequiredSkills(skills);
+        job.setApplicationDeadline(deadline);
+        job.setStatus(JobStatus.OPEN);
+        job.setPostedBy(postedBy);
+        return job;
+    }
+
+    private JobPosting oneOffJob(String jobId,
+                                 String code,
+                                 String title,
+                                 String duties,
+                                 int hours,
+                                 List<String> skills,
+                                 LocalDate deadline,
+                                 String postedBy,
+                                 String jobType,
+                                 String startDate,
+                                 String endDate,
+                                 String schedule,
+                                 String location,
+                                 JobCategory category) {
+        JobPosting job = new JobPosting();
+        job.setJobId(jobId);
+        job.setModuleCode(code);
+        job.setModuleTitle(title);
+        job.setCategory(category);
+        job.setSemester("2025/26");
+        job.setDuties(duties + " Module Organiser: Dr Ling Ma.");
+        job.setHours(hours);
+        job.setJobType(jobType);
+        job.setStartDate(startDate);
+        job.setEndDate(endDate);
+        job.setSchedule(schedule);
+        job.setLocation(location);
+        job.setWorkloadType(JobPosting.WORKLOAD_TYPE_TOTAL);
+        job.setRequiredTaCount(2);
         job.setRequiredSkills(skills);
         job.setApplicationDeadline(deadline);
         job.setStatus(JobStatus.OPEN);

@@ -9,14 +9,14 @@
 - Click `Load Demo Data`.
 - Log in as `alice.chen@demo.local`.
 - Show profile editing, CV path storage, and available jobs.
-- View a job detail dialog.
-- Open `My Applications` to show shortlisted status, match score, missing skills, and MO reviewer notes.
+- View a job detail dialog and point out job type, period, schedule, location, and weekly/total workload.
+- Open `My Applications` to show accepted one-off invigilation workload, match score, missing skills, and MO reviewer notes.
 - Log in as `emma.liu@demo.local` if time allows to show the EBU6304 missing-skills case.
 - Log in as `jason.wu@demo.local` if time allows to show mixed results across EBU5606 and EBU6366.
 
 ## Speaker 3: MO Flow
 - Log in as `ling.ma@qmul.ac.uk`.
-- Show job creation/editing.
+- Show job creation/editing, including job type, start/end date, schedule, location, and workload type.
 - Select a job, load applicants, and show the match score and missing skills.
 - Add reviewer notes and accept or reject an applicant.
 - Repeat briefly with:
@@ -29,18 +29,21 @@
 
 ## Speaker 4: Admin Flow
 - Log in as `admin@bupt.edu.cn`.
-- Show that the final demo dataset has 7 courses, 7 MO accounts, and 10 fictional TA accounts.
-- Show workload totals and overload highlighting.
+- Show that the final demo dataset has 7 course support jobs, 2 one-off event jobs, 7 MO accounts, and 10 fictional TA accounts.
+- Show weekly workload, one-off workload, threshold, and warning columns in the workload monitor.
 - Explain that the demo workload threshold is 10 hours/week.
 - Highlight Frank Zhao's accepted workload warning: he is accepted for EBU6475 at 6 hours/week and EBU6366 at 5 hours/week, for a total of 11 hours/week.
-- Open `Application Reviews` to show all applications, TA names, courses, MOs, statuses, match scores, missing skills, and MO reviewer notes.
+- Explain that Alice Chen's 3 hour invigilation and Jason Wu's 4 hour demo support are displayed as total event workload and are not mixed into the weekly threshold.
+- Open `Application Reviews` to show all applications, TA names, courses, job types, schedules, locations, workload, MOs, statuses, match scores, missing skills, and MO reviewer notes.
 - Use Emma Liu and Jason Wu as missing-skill examples, and Alice Chen, Ben Wang, Grace Xu, Henry Sun, and Ivy Huang as strong-match examples.
 - Click `Rebalance Suggestion` to show rule-based recommendations for open jobs.
 
 ## Speaker 5: Engineering Explanation
 - Show the JSON files in `data/`.
 - Explain that all persistence is transparent and inspectable.
+- Explain that schedule tells users when and where work happens, while workload is split into `WEEKLY` course support and `TOTAL` one-off event effort.
 - Mention automated tests for matching, workload, validation, duplicate prevention, JSON storage, and sample-data integrity.
+- Mention that automatic calendar-based schedule conflict detection is future work beyond the current lightweight string-based check.
 
 ## Speaker 6: Teamwork Explanation
 - Open `docs/team-task-split.md`.
