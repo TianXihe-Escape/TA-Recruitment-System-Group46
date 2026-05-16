@@ -8,9 +8,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -159,11 +161,7 @@ public class ApplicationService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Application not found."));
 
-        if (record.getStatus() == ApplicationStatus.REJECTED
-                || record.getStatus() == ApplicationStatus.ACCEPTED
-                || record.getStatus() == ApplicationStatus.WITHDRAWN) {
-            throw new IllegalStateException("Finalized applications cannot be changed.");
-        }
+        validateStatusTransition(record.getStatus(), status);
 
         if (status == ApplicationStatus.ACCEPTED) {
             validateAcceptanceCapacity(record, applications);
@@ -466,6 +464,34 @@ public class ApplicationService {
 
         if (acceptedCount >= job.getRequiredTaCount()) {
             throw new IllegalStateException("This job already has the required number of accepted TAs.");
+        }
+    }
+
+    private void validateStatusTransition(ApplicationStatus currentStatus, ApplicationStatus nextStatus) {
+        if (currentStatus == null || nextStatus == null || currentStatus == nextStatus) {
+            throw new IllegalStateException("Invalid application status transition.");
+        }
+
+        Set<ApplicationStatus> allowedNextStatuses = switch (currentStatus) {
+            case SUBMITTED -> EnumSet.of(
+                    ApplicationStatus.SHORTLISTED,
+                    ApplicationStatus.REJECTED,
+                    ApplicationStatus.WITHDRAWN
+            );
+            case SHORTLISTED -> EnumSet.of(
+                    ApplicationStatus.INTERVIEW_INVITED,
+                    ApplicationStatus.ACCEPTED,
+                    ApplicationStatus.REJECTED
+            );
+            case INTERVIEW_INVITED -> EnumSet.of(
+                    ApplicationStatus.ACCEPTED,
+                    ApplicationStatus.REJECTED
+            );
+            case ACCEPTED, REJECTED, WITHDRAWN -> EnumSet.noneOf(ApplicationStatus.class);
+        };
+
+        if (!allowedNextStatuses.contains(nextStatus)) {
+            throw new IllegalStateException("Invalid application status transition.");
         }
     }
 

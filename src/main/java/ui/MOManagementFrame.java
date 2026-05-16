@@ -260,8 +260,6 @@ public class MOManagementFrame extends JFrame {
         ));
         menu.add(buildAccountHeader());
         menu.addSeparator();
-        menu.add(menuItem("Job Editor", SimpleLineIcon.Type.EDIT, () -> showWorkspace(VIEW_JOB_EDITOR)));
-        menu.add(menuItem("Review Queue", SimpleLineIcon.Type.DOCUMENT, () -> showWorkspace(VIEW_REVIEW_QUEUE)));
         menu.add(menuItem("Change Password", SimpleLineIcon.Type.SAVE, this::showChangePasswordDialog));
         menu.add(menuItem("View Notifications", SimpleLineIcon.Type.BELL, this::showNotifications));
         menu.add(menuItem("View Messages", SimpleLineIcon.Type.SEND, this::showMessages));
@@ -1113,6 +1111,7 @@ public class MOManagementFrame extends JFrame {
                 "Decision At: " + UiFormat.dateTime(application.getDecisionAt()) + "\n" +
                 "Match Score: " + application.getMatchScore() + "%\n" +
                 "Missing Skills: " + valueOrDash(String.join(", ", application.getMissingSkills())) + "\n" +
+                "Reviewer Notes: " + reviewerNotesOrPending(application.getReviewerNotes()) + "\n" +
                 "CV Path: " + valueOrDash(applicant.getCvPath()) + "\n" +
                 "Supporting Document: " + valueOrDash(applicant.getSupportingDocumentPath()) + "\n" +
                 "For Job: " + job.getModuleCode() + " - " + job.getModuleTitle() + "\n\n" +
@@ -1121,6 +1120,10 @@ public class MOManagementFrame extends JFrame {
 
     private String valueOrDash(String value) {
         return value == null || value.isBlank() ? "-" : value;
+    }
+
+    private String reviewerNotesOrPending(String value) {
+        return value == null || value.isBlank() ? "Not yet reviewed" : value;
     }
 
     private void setSelectedApplicantDocuments(String cvPath, String supportingDocumentPath) {

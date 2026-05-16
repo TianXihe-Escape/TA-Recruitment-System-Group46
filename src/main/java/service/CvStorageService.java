@@ -14,6 +14,7 @@ import java.util.Locale;
  */
 public class CvStorageService {
     private static final List<String> ALLOWED_EXTENSIONS = List.of("pdf", "doc", "docx", "rtf", "txt");
+    private static final long MAX_DOCUMENT_SIZE_BYTES = 5L * 1024L * 1024L;
 
     public String storeCvForApplicant(String applicantId, String sourceCvPath, String previousCvPath) {
         return storeDocumentForApplicant(applicantId, sourceCvPath, previousCvPath, Constants.CV_DIR, "");
@@ -40,6 +41,13 @@ public class CvStorageService {
         }
         if (!Files.isRegularFile(source)) {
             throw new IllegalArgumentException("The selected document file could not be found:\n" + sourceDocumentPath);
+        }
+        try {
+            if (Files.size(source) > MAX_DOCUMENT_SIZE_BYTES) {
+                throw new IllegalArgumentException("The selected document file is too large. Please choose a file up to 5 MB.");
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("Could not inspect the selected document file:\n" + e.getMessage(), e);
         }
 
         String fileName = source.getFileName().toString();

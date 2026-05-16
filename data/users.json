@@ -1,55 +1,160 @@
 [
   {
-    "userId" : "user-ta-01",
-    "name" : "Li Hua",
-    "username" : "ta1@bupt.edu.cn",
-    "password" : "ta123",
-    "role" : "TA",
-    "managedModuleCodes" : [ ]
-  },
-  {
-    "userId" : "user-ta-02",
-    "name" : "Zhang Wei",
-    "username" : "ta2@bupt.edu.cn",
-    "password" : "ta123",
-    "role" : "TA",
-    "managedModuleCodes" : [ ]
-  },
-  {
-    "userId" : "user-ta-03",
-    "name" : "Chen Yu",
-    "username" : "ta3@bupt.edu.cn",
-    "password" : "ta123",
-    "role" : "TA",
-    "managedModuleCodes" : [ ]
-  },
-  {
-    "userId" : "user-mo-01",
-    "name" : "Alice Moore",
-    "username" : "mo1@bupt.edu.cn",
-    "password" : "mo123",
-    "role" : "MO",
-    "managedModuleCodes" : [
-      "COMP1001",
-      "DATA2002"
-    ]
-  },
-  {
-    "userId" : "user-mo-02",
-    "name" : "Brian Chen",
-    "username" : "mo2@bupt.edu.cn",
-    "password" : "mo123",
-    "role" : "MO",
-    "managedModuleCodes" : [
-      "COMP3003"
-    ]
-  },
-  {
     "userId" : "user-admin-01",
     "name" : "System Admin",
     "username" : "admin@bupt.edu.cn",
-    "password" : "admin123",
+    "password" : "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
     "role" : "ADMIN",
+    "managedModuleCodes" : [ ]
+  },
+  {
+    "userId" : "user-mo-ling",
+    "name" : "Dr Ling Ma",
+    "username" : "ling.ma@qmul.ac.uk",
+    "password" : "008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601",
+    "role" : "MO",
+    "managedModuleCodes" : [
+      "EBU6304"
+    ]
+  },
+  {
+    "userId" : "user-mo-chao-shu",
+    "name" : "Dr Chao Shu",
+    "username" : "chao.shu@qmul.ac.uk",
+    "password" : "008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601",
+    "role" : "MO",
+    "managedModuleCodes" : [
+      "EBU6475"
+    ]
+  },
+  {
+    "userId" : "user-mo-jin-zhang",
+    "name" : "Dr Jin Zhang",
+    "username" : "jin.zhang@qmul.ac.uk",
+    "password" : "008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601",
+    "role" : "MO",
+    "managedModuleCodes" : [
+      "EBU6366"
+    ]
+  },
+  {
+    "userId" : "user-mo-nickos",
+    "name" : "Dr Nickos Paltalidis",
+    "username" : "n.paltalidis@qmul.ac.uk",
+    "password" : "008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601",
+    "role" : "MO",
+    "managedModuleCodes" : [
+      "EBU5606"
+    ]
+  },
+  {
+    "userId" : "user-mo-paula",
+    "name" : "Dr Paula Fonseca",
+    "username" : "paula.fonseca@qmul.ac.uk",
+    "password" : "008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601",
+    "role" : "MO",
+    "managedModuleCodes" : [
+      "EBU5042"
+    ]
+  },
+  {
+    "userId" : "user-mo-chao-liu",
+    "name" : "Dr Chao Liu",
+    "username" : "chao.liu@qmul.ac.uk",
+    "password" : "008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601",
+    "role" : "MO",
+    "managedModuleCodes" : [
+      "CBU5201"
+    ]
+  },
+  {
+    "userId" : "user-mo-athen",
+    "name" : "Dr Athen Ma",
+    "username" : "a.ma@qmul.ac.uk",
+    "password" : "008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601",
+    "role" : "MO",
+    "managedModuleCodes" : [
+      "EBU6335"
+    ]
+  },
+  {
+    "userId" : "user-ta-alice",
+    "name" : "Alice Chen",
+    "username" : "alice.chen@demo.local",
+    "password" : "008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601",
+    "role" : "TA",
+    "managedModuleCodes" : [ ]
+  },
+  {
+    "userId" : "user-ta-ben",
+    "name" : "Ben Wang",
+    "username" : "ben.wang@demo.local",
+    "password" : "008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601",
+    "role" : "TA",
+    "managedModuleCodes" : [ ]
+  },
+  {
+    "userId" : "user-ta-chloe",
+    "name" : "Chloe Li",
+    "username" : "chloe.li@demo.local",
+    "password" : "008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601",
+    "role" : "TA",
+    "managedModuleCodes" : [ ]
+  },
+  {
+    "userId" : "user-ta-daniel",
+    "name" : "Daniel Zhang",
+    "username" : "daniel.zhang@demo.local",
+    "password" : "008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601",
+    "role" : "TA",
+    "managedModuleCodes" : [ ]
+  },
+  {
+    "userId" : "user-ta-emma",
+    "name" : "Emma Liu",
+    "username" : "emma.liu@demo.local",
+    "password" : "008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601",
+    "role" : "TA",
+    "managedModuleCodes" : [ ]
+  },
+  {
+    "userId" : "user-ta-frank",
+    "name" : "Frank Zhao",
+    "username" : "frank.zhao@demo.local",
+    "password" : "008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601",
+    "role" : "TA",
+    "managedModuleCodes" : [ ]
+  },
+  {
+    "userId" : "user-ta-grace",
+    "name" : "Grace Xu",
+    "username" : "grace.xu@demo.local",
+    "password" : "008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601",
+    "role" : "TA",
+    "managedModuleCodes" : [ ]
+  },
+  {
+    "userId" : "user-ta-henry",
+    "name" : "Henry Sun",
+    "username" : "henry.sun@demo.local",
+    "password" : "008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601",
+    "role" : "TA",
+    "managedModuleCodes" : [ ]
+  },
+  {
+    "userId" : "user-ta-ivy",
+    "name" : "Ivy Huang",
+    "username" : "ivy.huang@demo.local",
+    "password" : "008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601",
+    "role" : "TA",
+    "managedModuleCodes" : [ ]
+  },
+  {
+    "userId" : "user-ta-jason",
+    "name" : "Jason Wu",
+    "username" : "jason.wu@demo.local",
+    "password" : "008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601",
+    "role" : "TA",
     "managedModuleCodes" : [ ]
   }
 ]

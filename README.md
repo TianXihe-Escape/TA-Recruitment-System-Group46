@@ -19,7 +19,7 @@ The implementation is aligned with the coursework direction:
 ## Key Features By Role
 - `TA Applicant`: register, reset password, log in, edit profile with programme/year, upload a CV and supporting document, search/filter open jobs, save favourites, view job details, apply, withdraw before the deadline, track application status, open application detail popups, read reviewer notes, view missing-skill suggestions, exchange messages with MOs, and read notifications.
 - `Module Organiser`: create and edit module, invigilation, or other activity jobs; reopen closed jobs; view applicants per job; inspect match score, missing skills, profiles, CVs, and supporting documents; filter and sort applicants; shortlist, remove shortlist, invite interviews, accept, reject, add reviewer notes, reply to applicant messages, receive notifications, and see workload warnings before accepting overloaded TAs.
-- `Admin`: monitor workloads, inspect all jobs, view summary cards for open jobs, closed jobs, applications, and accepted TAs, load or reset sample data, create MO accounts, open hiring management, export CSV recruitment reports, and view rebalance suggestions and notifications.
+- `Admin`: monitor workloads, inspect all jobs, review all applications and MO reviewer notes, view summary cards for open jobs, closed jobs, applications, and accepted TAs, load or reset sample data, create MO accounts, open hiring management, export CSV recruitment reports, and view rebalance suggestions and notifications.
 
 ## Reliability Improvements
 - Stronger validation for TA registration and profile editing, including normalized email input, phone number checks, Chinese-name-friendly validation, and cleaner text handling
@@ -62,31 +62,106 @@ The implementation is aligned with the coursework direction:
 ## How To Run
 1. Install Java 17 or later.
 2. Open a terminal in the project root.
-3. If the project has already been compiled, run:
+3. If Maven is not available, compile and launch directly with:
+
+```text
+build-and-run.bat
+```
+
+This script finds all `src/main/java` source files, compiles them with `javac -encoding UTF-8` into `target/classes`, then starts `app.Main`.
+
+4. If the project has already been compiled, run:
 
 ```bash
 java -cp target/classes app.Main
 ```
 
-4. Or double-click:
+5. Or double-click the legacy launcher after compiling:
 
 ```text
 run.bat
 ```
 
-5. If you want Maven to compile and launch the app:
+6. If you want Maven to compile and launch the app:
 
 ```bash
 mvn test
 mvn exec:java
 ```
 
-6. In the login screen, click `Load Sample Data` for a ready-to-demo dataset if needed.
+7. In the login screen, click `Load Demo Data` for a ready-to-demo dataset if needed.
 
 ## Default Demo Accounts
-- `TA`: `ta1@bupt.edu.cn` / `ta123`
-- `MO`: `mo1@bupt.edu.cn` / `mo123`
+Click `Load Demo Data` from the login screen, or sign in as Admin and use `Load Demo Data`, to restore the full sample dataset. `Reset Demo Data` clears local JSON data; use `Load Demo Data` afterwards to repopulate it.
+
+Final demo data contains 7 courses, 7 MO accounts, 10 fictional TA accounts, sample applications with MO evaluations, notifications/messages, and workload examples. These sample accounts and module data are used only for local coursework demonstration. The system does not send real emails. TA accounts use `@demo.local` because they are fictional users.
+
+Each fictional TA profile points to a local demo CV in the `cv/` folder, such as `cv/alice-chen-cv.docx`, so TA and MO users can click the CV path in the UI and open a real document.
+
+In the demo dataset, the workload threshold is set to 10 hours/week. Frank Zhao is accepted for both `EBU6475` (6 hours/week) and `EBU6366` (5 hours/week), so his total assigned workload is 11 hours/week. This demonstrates how the Admin workload monitor helps identify overloaded TAs and supports workload balancing decisions.
+
+Admin users can open `Application Reviews` to view all applications in one place, including TA name, course, MO, status, match score, missing skills, and MO reviewer notes. This avoids switching between multiple MO and TA accounts during the demo.
+
+Admin:
 - `Admin`: `admin@bupt.edu.cn` / `admin123`
+
+MO:
+- `Dr Ling Ma`: `ling.ma@qmul.ac.uk` / `Password123` for `EBU6304`
+- `Dr Chao Shu`: `chao.shu@qmul.ac.uk` / `Password123` for `EBU6475`
+- `Dr Jin Zhang`: `jin.zhang@qmul.ac.uk` / `Password123` for `EBU6366`
+- `Dr Nickos Paltalidis`: `n.paltalidis@qmul.ac.uk` / `Password123` for `EBU5606`
+- `Dr Paula Fonseca`: `paula.fonseca@qmul.ac.uk` / `Password123` for `EBU5042`
+- `Dr Chao Liu`: `chao.liu@qmul.ac.uk` / `Password123` for `CBU5201`
+- `Dr Athen Ma`: `a.ma@qmul.ac.uk` / `Password123` for `EBU6335`
+
+TA:
+- `Alice Chen`: `alice.chen@demo.local` / `Password123`
+- `Ben Wang`: `ben.wang@demo.local` / `Password123`
+- `Chloe Li`: `chloe.li@demo.local` / `Password123`
+- `Daniel Zhang`: `daniel.zhang@demo.local` / `Password123`
+- `Emma Liu`: `emma.liu@demo.local` / `Password123`
+- `Frank Zhao`: `frank.zhao@demo.local` / `Password123`
+- `Grace Xu`: `grace.xu@demo.local` / `Password123`
+- `Henry Sun`: `henry.sun@demo.local` / `Password123`
+- `Ivy Huang`: `ivy.huang@demo.local` / `Password123`
+- `Jason Wu`: `jason.wu@demo.local` / `Password123`
+
+Recommended viva flow:
+1. Log in as Admin and check all 7 jobs plus the workload monitor.
+2. Open `Application Reviews` to inspect all applications, matching results, missing skills, and MO reviewer notes.
+3. Use the workload monitor to show Frank Zhao exceeding the 10 hours/week threshold because he has multiple accepted TA roles.
+4. In `Application Reviews`, identify Emma Liu and Jason Wu as missing-skill examples, and Alice Chen / Ben Wang / Grace Xu / Henry Sun / Ivy Huang as strong matches.
+5. Log in as Dr Ling Ma and review `EBU6304` applicants, comparing Alice Chen's high match with Emma Liu's missing skills.
+6. Log in as Dr Chao Shu and review `EBU6475` applicants, including Ben Wang and Frank Zhao.
+7. Log in as Dr Jin Zhang and review `EBU6366` applicants, including Chloe Li and Jason Wu.
+8. Log in as Dr Nickos Paltalidis and review `EBU5606` applicants, including Daniel Zhang and Jason Wu.
+9. Log in as Dr Paula Fonseca, Dr Chao Liu, and Dr Athen Ma to review Grace Xu, Henry Sun, and Ivy Huang.
+10. Log in as Alice Chen to show shortlisted status, reviewer notes, notifications, and messages.
+11. Log in as Emma Liu or Jason Wu to demonstrate missing skills.
+12. Return to Admin and show workload balancing / warning for Frank Zhao.
+
+Sample course set:
+- `EBU6304`: Software Engineering - 2025/26, Module Organiser Dr Ling Ma; teaching team includes Dr Gokop Goteng, Dr Riasat Islam, Dr Salman Haleem, and Dr Alan Wong.
+- `EBU6475`: Microprocessor Systems Design - 2025/26, Module Organiser Dr Chao Shu.
+- `EBU6366`: Microwave, Millimeterwave and Optical Transmission - 2025/26, Module Organiser Dr Jin Zhang; related staff Dr Fatma Benkhelifa.
+- `EBU5606`: Product Development and Marketing - 2025/26, Module Organiser Dr Nickos Paltalidis.
+- `EBU5042`: Advanced Network Programming - 2025/26, Module Organiser Dr Paula Fonseca; related staff Prof Gareth Tyson.
+- `CBU5201`: Machine Learning - 2025/26, Module Organiser Dr Chao Liu.
+- `EBU6335`: Digital Systems Design - 2025/26, Module Organiser Dr Athen Ma.
+
+Manual demo checklist:
+- Admin: log in, check all jobs, workload monitor, Application Reviews, notifications, CSV export, and sample-data reset/load.
+- Dr Ling Ma: log in, load `EBU6304` applicants, review Alice Chen and Emma Liu, and edit reviewer notes.
+- Dr Chao Shu: log in, load `EBU6475` applicants, and review Ben Wang / Frank Zhao.
+- Dr Jin Zhang: log in, load `EBU6366` applicants, and review Chloe Li / Frank Zhao.
+- Dr Nickos Paltalidis: log in, load `EBU5606` applicants, and review Daniel Zhang / Jason Wu.
+- Dr Paula Fonseca: log in, load `EBU5042` applicants, and review Grace Xu.
+- Dr Chao Liu: log in, load `CBU5201` applicants, and review Henry Sun / Emma Liu.
+- Dr Athen Ma: log in, load `EBU6335` applicants, and review Ivy Huang.
+- Alice Chen: log in, check shortlisted status, reviewer notes, notifications, and messages.
+- Emma Liu: log in, check rejected `EBU6304` application and missing skills.
+- Frank Zhao: log in, check accepted applications and workload-related notification.
+- Jason Wu: log in, compare EBU5606 support notes with EBU6366 missing RF skills.
 
 ## Project Structure
 ```text
@@ -110,6 +185,7 @@ data/
 
 ## Testing
 - Quick launch: `run.bat`
+- Build without Maven and launch: `build-and-run.bat`
 - Manual launch from compiled classes: `java -cp target/classes app.Main`
 - Compile and run tests with Maven: `mvn test`
 - Launch through Maven: `mvn exec:java`
@@ -125,6 +201,7 @@ data/
 - TA applicants can save favourite jobs and filter jobs by keyword, module, or activity category.
 - TA applicants can message the responsible MO from a job or application, and MOs can reply from the review queue.
 - Admin users can export CSV reports to the `exports/` folder.
+- Admin users can use `Application Reviews` to audit all applications and MO reviewer notes from one read-only table.
 
 ## User Manual
 - See [docs/user-manual.md](docs/user-manual.md) for setup, role-based workflows, and screenshots.

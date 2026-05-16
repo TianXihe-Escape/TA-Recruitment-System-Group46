@@ -52,7 +52,12 @@ public class MatchingService {
         result.setScorePercentage(score);
         result.setMatchedSkills(restoreDisplayOrder(requiredSkills, matched));
         result.setMissingSkills(restoreDisplayOrder(requiredSkills, missing));
-        result.setExplanation(buildExplanation(requiredSkills, result.getMatchedSkills(), result.getMissingSkills(), score));
+        result.setExplanation(buildExplanation(
+                normalizedRequired.size(),
+                result.getMatchedSkills(),
+                result.getMissingSkills(),
+                score
+        ));
         return result;
     }
 
@@ -97,9 +102,17 @@ public class MatchingService {
     /**
      * Builds a short human-readable explanation used in dialogs and tables.
      */
-    private String buildExplanation(List<String> requiredSkills, List<String> matchedSkills, List<String> missingSkills, int score) {
-        return "Match score " + score + "% based on " + matchedSkills.size() + " matched skill(s) out of "
-                + (requiredSkills == null ? 0 : requiredSkills.size()) + ". Missing: "
-                + (missingSkills.isEmpty() ? "none" : String.join(", ", missingSkills)) + ".";
+    private String buildExplanation(int totalRequiredSkills, List<String> matchedSkills, List<String> missingSkills, int score) {
+        String matchedText = matchedSkills.isEmpty() ? "none" : String.join(", ", matchedSkills);
+        String missingText = missingSkills.isEmpty() ? "none" : String.join(", ", missingSkills);
+        if (totalRequiredSkills == 0) {
+            return "Matched skills: none.\n"
+                    + "Missing skills: none.\n"
+                    + "Score formula: no required skills were provided, so score = 0%.";
+        }
+        return "Matched skills: " + matchedText + ".\n"
+                + "Missing skills: " + missingText + ".\n"
+                + "Score formula: matched required skills / total required skills = "
+                + matchedSkills.size() + " / " + totalRequiredSkills + " = " + score + "%.";
     }
 }
