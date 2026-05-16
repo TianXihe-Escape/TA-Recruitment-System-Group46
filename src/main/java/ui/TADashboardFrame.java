@@ -98,10 +98,10 @@ public class TADashboardFrame extends JFrame {
     private final JComboBox<String> categoryFilterBox = new JComboBox<>();
     private boolean syncingJobFilters;
     private final DefaultTableModel jobTableModel = new DefaultTableModel(
-            new Object[]{"Job ID", "Module", "Category", "Semester", "Hours", "TA Demand", "Deadline", "Skills", "Favourite", "Status"}, 0);
+            new Object[]{"Job ID", "Module", "Job Type", "Schedule", "Location", "Workload", "TA Demand", "Deadline", "Skills", "Favourite", "Status"}, 0);
     private final JTable jobTable = new PlaceholderTable(jobTableModel, "No open jobs are available right now.");
     private final DefaultTableModel favoriteJobTableModel = new DefaultTableModel(
-            new Object[]{"Job ID", "Module", "Category", "Semester", "Hours", "TA Demand", "Deadline", "Skills", "Favourite", "Status"}, 0);
+            new Object[]{"Job ID", "Module", "Job Type", "Schedule", "Location", "Workload", "TA Demand", "Deadline", "Skills", "Favourite", "Status"}, 0);
     private final JTable favoriteJobTable = new PlaceholderTable(favoriteJobTableModel, "No favourite jobs match the current filters.");
     private final DefaultTableModel applicationTableModel = new DefaultTableModel(
             new Object[]{"Application ID", "Job ID", "Status", "Match %", "Missing Skills", "Reviewer Notes"}, 0);
@@ -727,9 +727,10 @@ public class TADashboardFrame extends JFrame {
         return new Object[]{
                 job.getJobId(),
                 job.getModuleCode() + " - " + job.getModuleTitle(),
-                job.getCategory() == null ? "-" : job.getCategory().getDisplayName(),
-                valueOrDash(job.getSemester()),
-                job.getHours(),
+                UiFormat.valueOrDash(job.getJobType()),
+                valueOrDash(job.getSchedule()),
+                valueOrDash(job.getLocation()),
+                UiFormat.workload(job),
                 buildTaDemandText(job),
                 job.getApplicationDeadline(),
                 String.join(", ", job.getRequiredSkills()),
@@ -808,6 +809,11 @@ public class TADashboardFrame extends JFrame {
                 "Suggestion: " + buildMissingSkillSuggestion(application) + "\n" +
                 "Reviewer Notes: " + reviewerNotesOrPending(application.getReviewerNotes()) + "\n" +
                 "TA Demand: " + (job == null ? "-" : buildTaDemandText(job)) + "\n" +
+                "Job Type: " + (job == null ? "-" : UiFormat.valueOrDash(job.getJobType())) + "\n" +
+                "Period: " + (job == null ? "-" : UiFormat.period(job)) + "\n" +
+                "Schedule: " + (job == null ? "-" : valueOrDash(job.getSchedule())) + "\n" +
+                "Location: " + (job == null ? "-" : valueOrDash(job.getLocation())) + "\n" +
+                "Workload: " + (job == null ? "-" : UiFormat.workload(job)) + "\n" +
                 "Deadline: " + (job == null ? "-" : UiFormat.date(job.getApplicationDeadline()));
         UiMessage.info(this, details);
     }
@@ -1286,8 +1292,8 @@ public class TADashboardFrame extends JFrame {
         favoriteJobTable.getColumnModel().getColumn(6).setCellRenderer(new DeadlineWarningRenderer());
         favoriteJobTable.getColumnModel().getColumn(9).setCellRenderer(new StatusBadgeRenderer());
         applicationTable.getColumnModel().getColumn(2).setCellRenderer(new StatusBadgeRenderer());
-        UiTheme.setColumnWidths(jobTable, 90, 260, 130, 110, 70, 100, 120, 220, 90, 90);
-        UiTheme.setColumnWidths(favoriteJobTable, 90, 260, 130, 110, 70, 100, 120, 220, 90, 90);
+        UiTheme.setColumnWidths(jobTable, 90, 260, 140, 260, 180, 110, 100, 120, 220, 90, 90);
+        UiTheme.setColumnWidths(favoriteJobTable, 90, 260, 140, 260, 180, 110, 100, 120, 220, 90, 90);
         UiTheme.setColumnWidths(applicationTable, 120, 90, 120, 90, 220, 280);
         UiTheme.setColumnWidths(notificationTable, 160, 80, 560);
         UiTheme.setColumnWidths(messageTable, 110, 160, 230, 190, 80, 520);

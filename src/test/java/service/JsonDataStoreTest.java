@@ -10,6 +10,7 @@ import org.junit.jupiter.api.io.TempDir;
 import repository.JsonDataStore;
 
 import java.nio.file.Path;
+import java.nio.file.Files;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -62,5 +63,38 @@ class JsonDataStoreTest {
 
         assertEquals(JobCategory.INVIGILATION, loaded.get(0).getCategory());
         assertEquals("2026 Spring", loaded.get(0).getSemester());
+    }
+
+    @Test
+    void shouldDefaultMissingJobScheduleAndWorkloadFieldsForOldJson() throws Exception {
+        JsonDataStore store = new JsonDataStore();
+        Path file = tempDir.resolve("jobs.json");
+        Files.writeString(file, """
+                [
+                  {
+                    "jobId": "j-old",
+                    "moduleCode": "COMP1001",
+                    "moduleTitle": "Programming",
+                    "category": "MODULE_TA",
+                    "semester": "2026 Spring",
+                    "duties": "Support labs",
+                    "hours": 6,
+                    "requiredTaCount": 1,
+                    "requiredSkills": ["Java"],
+                    "applicationDeadline": null,
+                    "status": "OPEN",
+                    "postedBy": "mo1"
+                  }
+                ]
+                """);
+
+        List<JobPosting> loaded = store.readList(file, JobPosting.class);
+
+        assertEquals(JobPosting.JOB_TYPE_COURSE_SUPPORT, loaded.get(0).getJobType());
+        assertEquals(JobPosting.WORKLOAD_TYPE_WEEKLY, loaded.get(0).getWorkloadType());
+        assertEquals("", loaded.get(0).getStartDate());
+        assertEquals("", loaded.get(0).getEndDate());
+        assertEquals("", loaded.get(0).getSchedule());
+        assertEquals("", loaded.get(0).getLocation());
     }
 }
