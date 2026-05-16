@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -54,7 +55,9 @@ public class JsonDataStore {
             }
             return results;
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to read data from " + path, e);
+            throw new IllegalStateException("Could not read JSON data file " + path + ".", e);
+        } catch (RuntimeException e) {
+            throw damagedFileException(path, e);
         }
     }
 
@@ -68,7 +71,7 @@ public class JsonDataStore {
             for (T value : values) {
                 serialized.add(serialize(value));
             }
-            Files.writeString(path, JsonUtil.toPrettyJson(serialized), StandardCharsets.UTF_8);
+            writeStringAtomically(path, JsonUtil.toPrettyJson(serialized));
         } catch (IOException e) {
             throw new IllegalStateException("Failed to write data to " + path, e);
         }
@@ -89,7 +92,9 @@ public class JsonDataStore {
             Map<String, Object> map = (Map<String, Object>) rawMap;
             return convertMap(clazz, map);
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to read config from " + path, e);
+            throw new IllegalStateException("Could not read JSON data file " + path + ".", e);
+        } catch (RuntimeException e) {
+            throw damagedFileException(path, e);
         }
     }
 
@@ -99,7 +104,7 @@ public class JsonDataStore {
     public <T> void writeObject(Path path, T value) {
         ensureParent(path);
         try {
-            Files.writeString(path, JsonUtil.toPrettyJson(serialize(value)), StandardCharsets.UTF_8);
+            writeStringAtomically(path, JsonUtil.toPrettyJson(serialize(value)));
         } catch (IOException e) {
             throw new IllegalStateException("Failed to write config to " + path, e);
         }
@@ -134,6 +139,25 @@ public class JsonDataStore {
         } catch (IOException e) {
             throw new IllegalStateException("Failed to initialize " + path, e);
         }
+    }
+
+    private void writeStringAtomically(Path path, String content) throws IOException {
+        ensureParent(path);
+        Path temp = Files.createTempFile(path.getParent(), path.getFileName().toString(), ".tmp");
+        try {
+            Files.writeString(temp, content, StandardCharsets.UTF_8);
+            Files.move(temp, path, StandardCopyOption.REPLACE_EXISTING);
+        } finally {
+            Files.deleteIfExists(temp);
+        }
+    }
+
+    private IllegalStateException damagedFileException(Path path, RuntimeException cause) {
+        return new IllegalStateException(
+                "The JSON data file appears to be damaged: " + path
+                        + ". Restore sample data from the application or delete the damaged file so it can be recreated.",
+                cause
+        );
     }
 
     @SuppressWarnings("unchecked")

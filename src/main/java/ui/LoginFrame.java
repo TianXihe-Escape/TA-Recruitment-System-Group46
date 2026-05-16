@@ -115,9 +115,8 @@ public class LoginFrame extends JFrame {
 
         // Text area displaying demo account credentials
         JTextArea accountArea = new JTextArea(
-                "TA: ta1@bupt.edu.cn / ta123\n" +
-                        "MO 1: mo1@bupt.edu.cn / mo123\n" +
-                        "MO 2: mo2@bupt.edu.cn / mo123\n" +
+                "TA: alice.chen@demo.local / Password123\n" +
+                        "MO: ling.ma@qmul.ac.uk / Password123\n" +
                         "Admin: admin@bupt.edu.cn / admin123"
         );
         accountArea.setEditable(false);  // Read-only
@@ -190,7 +189,7 @@ public class LoginFrame extends JFrame {
             // Load sample data into the system
             dataService.loadSampleData();
             // Display success message with demo account credentials
-            UiMessage.info(this, "Sample data loaded.\nTA: ta1@bupt.edu.cn / ta123\nMO 1: mo1@bupt.edu.cn / mo123\nMO 2: mo2@bupt.edu.cn / mo123\nAdmin: admin@bupt.edu.cn / admin123");
+            UiMessage.info(this, "Sample data loaded.\nTA: alice.chen@demo.local / Password123\nMO: ling.ma@qmul.ac.uk / Password123\nAdmin: admin@bupt.edu.cn / admin123");
         });
 
         // Add the main layout to the root panel and then to the frame

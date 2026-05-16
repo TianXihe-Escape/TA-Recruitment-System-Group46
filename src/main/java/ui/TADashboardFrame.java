@@ -750,7 +750,7 @@ public class TADashboardFrame extends JFrame {
                     record.getStatus(),
                     record.getMatchScore(),
                     String.join(", ", record.getMissingSkills()),
-                    valueOrDash(record.getReviewerNotes())
+                    reviewerNotesOrPending(record.getReviewerNotes())
             });
         }
     }
@@ -806,7 +806,7 @@ public class TADashboardFrame extends JFrame {
                 "Match Score: " + application.getMatchScore() + "%\n" +
                 "Missing Skills: " + valueOrDash(String.join(", ", application.getMissingSkills())) + "\n" +
                 "Suggestion: " + buildMissingSkillSuggestion(application) + "\n" +
-                "Reviewer Notes: " + valueOrDash(application.getReviewerNotes()) + "\n" +
+                "Reviewer Notes: " + reviewerNotesOrPending(application.getReviewerNotes()) + "\n" +
                 "TA Demand: " + (job == null ? "-" : buildTaDemandText(job)) + "\n" +
                 "Deadline: " + (job == null ? "-" : UiFormat.date(job.getApplicationDeadline()));
         UiMessage.info(this, details);
@@ -1298,6 +1298,10 @@ public class TADashboardFrame extends JFrame {
      */
     private String valueOrDash(String value) {
         return value == null || value.isBlank() ? "-" : value;
+    }
+
+    private String reviewerNotesOrPending(String value) {
+        return value == null || value.isBlank() ? "Not yet reviewed" : value;
     }
 
     private String initialsForProfile() {

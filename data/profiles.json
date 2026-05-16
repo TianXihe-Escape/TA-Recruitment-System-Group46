@@ -1,66 +1,244 @@
 [
   {
-    "applicantId" : "applicant-01",
-    "userId" : "user-ta-01",
-    "name" : "Li Hua",
-    "email" : "ta1@bupt.edu.cn",
-    "phone" : "13800000001",
+    "applicantId" : "applicant-alice",
+    "userId" : "user-ta-alice",
+    "name" : "Alice Chen",
+    "email" : "alice.chen@demo.local",
+    "phone" : "13800000011",
     "programme" : "Software Engineering",
     "yearOfStudy" : "Year 3",
     "skills" : [
       "Java",
-      "Communication",
-      "Agile",
-      "Tutoring"
+      "Software Engineering",
+      "Agile Development",
+      "GitHub",
+      "Testing"
     ],
-    "availability" : "Mon/Wed afternoon",
-    "experienceSummary" : "Supported Java lab sessions and peer tutoring.",
-    "preferredDuties" : "Lab support, marking",
-    "cvPath" : "sample-cv/li-hua-cv.pdf",
-    "supportingDocumentPath" : "",
-    "favoriteJobIds" : [ ]
-  },
-  {
-    "applicantId" : "applicant-02",
-    "userId" : "user-ta-02",
-    "name" : "Zhang Wei",
-    "email" : "ta2@bupt.edu.cn",
-    "phone" : "13800000002",
-    "programme" : "Data Science",
-    "yearOfStudy" : "Year 2",
-    "skills" : [
-      "Python",
-      "Data Analysis",
-      "Communication"
-    ],
-    "availability" : "Tue/Thu full day",
-    "experienceSummary" : "Assisted with data science tutorials.",
-    "preferredDuties" : "Tutorial support",
-    "cvPath" : "sample-cv/zhang-wei-cv.pdf",
+    "availability" : "8 hours/week",
+    "experienceSummary" : "I have strong Java programming experience and have completed several coursework projects using GitHub and Agile development practices. I am confident in supporting EBU6304 labs and helping students debug basic software engineering issues.",
+    "preferredDuties" : "EBU6304 lab support",
+    "cvPath" : "cv/alice-chen-cv.docx",
     "supportingDocumentPath" : "",
     "favoriteJobIds" : [
-      "job-03"
+      "job-ebu6304"
     ]
   },
   {
-    "applicantId" : "applicant-03",
-    "userId" : "user-ta-03",
-    "name" : "Chen Yu",
-    "email" : "ta3@bupt.edu.cn",
-    "phone" : "13800000003",
+    "applicantId" : "applicant-ben",
+    "userId" : "user-ta-ben",
+    "name" : "Ben Wang",
+    "email" : "ben.wang@demo.local",
+    "phone" : "13800000012",
+    "programme" : "Electronic Engineering",
+    "yearOfStudy" : "Year 3",
+    "skills" : [
+      "C Programming",
+      "Microcontrollers",
+      "Embedded Systems",
+      "Digital Systems",
+      "Debugging"
+    ],
+    "availability" : "7 hours/week",
+    "experienceSummary" : "I am familiar with C programming and embedded system debugging. I have experience with microcontroller labs and can help students understand hardware/software interaction.",
+    "preferredDuties" : "EBU6475 lab support",
+    "cvPath" : "cv/ben-wang-cv.docx",
+    "supportingDocumentPath" : "",
+    "favoriteJobIds" : [
+      "job-ebu6475"
+    ]
+  },
+  {
+    "applicantId" : "applicant-chloe",
+    "userId" : "user-ta-chloe",
+    "name" : "Chloe Li",
+    "email" : "chloe.li@demo.local",
+    "phone" : "13800000013",
+    "programme" : "Telecommunications Engineering",
+    "yearOfStudy" : "Year 4",
+    "skills" : [
+      "MATLAB",
+      "Signal Analysis",
+      "RF Systems",
+      "Microwave Engineering"
+    ],
+    "availability" : "6 hours/week",
+    "experienceSummary" : "I have a good background in communication systems and MATLAB-based signal analysis. I can support students in understanding RF and microwave-related exercises.",
+    "preferredDuties" : "EBU6366 tutorials",
+    "cvPath" : "cv/chloe-li-cv.docx",
+    "supportingDocumentPath" : "",
+    "favoriteJobIds" : [
+      "job-ebu6366"
+    ]
+  },
+  {
+    "applicantId" : "applicant-daniel",
+    "userId" : "user-ta-daniel",
+    "name" : "Daniel Zhang",
+    "email" : "daniel.zhang@demo.local",
+    "phone" : "13800000014",
+    "programme" : "Business and Engineering",
+    "yearOfStudy" : "Year 3",
+    "skills" : [
+      "Product Development",
+      "Marketing",
+      "Business Analysis",
+      "Report Writing",
+      "Presentation"
+    ],
+    "availability" : "5 hours/week",
+    "experienceSummary" : "I have experience preparing business reports and product concept evaluations. I can support students with customer needs analysis, report structure and presentation preparation.",
+    "preferredDuties" : "EBU5606 workshops",
+    "cvPath" : "cv/daniel-zhang-cv.docx",
+    "supportingDocumentPath" : "",
+    "favoriteJobIds" : [
+      "job-ebu5606"
+    ]
+  },
+  {
+    "applicantId" : "applicant-emma",
+    "userId" : "user-ta-emma",
+    "name" : "Emma Liu",
+    "email" : "emma.liu@demo.local",
+    "phone" : "13800000015",
+    "programme" : "Data Science",
+    "yearOfStudy" : "Year 3",
+    "skills" : [
+      "Python",
+      "Machine Learning",
+      "Data Analysis",
+      "Mathematics"
+    ],
+    "availability" : "6 hours/week",
+    "experienceSummary" : "I am strong in Python and data analysis, but I have limited experience in Java and Agile project management. I am willing to learn missing skills before supporting software engineering modules.",
+    "preferredDuties" : "EBU6304 after preparation",
+    "cvPath" : "cv/emma-liu-cv.docx",
+    "supportingDocumentPath" : "",
+    "favoriteJobIds" : [
+      "job-ebu6304"
+    ]
+  },
+  {
+    "applicantId" : "applicant-frank",
+    "userId" : "user-ta-frank",
+    "name" : "Frank Zhao",
+    "email" : "frank.zhao@demo.local",
+    "phone" : "13800000016",
+    "programme" : "Computer Engineering",
+    "yearOfStudy" : "Year 4",
+    "skills" : [
+      "Java",
+      "C Programming",
+      "MATLAB",
+      "Debugging",
+      "Presentation"
+    ],
+    "availability" : "10 hours/week",
+    "experienceSummary" : "I have a mixed technical background and can support programming-related lab sessions. I am available for multiple modules but my workload should be monitored carefully.",
+    "preferredDuties" : "Programming and lab support",
+    "cvPath" : "cv/frank-zhao-cv.docx",
+    "supportingDocumentPath" : "",
+    "favoriteJobIds" : [
+      "job-ebu6304",
+      "job-ebu6475",
+      "job-ebu6366"
+    ]
+  },
+  {
+    "applicantId" : "applicant-grace",
+    "userId" : "user-ta-grace",
+    "name" : "Grace Xu",
+    "email" : "grace.xu@demo.local",
+    "phone" : "13800000017",
+    "programme" : "Computer Science",
+    "yearOfStudy" : "Year 3",
+    "skills" : [
+      "Java",
+      "Network Programming",
+      "Socket Programming",
+      "Client Server Architecture",
+      "Debugging"
+    ],
+    "availability" : "6 hours/week",
+    "experienceSummary" : "I have experience with Java socket programming and client-server coursework. I can help students debug network applications and explain basic communication protocols.",
+    "preferredDuties" : "EBU5042 lab support",
+    "cvPath" : "cv/grace-xu-cv.docx",
+    "supportingDocumentPath" : "",
+    "favoriteJobIds" : [
+      "job-ebu5042"
+    ]
+  },
+  {
+    "applicantId" : "applicant-henry",
+    "userId" : "user-ta-henry",
+    "name" : "Henry Sun",
+    "email" : "henry.sun@demo.local",
+    "phone" : "13800000018",
     "programme" : "Artificial Intelligence",
     "yearOfStudy" : "Year 3",
     "skills" : [
       "Python",
-      "SQL",
-      "Marking",
-      "Communication"
+      "Machine Learning",
+      "Data Analysis",
+      "Mathematics",
+      "Jupyter Notebook"
     ],
-    "availability" : "Fri afternoon and weekend",
-    "experienceSummary" : "Helped grade quizzes and maintain course datasets.",
-    "preferredDuties" : "Marking, office hours",
-    "cvPath" : "sample-cv/chen-yu-cv.pdf",
+    "availability" : "7 hours/week",
+    "experienceSummary" : "I am confident in Python, Jupyter Notebook and basic machine learning models. I can support students with data preprocessing, model training and coursework notebooks.",
+    "preferredDuties" : "Machine Learning tutorials",
+    "cvPath" : "cv/henry-sun-cv.docx",
     "supportingDocumentPath" : "",
-    "favoriteJobIds" : [ ]
+    "favoriteJobIds" : [
+      "job-cbu5201"
+    ]
+  },
+  {
+    "applicantId" : "applicant-ivy",
+    "userId" : "user-ta-ivy",
+    "name" : "Ivy Huang",
+    "email" : "ivy.huang@demo.local",
+    "phone" : "13800000019",
+    "programme" : "Electronic Engineering",
+    "yearOfStudy" : "Year 3",
+    "skills" : [
+      "Digital Logic",
+      "Verilog",
+      "FPGA",
+      "Circuit Design",
+      "Debugging"
+    ],
+    "availability" : "6 hours/week",
+    "experienceSummary" : "I have completed digital systems and FPGA-related projects. I can help students with Verilog syntax, waveform debugging and digital logic design.",
+    "preferredDuties" : "EBU6335 lab support",
+    "cvPath" : "cv/ivy-huang-cv.docx",
+    "supportingDocumentPath" : "",
+    "favoriteJobIds" : [
+      "job-ebu6335"
+    ]
+  },
+  {
+    "applicantId" : "applicant-jason",
+    "userId" : "user-ta-jason",
+    "name" : "Jason Wu",
+    "email" : "jason.wu@demo.local",
+    "phone" : "13800000020",
+    "programme" : "Engineering Management",
+    "yearOfStudy" : "Year 4",
+    "skills" : [
+      "Java",
+      "Python",
+      "MATLAB",
+      "Report Writing",
+      "Presentation"
+    ],
+    "availability" : "9 hours/week",
+    "experienceSummary" : "I have a broad technical background and can support programming, data analysis and report preparation. However, I may need additional preparation for specialised RF or FPGA topics.",
+    "preferredDuties" : "Programming and report support",
+    "cvPath" : "cv/jason-wu-cv.docx",
+    "supportingDocumentPath" : "",
+    "favoriteJobIds" : [
+      "job-ebu6304",
+      "job-cbu5201",
+      "job-ebu5606"
+    ]
   }
 ]

@@ -135,6 +135,30 @@ class ApplicationServiceTest {
     }
 
     @Test
+    void shouldRejectInvalidStatusTransition() {
+        ApplicationRecord record = new ApplicationRecord();
+        record.setApplicationId("x1");
+        record.setApplicantId("a1");
+        record.setJobId("j1");
+        record.setStatus(ApplicationStatus.SUBMITTED);
+        applicationRepository.saveAll(new ArrayList<>(List.of(record)));
+        jobRepository.saveAll(List.of(buildJob()));
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> applicationService.updateStatus("x1", ApplicationStatus.ACCEPTED, "skip review"));
+
+        assertEquals("Invalid application status transition.", exception.getMessage());
+        assertEquals(ApplicationStatus.SUBMITTED, applicationRepository.findById("x1").orElseThrow().getStatus());
+    }
+
+    @Test
+    void shouldRejectStatusChangesAfterFinalStates() {
+        assertFinalStatusCannotBeChanged(ApplicationStatus.ACCEPTED);
+        assertFinalStatusCannotBeChanged(ApplicationStatus.REJECTED);
+        assertFinalStatusCannotBeChanged(ApplicationStatus.WITHDRAWN);
+    }
+
+    @Test
     void shouldUpdateStatusToShortlisted() {
         ApplicationRecord record = new ApplicationRecord();
         record.setApplicationId("x1");
@@ -429,5 +453,21 @@ class ApplicationServiceTest {
         job.setApplicationDeadline(LocalDate.now().plusDays(5));
         job.setRequiredSkills(List.of("Java"));
         return job;
+    }
+
+    private void assertFinalStatusCannotBeChanged(ApplicationStatus status) {
+        ApplicationRecord record = new ApplicationRecord();
+        record.setApplicationId("x-" + status.name().toLowerCase());
+        record.setApplicantId("a1");
+        record.setJobId("j1");
+        record.setStatus(status);
+        applicationRepository.saveAll(new ArrayList<>(List.of(record)));
+        jobRepository.saveAll(List.of(buildJob()));
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> applicationService.updateStatus(record.getApplicationId(), ApplicationStatus.SHORTLISTED, "late change"));
+
+        assertEquals("Invalid application status transition.", exception.getMessage());
+        assertEquals(status, applicationRepository.findById(record.getApplicationId()).orElseThrow().getStatus());
     }
 }

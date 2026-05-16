@@ -36,6 +36,11 @@
 | US27 | Role permissions | TC-SEC-01 | TA/MO/Admin login | Only role dashboard/actions are accessible | Pass |
 | US28 | JSON storage | TC-DAT-01 | Save/read entities | JSON files persist and reload data | Pass |
 | US29 | TA/MO messages | TC-MSG-01 | TA sends message and MO replies | `messages.json` stores both directions with read tracking | Pass |
+| US30 | Demo data integrity | TC-SEED-01 | Load demo data | All job owners, applications, messages, notifications, and allocations reference existing local JSON users/jobs/profiles | Pass |
+| US31 | Course-specific demo | TC-SEED-02 | Load demo data | EBU6304, EBU6475, EBU6366, EBU5606, EBU5042, CBU5201, and EBU6335 jobs exist with the requested MO accounts | Pass |
+| US32 | Self/MO evaluation | TC-SEED-03 | Load demo data and open TA/MO dashboards | TA self evaluation appears via profile experience summary; MO evaluation appears via reviewer notes | Pass |
+| US33 | Workload demo | TC-SEED-04 | Open Admin workload monitor | Demo threshold is 10 hours/week; Frank Zhao has two accepted jobs totalling 11 hours/week and triggers the workload warning | Pass |
+| US34 | Admin application review overview | TC-ADM-03 | Admin opens Application Reviews | All applications show TA, course, MO, status, match score, missing skills, and reviewer notes | Pass |
 
 ## Automated Unit Tests
 - `ApplicationServiceTest`
@@ -47,5 +52,20 @@
 - `MessageServiceTest`
 - `ValidationServiceTest`
 - `WorkloadServiceTest`
+- `SampleDataLoaderTest`
 
-Latest local JUnit run: 46 tests found, 46 successful, 0 failed.
+Latest local JUnit run: 61 tests found, 61 successful, 0 failed.
+
+## Manual Demo Checklist
+- Admin: log in as `admin@bupt.edu.cn`, inspect all jobs, workload monitor, Application Reviews, notifications, CSV export, and sample-data reset/load.
+- Dr Ling Ma: log in as `ling.ma@qmul.ac.uk`, load `EBU6304` applicants, review Alice Chen and Emma Liu, and edit reviewer notes.
+- Dr Chao Shu: log in as `chao.shu@qmul.ac.uk`, load `EBU6475` applicants, and review Ben Wang / Frank Zhao.
+- Dr Jin Zhang: log in as `jin.zhang@qmul.ac.uk`, load `EBU6366` applicants, and review Chloe Li / Frank Zhao.
+- Dr Nickos Paltalidis: log in as `n.paltalidis@qmul.ac.uk`, load `EBU5606` applicants, and review Daniel Zhang / Jason Wu.
+- Dr Paula Fonseca: log in as `paula.fonseca@qmul.ac.uk`, load `EBU5042` applicants, and review Grace Xu.
+- Dr Chao Liu: log in as `chao.liu@qmul.ac.uk`, load `CBU5201` applicants, and review Henry Sun / Emma Liu.
+- Dr Athen Ma: log in as `a.ma@qmul.ac.uk`, load `EBU6335` applicants, and review Ivy Huang.
+- Alice Chen: log in as `alice.chen@demo.local`, check shortlisted status, MO evaluation, notifications, and messages.
+- Emma Liu: log in as `emma.liu@demo.local`, check rejected `EBU6304` application, missing skills, and reviewer notes.
+- Frank Zhao: log in as `frank.zhao@demo.local`, check accepted applications and workload-related notification.
+- Jason Wu: log in as `jason.wu@demo.local`, compare EBU5606 support notes with EBU6366 missing RF skills.

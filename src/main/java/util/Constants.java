@@ -1,6 +1,5 @@
 package util;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -133,24 +132,6 @@ public final class Constants {
      * @return The resolved Path to the project directory.
      */
     private static Path resolveProjectDir() {
-        // Get the current working directory as an absolute, normalized path
-        Path workingDirectory = Paths.get("").toAbsolutePath().normalize();
-        String projectDirectoryName = "TA-Recruitment-System-Group46";
-
-        Path current = workingDirectory;
-        while (current != null) {
-            if (current.getFileName() != null && projectDirectoryName.equals(current.getFileName().toString())) {
-                return current.normalize();
-            }
-            current = current.getParent();
-        }
-
-        Path projectDirectory = workingDirectory.resolve(projectDirectoryName);
-        if (Files.isDirectory(projectDirectory)) {
-            return projectDirectory.normalize();
-        }
-
-        // Default: use the current working directory as the application root.
-        return workingDirectory;
+        return Paths.get("").toAbsolutePath().normalize();
     }
 }

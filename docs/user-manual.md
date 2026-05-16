@@ -23,6 +23,12 @@ or
 run.bat
 ```
 
+If Maven is not available and `target/classes` does not exist yet, use:
+
+```text
+build-and-run.bat
+```
+
 If you want Maven to verify the project first:
 
 ```bash
@@ -30,9 +36,37 @@ mvn test
 ```
 
 ## Demo Accounts
-- `TA`: `ta1@bupt.edu.cn` / `ta123`
-- `MO`: `mo1@bupt.edu.cn` / `mo123`
 - `Admin`: `admin@bupt.edu.cn` / `admin123`
+- `MO EBU6304`: `ling.ma@qmul.ac.uk` / `Password123`
+- `MO EBU6475`: `chao.shu@qmul.ac.uk` / `Password123`
+- `MO EBU6366`: `jin.zhang@qmul.ac.uk` / `Password123`
+- `MO EBU5606`: `n.paltalidis@qmul.ac.uk` / `Password123`
+- `MO EBU5042`: `paula.fonseca@qmul.ac.uk` / `Password123`
+- `MO CBU5201`: `chao.liu@qmul.ac.uk` / `Password123`
+- `MO EBU6335`: `a.ma@qmul.ac.uk` / `Password123`
+- `TA Alice`: `alice.chen@demo.local` / `Password123`
+- `TA Ben`: `ben.wang@demo.local` / `Password123`
+- `TA Chloe`: `chloe.li@demo.local` / `Password123`
+- `TA Daniel`: `daniel.zhang@demo.local` / `Password123`
+- `TA Emma`: `emma.liu@demo.local` / `Password123`
+- `TA Frank`: `frank.zhao@demo.local` / `Password123`
+- `TA Grace`: `grace.xu@demo.local` / `Password123`
+- `TA Henry`: `henry.sun@demo.local` / `Password123`
+- `TA Ivy`: `ivy.huang@demo.local` / `Password123`
+- `TA Jason`: `jason.wu@demo.local` / `Password123`
+
+All sample accounts are local coursework-demo accounts only. The application does not send real email.
+
+The final demo dataset contains 7 courses, 7 MO accounts, 10 fictional TA accounts, sample applications with reviewer notes, notifications/messages, and workload examples. The demo workload threshold is 10 hours/week; Frank Zhao is intentionally accepted for EBU6475 and EBU6366 so his 11 hours/week assigned workload demonstrates Admin workload balancing.
+
+## Demo Course Set
+- `EBU6304`: Software Engineering - 2025/26, Module Organiser Dr Ling Ma.
+- `EBU6475`: Microprocessor Systems Design - 2025/26, Module Organiser Dr Chao Shu.
+- `EBU6366`: Microwave, Millimeterwave and Optical Transmission - 2025/26, Module Organiser Dr Jin Zhang.
+- `EBU5606`: Product Development and Marketing - 2025/26, Module Organiser Dr Nickos Paltalidis.
+- `EBU5042`: Advanced Network Programming - 2025/26, Module Organiser Dr Paula Fonseca.
+- `CBU5201`: Machine Learning - 2025/26, Module Organiser Dr Chao Liu.
+- `EBU6335`: Digital Systems Design - 2025/26, Module Organiser Dr Athen Ma.
 
 ## Main Screens
 
@@ -52,7 +86,7 @@ The MO dashboard is used to manage jobs, review applicants, write reviewer notes
 ![MO dashboard](screenshots/mo-dashboard.png)
 
 ### Admin Dashboard
-The Admin dashboard is used to monitor TA workloads, inspect jobs, view summary cards, reset demo data, generate rebalance suggestions, open the full hiring-management console, and create MO accounts with managed modules.
+The Admin dashboard is used to monitor TA workloads, inspect jobs, view all application reviews, view summary cards, reset demo data, generate rebalance suggestions, open the full hiring-management console, and create MO accounts with managed modules.
 
 ![Admin dashboard](screenshots/admin-dashboard.png)
 
@@ -129,14 +163,22 @@ The Admin dashboard is used to monitor TA workloads, inspect jobs, view summary 
 - total applications
 - accepted TAs
 3. Use `Refresh` to reload current workload data.
-4. Use `Open Hiring Management` to access all MO job-posting and applicant-review functions across all known modules.
-5. Use `Create MO Account` to add a new MO login and assign one or more module codes.
-6. Use `Load Demo Data` to repopulate the sample dataset.
-7. Use `Reset Demo Data` to clear and reset the dataset.
-8. Use `Rebalance Suggestion` to view simple recommendations for open jobs.
-9. Use `Export CSV` to write a recruitment report to the `exports/` folder.
-10. Use `View Notifications` to review admin notifications.
-11. A confirmation dialog is shown before resetting demo data.
+4. Open `Application Reviews` to view all applications with TA name, course, MO, status, match score, missing skills, and MO reviewer notes.
+5. Use `Open Hiring Management` to access all MO job-posting and applicant-review functions across all known modules.
+6. Use `Create MO Account` to add a new MO login and assign one or more module codes.
+7. Use `Load Demo Data` to repopulate the sample dataset.
+8. Use `Reset Demo Data` to clear and reset the dataset.
+9. Use `Rebalance Suggestion` to view simple recommendations for open jobs.
+10. Use `Export CSV` to write a recruitment report to the `exports/` folder.
+11. Use `View Notifications` to review admin notifications.
+12. A confirmation dialog is shown before resetting demo data.
+
+### Admin Application Reviews
+- The table is read-only.
+- Empty reviewer notes show as `Not yet reviewed`.
+- Empty missing skills show as `None`.
+- The detail panel below the table shows the selected application's full reviewer notes, so long MO comments remain readable.
+- This overview helps Admin identify Emma Liu and Jason Wu as missing-skill examples and Alice Chen, Ben Wang, Grace Xu, Henry Sun, and Ivy Huang as strong matches without switching accounts.
 
 ## Data Files
 The application stores all data in:

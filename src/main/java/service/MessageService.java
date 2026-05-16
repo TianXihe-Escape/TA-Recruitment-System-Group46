@@ -5,7 +5,6 @@ import repository.MessageRepository;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -56,14 +55,14 @@ public class MessageService {
         return messageRepository.findAll().stream()
                 .filter(message -> userId != null
                         && (userId.equals(message.getSenderUserId()) || userId.equals(message.getRecipientUserId())))
-                .sorted(Comparator.comparing(MessageRecord::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder())).reversed())
+                .sorted(this::compareNewestFirst)
                 .toList();
     }
 
     public List<MessageRecord> getMessagesForJob(String jobId) {
         return messageRepository.findAll().stream()
                 .filter(message -> jobId != null && jobId.equals(message.getJobId()))
-                .sorted(Comparator.comparing(MessageRecord::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder())).reversed())
+                .sorted(this::compareNewestFirst)
                 .toList();
     }
 
@@ -115,6 +114,25 @@ public class MessageService {
         }
         Matcher matcher = MESSAGE_ID_PATTERN.matcher(messageId.trim());
         return matcher.matches() ? Integer.parseInt(matcher.group(1)) : 0;
+    }
+
+    private int compareNewestFirst(MessageRecord left, MessageRecord right) {
+        LocalDateTime leftTime = left.getCreatedAt();
+        LocalDateTime rightTime = right.getCreatedAt();
+        if (leftTime == null && rightTime == null) {
+            return Integer.compare(extractSequence(right.getMessageId()), extractSequence(left.getMessageId()));
+        }
+        if (leftTime == null) {
+            return 1;
+        }
+        if (rightTime == null) {
+            return -1;
+        }
+        int timeCompare = rightTime.compareTo(leftTime);
+        if (timeCompare != 0) {
+            return timeCompare;
+        }
+        return Integer.compare(extractSequence(right.getMessageId()), extractSequence(left.getMessageId()));
     }
 
     private String blankToNull(String value) {
