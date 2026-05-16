@@ -1,50 +1,142 @@
 [
   {
-    "jobId" : "job-01",
-    "moduleCode" : "COMP1001",
-    "moduleTitle" : "Programming Fundamentals",
-    "duties" : "Support labs, answer questions, mark exercises",
-    "hours" : 5,
-    "requiredTaCount" : 1,
-    "requiredSkills" : [
-      "Java",
-      "Communication",
-      "Agile"
-    ],
-    "applicationDeadline" : "2026-04-26",
-    "status" : "CLOSED",
-    "postedBy" : "user-mo-01"
-  },
-  {
-    "jobId" : "job-02",
-    "moduleCode" : "DATA2002",
-    "moduleTitle" : "Data Analytics",
-    "duties" : "Prepare tutorial materials and support datasets",
-    "hours" : 8,
+    "jobId" : "job-ebu6304",
+    "moduleCode" : "EBU6304",
+    "moduleTitle" : "Software Engineering - 2025/26",
+    "category" : "MODULE_TA",
+    "semester" : "2025/26",
+    "duties" : "Support software engineering labs, answer student questions, assist with Java project issues, help review Agile artefacts, and support coursework demonstrations. Module Organiser: Dr Ling Ma. Teaching team: Dr Gokop Goteng; Dr Riasat Islam; Dr Salman Haleem; Dr Alan Wong.",
+    "hours" : 6,
     "requiredTaCount" : 3,
     "requiredSkills" : [
-      "Python",
-      "Data Analysis",
-      "Communication"
+      "Java",
+      "Software Engineering",
+      "Agile Development",
+      "GitHub",
+      "Testing"
     ],
-    "applicationDeadline" : "2026-04-19",
+    "applicationDeadline" : "2026-06-13",
     "status" : "OPEN",
-    "postedBy" : "user-mo-01"
+    "postedBy" : "user-mo-ling"
   },
   {
-    "jobId" : "job-03",
-    "moduleCode" : "COMP3003",
-    "moduleTitle" : "Introduction to AI",
-    "duties" : "Support seminars, prepare examples, and help with marking.",
+    "jobId" : "job-ebu6475",
+    "moduleCode" : "EBU6475",
+    "moduleTitle" : "Microprocessor Systems Design - 2025/26",
+    "category" : "MODULE_TA",
+    "semester" : "2025/26",
+    "duties" : "Support embedded systems labs, help students with microcontroller programming, assist debugging hardware/software issues, and support lab demonstrations. Module Organiser: Dr Chao Shu.",
+    "hours" : 6,
+    "requiredTaCount" : 2,
+    "requiredSkills" : [
+      "C Programming",
+      "Microcontrollers",
+      "Embedded Systems",
+      "Digital Systems",
+      "Debugging"
+    ],
+    "applicationDeadline" : "2026-06-11",
+    "status" : "OPEN",
+    "postedBy" : "user-mo-chao-shu"
+  },
+  {
+    "jobId" : "job-ebu6366",
+    "moduleCode" : "EBU6366",
+    "moduleTitle" : "Microwave, Millimeterwave and Optical Transmission - 2025/26",
+    "category" : "MODULE_TA",
+    "semester" : "2025/26",
+    "duties" : "Support tutorials and lab preparation for microwave, millimeterwave and optical transmission topics, assist students with RF concepts, MATLAB exercises, and coursework questions. Related staff: Dr Fatma Benkhelifa.",
+    "hours" : 5,
+    "requiredTaCount" : 2,
+    "requiredSkills" : [
+      "Microwave Engineering",
+      "RF Systems",
+      "Optical Transmission",
+      "MATLAB",
+      "Signal Analysis"
+    ],
+    "applicationDeadline" : "2026-06-09",
+    "status" : "OPEN",
+    "postedBy" : "user-mo-jin-zhang"
+  },
+  {
+    "jobId" : "job-ebu5606",
+    "moduleCode" : "EBU5606",
+    "moduleTitle" : "Product Development and Marketing - 2025/26",
+    "category" : "MODULE_TA",
+    "semester" : "2025/26",
+    "duties" : "Support product development workshops, help students refine business reports and presentation materials, assist with customer needs analysis, concept testing, and marketing coursework activities.",
+    "hours" : 4,
+    "requiredTaCount" : 2,
+    "requiredSkills" : [
+      "Product Development",
+      "Marketing",
+      "Business Analysis",
+      "Report Writing",
+      "Presentation"
+    ],
+    "applicationDeadline" : "2026-06-15",
+    "status" : "OPEN",
+    "postedBy" : "user-mo-nickos"
+  },
+  {
+    "jobId" : "job-ebu5042",
+    "moduleCode" : "EBU5042",
+    "moduleTitle" : "Advanced Network Programming - 2025/26",
+    "category" : "MODULE_TA",
+    "semester" : "2025/26",
+    "duties" : "Support advanced network programming labs, help students debug socket-based applications, answer questions about client-server architecture, and assist with coursework support. Related staff: Prof Gareth Tyson.",
+    "hours" : 5,
+    "requiredTaCount" : 2,
+    "requiredSkills" : [
+      "Java",
+      "Network Programming",
+      "Socket Programming",
+      "Client Server Architecture",
+      "Debugging"
+    ],
+    "applicationDeadline" : "2026-06-10",
+    "status" : "OPEN",
+    "postedBy" : "user-mo-paula"
+  },
+  {
+    "jobId" : "job-cbu5201",
+    "moduleCode" : "CBU5201",
+    "moduleTitle" : "Machine Learning - 2025/26",
+    "category" : "MODULE_TA",
+    "semester" : "2025/26",
+    "duties" : "Support machine learning tutorials, help students understand basic models, assist with Python notebooks, and answer questions about coursework tasks.",
     "hours" : 5,
     "requiredTaCount" : 2,
     "requiredSkills" : [
       "Python",
-      "Communication",
-      "Marking"
+      "Machine Learning",
+      "Data Analysis",
+      "Mathematics",
+      "Jupyter Notebook"
     ],
-    "applicationDeadline" : "2026-04-15",
+    "applicationDeadline" : "2026-06-14",
     "status" : "OPEN",
-    "postedBy" : "user-mo-02"
+    "postedBy" : "user-mo-chao-liu"
+  },
+  {
+    "jobId" : "job-ebu6335",
+    "moduleCode" : "EBU6335",
+    "moduleTitle" : "Digital Systems Design - 2025/26",
+    "category" : "MODULE_TA",
+    "semester" : "2025/26",
+    "duties" : "Support digital systems design labs, help students understand digital logic, Verilog and FPGA workflows, and assist with debugging design exercises.",
+    "hours" : 5,
+    "requiredTaCount" : 2,
+    "requiredSkills" : [
+      "Digital Logic",
+      "Verilog",
+      "FPGA",
+      "Circuit Design",
+      "Debugging"
+    ],
+    "applicationDeadline" : "2026-06-12",
+    "status" : "OPEN",
+    "postedBy" : "user-mo-athen"
   }
 ]

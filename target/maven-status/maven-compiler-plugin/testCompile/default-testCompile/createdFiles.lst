@@ -1,0 +1,11 @@
+service\NotificationServiceTest.class
+service\AuthServiceTest.class
+service\CvStorageServiceTest.class
+service\WorkloadServiceTest.class
+service\JobServiceTest.class
+service\JsonDataStoreTest.class
+service\SampleDataLoaderTest.class
+service\ApplicationServiceTest.class
+service\MessageServiceTest.class
+service\MatchingServiceTest.class
+service\ValidationServiceTest.class

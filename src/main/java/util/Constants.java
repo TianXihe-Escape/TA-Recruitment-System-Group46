@@ -1,6 +1,5 @@
 package util;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -48,6 +47,16 @@ public final class Constants {
     public static final Path CV_DIR = PROJECT_DIR.resolve("cv").normalize();
 
     /**
+     * The directory path where supporting documents are copied for stable review.
+     */
+    public static final Path SUPPORTING_DOC_DIR = PROJECT_DIR.resolve("supporting-documents").normalize();
+
+    /**
+     * The directory path where generated CSV reports are written.
+     */
+    public static final Path EXPORTS_DIR = PROJECT_DIR.resolve("exports").normalize();
+
+    /**
      * File path for storing user account information.
      * Contains all registered users with their authentication credentials,
      * personal details, and role assignments.
@@ -75,6 +84,21 @@ public final class Constants {
      * including application status, timestamps, and review notes.
      */
     public static final Path APPLICATIONS_FILE = DATA_DIR.resolve("applications.json");
+
+    /**
+     * File path for storing in-system notifications.
+     */
+    public static final Path NOTIFICATIONS_FILE = DATA_DIR.resolve("notifications.json");
+
+    /**
+     * File path for storing two-way TA/MO messages.
+     */
+    public static final Path MESSAGES_FILE = DATA_DIR.resolve("messages.json");
+
+    /**
+     * File path for storing accepted applicant allocation records.
+     */
+    public static final Path ALLOCATIONS_FILE = DATA_DIR.resolve("allocations.json");
 
     /**
      * File path for storing system configuration settings.
@@ -108,24 +132,6 @@ public final class Constants {
      * @return The resolved Path to the project directory.
      */
     private static Path resolveProjectDir() {
-        // Get the current working directory as an absolute, normalized path
-        Path workingDirectory = Paths.get("").toAbsolutePath().normalize();
-        String projectDirectoryName = "TA-Recruitment-System-Group46";
-
-        Path current = workingDirectory;
-        while (current != null) {
-            if (current.getFileName() != null && projectDirectoryName.equals(current.getFileName().toString())) {
-                return current.normalize();
-            }
-            current = current.getParent();
-        }
-
-        Path projectDirectory = workingDirectory.resolve(projectDirectoryName);
-        if (Files.isDirectory(projectDirectory)) {
-            return projectDirectory.normalize();
-        }
-
-        // Default: use the current working directory as the application root.
-        return workingDirectory;
+        return Paths.get("").toAbsolutePath().normalize();
     }
 }

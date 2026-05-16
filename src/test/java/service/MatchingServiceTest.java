@@ -22,6 +22,9 @@ class MatchingServiceTest {
         assertEquals(List.of("Java", "Communication"), result.getMatchedSkills());
         assertEquals(List.of("Agile"), result.getMissingSkills());
         assertTrue(result.getExplanation().contains("67%"));
+        assertTrue(result.getExplanation().contains("Matched skills: Java, Communication."));
+        assertTrue(result.getExplanation().contains("Missing skills: Agile."));
+        assertTrue(result.getExplanation().contains("Score formula: matched required skills / total required skills = 2 / 3 = 67%."));
     }
 
     @Test

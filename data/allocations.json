@@ -1,0 +1,29 @@
+[
+  {
+    "allocationId" : "alloc-01",
+    "applicationId" : "apply-06",
+    "applicantId" : "applicant-frank",
+    "jobId" : "job-ebu6475",
+    "allocatedByUserId" : "user-mo-chao-shu",
+    "allocatedAt" : "2026-05-15T21:38:53.431773300",
+    "active" : true
+  },
+  {
+    "allocationId" : "alloc-02",
+    "applicationId" : "apply-07",
+    "applicantId" : "applicant-frank",
+    "jobId" : "job-ebu6366",
+    "allocatedByUserId" : "user-mo-jin-zhang",
+    "allocatedAt" : "2026-05-15T21:38:53.432772600",
+    "active" : true
+  },
+  {
+    "allocationId" : "alloc-03",
+    "applicationId" : "apply-11",
+    "applicantId" : "applicant-jason",
+    "jobId" : "job-ebu5606",
+    "allocatedByUserId" : "user-mo-nickos",
+    "allocatedAt" : "2026-05-15T21:38:53.432772600",
+    "active" : true
+  }
+]

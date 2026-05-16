@@ -5,6 +5,7 @@ import model.Role;
 import repository.ApplicantProfileRepository;
 import repository.UserRepository;
 import util.IdGenerator;
+import util.PasswordUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -103,10 +104,22 @@ public class AuthService {
             throw new IllegalArgumentException(String.join("\n", errors));
         }
 
-        // Attempt to find the user and verify credentials
-        return userRepository.findByUsername(normalizedUsername)
-                .filter(user -> user.getPassword().equals(password) && user.getRole() == role)  // Verify password and role
-                .orElseThrow(() -> new IllegalArgumentException("Wrong username, password, or role."));  // Authentication failed
+        List<model.User> users = new ArrayList<>(userRepository.findAll());
+        model.User user = users.stream()
+                .filter(item -> item.getUsername().equalsIgnoreCase(normalizedUsername))
+                .filter(item -> item.getRole() == role)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Wrong username, password, or role."));
+
+        if (!PasswordUtil.matches(password, user.getPassword())) {
+            throw new IllegalArgumentException("Wrong username, password, or role.");
+        }
+
+        if (!PasswordUtil.isHash(user.getPassword())) {
+            user.setPassword(PasswordUtil.hash(password));
+            userRepository.saveAll(users);
+        }
+        return user;
     }
 
     /**
@@ -144,6 +157,55 @@ public class AuthService {
                                  String confirmPassword,
                                  List<String> managedModuleCodes) {
         return registerUser(username, name, password, confirmPassword, Role.MO, managedModuleCodes);
+    }
+
+    public void changePassword(String username, String oldPassword, String newPassword, String confirmPassword) {
+        String normalizedUsername = validationService.normalizeEmail(username);
+        List<String> errors = validationService.validateLogin(normalizedUsername, oldPassword);
+        errors.addAll(validationService.validateRegistration(normalizedUsername, newPassword, confirmPassword));
+        List<model.User> users = new ArrayList<>(userRepository.findAll());
+        model.User user = users.stream()
+                .filter(item -> item.getUsername().equalsIgnoreCase(normalizedUsername))
+                .findFirst()
+                .orElse(null);
+        if (user == null) {
+            errors.add("No account exists for this email address.");
+        } else if (!PasswordUtil.matches(oldPassword, user.getPassword())) {
+            errors.add("Old password is incorrect.");
+        }
+        if (!errors.isEmpty()) {
+            throw new IllegalArgumentException(String.join("\n", errors));
+        }
+
+        user.setPassword(PasswordUtil.hash(newPassword));
+        userRepository.saveAll(users);
+    }
+
+    /**
+     * Resets a registered user's password after validating the replacement.
+     * This method is intended for authenticated administrator workflows only.
+     *
+     * @param username        account email
+     * @param newPassword     new password
+     * @param confirmPassword confirmation of the new password
+     */
+    public void resetPassword(String username, String newPassword, String confirmPassword) {
+        String normalizedUsername = validationService.normalizeEmail(username);
+        List<String> errors = validationService.validateRegistration(normalizedUsername, newPassword, confirmPassword);
+        List<model.User> users = new ArrayList<>(userRepository.findAll());
+        model.User user = users.stream()
+                .filter(item -> item.getUsername().equalsIgnoreCase(normalizedUsername))
+                .findFirst()
+                .orElse(null);
+        if (user == null) {
+            errors.add("No account exists for this email address.");
+        }
+        if (!errors.isEmpty()) {
+            throw new IllegalArgumentException(String.join("\n", errors));
+        }
+
+        user.setPassword(PasswordUtil.hash(newPassword));
+        userRepository.saveAll(users);
     }
 
     /**
@@ -210,7 +272,7 @@ public class AuthService {
         String userId = IdGenerator.nextUserId(role, users);
 
         // Create the new user object
-        model.User user = new model.User(userId, normalizedName, normalizedUsername, password, role, managedModuleCodes);
+        model.User user = new model.User(userId, normalizedName, normalizedUsername, PasswordUtil.hash(password), role, managedModuleCodes);
 
         // Add the new user to the list and save
         users.add(user);

@@ -1,4 +1,4 @@
-﻿package service;
+package service;
 
 import model.JobPosting;
 import util.FileUtil;
@@ -26,6 +26,9 @@ public class ValidationService {
     private static final int MAX_SKILL_LENGTH = 30;
     private static final int MAX_MODULE_CODE_LENGTH = 20;
     private static final int MAX_MODULE_TITLE_LENGTH = 80;
+    private static final int MAX_PROGRAMME_LENGTH = 80;
+    private static final int MAX_YEAR_LENGTH = 20;
+    private static final int MAX_SEMESTER_LENGTH = 40;
     private static final int MAX_DUTIES_LENGTH = 300;
     private static final int MAX_REQUIRED_TA_COUNT = 20;
     private static final List<String> ALLOWED_CV_EXTENSIONS = List.of("pdf", "doc", "docx", "rtf", "txt");
@@ -79,6 +82,23 @@ public class ValidationService {
             errors.add("Phone number is required.");
         } else if (!PHONE_PATTERN.matcher(normalizedPhone).matches()) {
             errors.add(PHONE_ERROR_MESSAGE);
+        }
+        return errors;
+    }
+
+    public List<String> validateAcademicProfile(String programme, String yearOfStudy) {
+        List<String> errors = new ArrayList<>();
+        String normalizedProgramme = normalizeText(programme);
+        String normalizedYear = normalizeText(yearOfStudy);
+        if (FileUtil.isBlank(normalizedProgramme)) {
+            errors.add("Programme is required.");
+        } else if (normalizedProgramme.length() > MAX_PROGRAMME_LENGTH) {
+            errors.add("Programme must be 80 characters or fewer.");
+        }
+        if (FileUtil.isBlank(normalizedYear)) {
+            errors.add("Year of study is required.");
+        } else if (normalizedYear.length() > MAX_YEAR_LENGTH) {
+            errors.add("Year of study must be 20 characters or fewer.");
         }
         return errors;
     }
@@ -138,8 +158,16 @@ public class ValidationService {
     }
 
     public List<String> validateCvPath(String cvPath) {
+        return validateDocumentPath(cvPath, "CV file");
+    }
+
+    public List<String> validateSupportingDocumentPath(String documentPath) {
+        return validateDocumentPath(documentPath, "Supporting document");
+    }
+
+    private List<String> validateDocumentPath(String documentPath, String label) {
         List<String> errors = new ArrayList<>();
-        String normalizedPath = normalizeText(cvPath);
+        String normalizedPath = normalizeText(documentPath);
         if (FileUtil.isBlank(normalizedPath)) {
             return errors;
         }
@@ -149,13 +177,13 @@ public class ValidationService {
                 : Path.of(normalizedPath).getFileName().toString();
         int extensionIndex = fileName.lastIndexOf('.');
         if (extensionIndex < 0) {
-            errors.add("CV file must use a common resume format: PDF, DOC, DOCX, RTF, or TXT.");
+            errors.add(label + " must use a common document format: PDF, DOC, DOCX, RTF, or TXT.");
             return errors;
         }
 
         String extension = fileName.substring(extensionIndex + 1).toLowerCase(Locale.ROOT);
         if (!ALLOWED_CV_EXTENSIONS.contains(extension)) {
-            errors.add("CV file must use a common resume format: PDF, DOC, DOCX, RTF, or TXT.");
+            errors.add(label + " must use a common document format: PDF, DOC, DOCX, RTF, or TXT.");
         }
         return errors;
     }
@@ -164,6 +192,7 @@ public class ValidationService {
         List<String> errors = new ArrayList<>();
         String moduleCode = normalizeModuleCode(jobPosting.getModuleCode());
         String moduleTitle = normalizeText(jobPosting.getModuleTitle());
+        String semester = normalizeText(jobPosting.getSemester());
         String duties = normalizeMultilineText(jobPosting.getDuties());
         List<String> requiredSkills = parseSkills(String.join(", ", jobPosting.getRequiredSkills()));
 
@@ -176,6 +205,14 @@ public class ValidationService {
             errors.add("Module title is required.");
         } else if (moduleTitle.length() > MAX_MODULE_TITLE_LENGTH) {
             errors.add("Module title must be 80 characters or fewer.");
+        }
+        if (jobPosting.getCategory() == null) {
+            errors.add("Job category is required.");
+        }
+        if (FileUtil.isBlank(semester)) {
+            errors.add("Semester is required.");
+        } else if (semester.length() > MAX_SEMESTER_LENGTH) {
+            errors.add("Semester must be 40 characters or fewer.");
         }
         if (jobPosting.getHours() <= 0) {
             errors.add("Hours must be greater than 0.");

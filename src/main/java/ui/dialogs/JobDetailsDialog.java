@@ -24,6 +24,8 @@ public class JobDetailsDialog extends JDialog {
         area.setText(
                 "Job ID: " + jobPosting.getJobId() + "\n" +
                         "Module: " + jobPosting.getModuleCode() + " - " + jobPosting.getModuleTitle() + "\n" +
+                        "Category: " + (jobPosting.getCategory() == null ? "-" : jobPosting.getCategory().getDisplayName()) + "\n" +
+                        "Semester: " + (jobPosting.getSemester() == null || jobPosting.getSemester().isBlank() ? "-" : jobPosting.getSemester()) + "\n" +
                         "Duties: " + jobPosting.getDuties() + "\n" +
                         "Hours: " + jobPosting.getHours() + "\n" +
                         "TA Needed: " + jobPosting.getRequiredTaCount() + "\n" +
