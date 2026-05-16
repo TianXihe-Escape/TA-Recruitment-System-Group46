@@ -20,7 +20,7 @@
 | US16 | Review applicant list | `ApplicationService.getApplicationsForJob` | MO Load Applicants | manual |
 | US17 | Review applicant profile/CV | `CvStorageService.resolveCvPath` | MO applicant summary / clickable document lines | manual |
 | US18 | Shortlist candidates | `ApplicationService.updateStatus`, `removeShortlist` | MO Shortlist / Remove Shortlist | `ApplicationServiceTest` |
-| US19 | Record hiring decision | `ApplicationRecord.decisionAt`, `lastUpdatedAt`, `statusHistory` | TA/MO details | `ApplicationServiceTest` |
+| US19 | Invite interview / record hiring decision | `ApplicationStatus.INTERVIEW_INVITED`, `ApplicationRecord.decisionAt`, `lastUpdatedAt`, `statusHistory` | MO Invite Interview / TA application details | `ApplicationServiceTest` |
 | US20 | Allocate TA to vacancy | `AllocationRecord`, `AllocationService` | Admin workload and accepted assignments | `ApplicationServiceTest` |
 | US21 | View TA workload dashboard | `WorkloadService.buildWorkloadRecords` | Admin TA Workload | `WorkloadServiceTest` |
 | US22 | Conflict/workload warning | `WorkloadService.projectedHours` | MO accept workload warning | `WorkloadServiceTest` |
@@ -30,3 +30,4 @@
 | US26 | Missing skill suggestion | `ApplicationRecord.missingSkills` | TA application detail suggestion | manual |
 | US27 | Role-based permissions | role dashboards, MO managed modules | Login/MO/Admin frames | manual |
 | US28 | File-based storage | `JsonDataStore`, JSON files | `data/*.json`, no database | `JsonDataStoreTest` |
+| US29 | TA/MO messages | `MessageRecord`, `MessageService`, `messages.json` | TA Messages tab / MO View Messages | `MessageServiceTest` |

@@ -6,6 +6,7 @@ import model.JobStatus;
 import repository.JobRepository;
 import util.IdGenerator;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -58,6 +59,8 @@ public class JobService {
     public List<JobPosting> getOpenJobs() {
         return getAllJobs().stream()
                 .filter(job -> job.getStatus() == JobStatus.OPEN)
+                .filter(job -> job.getApplicationDeadline() == null
+                        || !job.getApplicationDeadline().isBefore(LocalDate.now()))
                 .collect(Collectors.toList());
     }
 

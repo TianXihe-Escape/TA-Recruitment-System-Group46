@@ -17,6 +17,7 @@ public class SampleDataLoader {
     private final JobRepository jobRepository;
     private final ApplicationRepository applicationRepository;
     private final NotificationRepository notificationRepository;
+    private final MessageRepository messageRepository;
     private final AllocationRepository allocationRepository;
     private final ConfigRepository configRepository;
 
@@ -25,6 +26,7 @@ public class SampleDataLoader {
                             JobRepository jobRepository,
                             ApplicationRepository applicationRepository,
                             NotificationRepository notificationRepository,
+                            MessageRepository messageRepository,
                             AllocationRepository allocationRepository,
                             ConfigRepository configRepository) {
         this.userRepository = userRepository;
@@ -32,6 +34,7 @@ public class SampleDataLoader {
         this.jobRepository = jobRepository;
         this.applicationRepository = applicationRepository;
         this.notificationRepository = notificationRepository;
+        this.messageRepository = messageRepository;
         this.allocationRepository = allocationRepository;
         this.configRepository = configRepository;
     }
@@ -192,6 +195,17 @@ public class SampleDataLoader {
         notification.setRead(false);
         notificationRepository.saveAll(List.of(notification));
 
+        MessageRecord message = new MessageRecord();
+        message.setMessageId("msg-01");
+        message.setJobId("job-02");
+        message.setApplicationId("apply-02");
+        message.setSenderUserId("user-ta-02");
+        message.setRecipientUserId("user-mo-01");
+        message.setBody("Could you confirm whether DATA2002 tutorials require Tuesday availability?");
+        message.setCreatedAt(LocalDateTime.now().minusHours(10));
+        message.setRead(false);
+        messageRepository.saveAll(List.of(message));
+
         SystemConfig config = new SystemConfig();
         config.setWorkloadThreshold(10);
         configRepository.save(config);
@@ -203,6 +217,7 @@ public class SampleDataLoader {
         jobRepository.saveAll(new ArrayList<>());
         applicationRepository.saveAll(new ArrayList<>());
         notificationRepository.saveAll(new ArrayList<>());
+        messageRepository.saveAll(new ArrayList<>());
         allocationRepository.saveAll(new ArrayList<>());
         configRepository.save(new SystemConfig());
     }

@@ -6,6 +6,7 @@ import model.ApplicationStatus;
 import model.JobCategory;
 import model.JobPosting;
 import model.JobStatus;
+import model.MessageRecord;
 import model.Role;
 import model.SkillMatchResult;
 import model.User;
@@ -17,6 +18,7 @@ import service.CvStorageService;
 import service.DataService;
 import service.JobService;
 import service.MatchingService;
+import service.MessageService;
 import service.NotificationService;
 import service.ValidationService;
 import service.WorkloadService;
@@ -54,6 +56,7 @@ public class MOManagementFrame extends JFrame {
     private final ApplicationService applicationService;
     private final CvStorageService cvStorageService;
     private final NotificationService notificationService;
+    private final MessageService messageService;
     private final WorkloadService workloadService;
     private final MatchingService matchingService;
     private final ValidationService validationService;
@@ -77,7 +80,7 @@ public class MOManagementFrame extends JFrame {
     private final JTextArea applicantSummaryArea = new JTextArea(4, 20);
     private final JTextArea matchInfoArea = new JTextArea(6, 20);
     private final JComboBox<String> applicantStatusFilter = new JComboBox<>(
-            new String[]{"All Statuses", "SUBMITTED", "SHORTLISTED", "ACCEPTED", "REJECTED", "WITHDRAWN"}
+            new String[]{"All Statuses", "SUBMITTED", "SHORTLISTED", "INTERVIEW_INVITED", "ACCEPTED", "REJECTED", "WITHDRAWN"}
     );
     private final JComboBox<String> applicantSortBox = new JComboBox<>(
             new String[]{"Match % (High to Low)", "Match % (Low to High)", "Applicant Name (A-Z)", "Applicant Name (Z-A)", "Status"}
@@ -111,6 +114,7 @@ public class MOManagementFrame extends JFrame {
                 validationService
         );
         this.notificationService = new NotificationService(dataService.getNotificationRepository());
+        this.messageService = new MessageService(dataService.getMessageRepository());
         this.workloadService = new WorkloadService();
         this.jobService = new JobService(dataService.getJobRepository(), validationService);
         this.applicantService = new ApplicantService(dataService.getProfileRepository(), validationService);
@@ -260,6 +264,7 @@ public class MOManagementFrame extends JFrame {
         menu.add(menuItem("Review Queue", SimpleLineIcon.Type.DOCUMENT, () -> showWorkspace(VIEW_REVIEW_QUEUE)));
         menu.add(menuItem("Change Password", SimpleLineIcon.Type.SAVE, this::showChangePasswordDialog));
         menu.add(menuItem("View Notifications", SimpleLineIcon.Type.BELL, this::showNotifications));
+        menu.add(menuItem("View Messages", SimpleLineIcon.Type.SEND, this::showMessages));
         menu.add(menuItem("Refresh", SimpleLineIcon.Type.REFRESH, this::refreshWorkspace));
         menu.addSeparator();
         menu.add(menuItem(adminMode ? "Back to Admin" : "Logout", SimpleLineIcon.Type.LOGOUT, this::goBack));
@@ -329,6 +334,14 @@ public class MOManagementFrame extends JFrame {
             return currentUser.getUsername();
         }
         return adminMode ? "Admin" : "MO";
+    }
+
+    private String displayNameForUser(String userId) {
+        return dataService.getUserRepository().findAll().stream()
+                .filter(user -> userId != null && userId.equals(user.getUserId()))
+                .findFirst()
+                .map(user -> valueOrDash(user.getName()))
+                .orElse(valueOrDash(userId));
     }
 
     private String initialsFor(String value) {
@@ -408,27 +421,33 @@ public class MOManagementFrame extends JFrame {
         JButton loadApplicantsButton = UiTheme.createSecondaryButton("Load Applicants");
         JButton shortlistButton = UiTheme.createSecondaryButton("Shortlist");
         JButton removeShortlistButton = UiTheme.createSecondaryButton("Remove Shortlist");
+        JButton inviteInterviewButton = UiTheme.createSecondaryButton("Invite Interview");
         JButton acceptButton = UiTheme.createPrimaryButton("Accept");
         JButton cancelAcceptanceButton = UiTheme.createSecondaryButton("Cancel Acceptance");
         JButton rejectButton = UiTheme.createDangerButton("Reject");
         JButton refreshButton = UiTheme.createSecondaryButton("Refresh");
         JButton notificationsButton = UiTheme.createSecondaryButton("View Notifications");
+        JButton messagesButton = UiTheme.createSecondaryButton("View Messages");
         decorateButton(loadApplicantsButton, SimpleLineIcon.Type.DOCUMENT);
         decorateButton(shortlistButton, SimpleLineIcon.Type.STAR);
         decorateButton(removeShortlistButton, SimpleLineIcon.Type.LOGOUT);
+        decorateButton(inviteInterviewButton, SimpleLineIcon.Type.BELL);
         decorateButton(acceptButton, SimpleLineIcon.Type.CHECK);
         decorateButton(cancelAcceptanceButton, SimpleLineIcon.Type.REFRESH);
         decorateButton(rejectButton, SimpleLineIcon.Type.TRASH);
         decorateButton(refreshButton, SimpleLineIcon.Type.REFRESH);
         decorateButton(notificationsButton, SimpleLineIcon.Type.BELL);
+        decorateButton(messagesButton, SimpleLineIcon.Type.SEND);
 
         loadApplicantsButton.addActionListener(event -> loadApplicantsForSelectedJob());
         shortlistButton.addActionListener(event -> updateApplicationStatus(ApplicationStatus.SHORTLISTED));
         removeShortlistButton.addActionListener(event -> removeShortlist());
+        inviteInterviewButton.addActionListener(event -> inviteSelectedApplicantToInterview());
         acceptButton.addActionListener(event -> updateApplicationStatus(ApplicationStatus.ACCEPTED));
         cancelAcceptanceButton.addActionListener(event -> cancelAcceptedApplication());
         rejectButton.addActionListener(event -> updateApplicationStatus(ApplicationStatus.REJECTED));
         notificationsButton.addActionListener(event -> showNotifications());
+        messagesButton.addActionListener(event -> showMessages());
         refreshButton.addActionListener(event -> {
             refreshJobs();
             applicantTableModel.setRowCount(0);
@@ -481,7 +500,7 @@ public class MOManagementFrame extends JFrame {
         JPanel topControls = new JPanel();
         topControls.setOpaque(false);
         topControls.setLayout(new BoxLayout(topControls, BoxLayout.Y_AXIS));
-        topControls.add(UiTheme.createButtonRow(FlowLayout.LEFT, loadApplicantsButton, shortlistButton, removeShortlistButton, acceptButton, cancelAcceptanceButton, rejectButton, notificationsButton, refreshButton));
+        topControls.add(UiTheme.createButtonRow(FlowLayout.LEFT, loadApplicantsButton, shortlistButton, removeShortlistButton, inviteInterviewButton, acceptButton, cancelAcceptanceButton, rejectButton, notificationsButton, messagesButton, refreshButton));
         topControls.add(Box.createVerticalStrut(8));
         topControls.add(filterPanel);
 
@@ -698,6 +717,84 @@ public class MOManagementFrame extends JFrame {
         }
     }
 
+    private void inviteSelectedApplicantToInterview() {
+        int row = applicantTable.getSelectedRow();
+        if (row < 0) {
+            UiMessage.error(this, "Please select an applicant first.");
+            return;
+        }
+
+        String applicationId = String.valueOf(applicantTableModel.getValueAt(row, 0));
+        ApplicationRecord application = dataService.getApplicationRepository().findById(applicationId).orElse(null);
+        if (application == null) {
+            UiMessage.error(this, "Application details could not be found.");
+            return;
+        }
+        ApplicantProfile applicant = findApplicant(application.getApplicantId()).orElse(null);
+        JobPosting job = findJob(application.getJobId()).orElse(null);
+        if (applicant == null || job == null) {
+            UiMessage.error(this, "The selected applicant or job record no longer exists.");
+            return;
+        }
+
+        Optional<String> invitation = promptForInterviewInvitation(applicant, job);
+        if (invitation.isEmpty()) {
+            return;
+        }
+
+        int jobRow = jobTable.getSelectedRow();
+        String selectedJobId = jobRow >= 0 ? String.valueOf(jobTableModel.getValueAt(jobRow, 0)) : application.getJobId();
+        try {
+            applicationService.updateStatus(applicationId, ApplicationStatus.INTERVIEW_INVITED, invitation.get(), currentUser.getUserId());
+            String jobName = job.getModuleCode() + " " + job.getModuleTitle();
+            notificationService.notifyUser(applicant.getUserId(), "Interview invitation for " + jobName + ": " + invitation.get());
+            notificationService.notifyUser(currentUser.getUserId(), "Application " + applicationId + " invited to interview for " + jobName + ".");
+            UiMessage.info(this, "Interview invitation sent.");
+            if (selectedJobId != null) {
+                loadApplicantsForJob(selectedJobId);
+            }
+        } catch (Exception ex) {
+            UiMessage.error(this, ex.getMessage());
+        }
+    }
+
+    private Optional<String> promptForInterviewInvitation(ApplicantProfile applicant, JobPosting job) {
+        JTextField timeField = new JTextField();
+        JTextField locationField = new JTextField();
+        JTextArea detailsArea = new JTextArea(4, 32);
+        UiTheme.styleTextField(timeField);
+        UiTheme.styleTextField(locationField);
+        UiTheme.styleTextArea(detailsArea, 4);
+        detailsArea.setLineWrap(true);
+        detailsArea.setWrapStyleWord(true);
+
+        JPanel form = UiTheme.createFormGrid();
+        UiTheme.addFormRow(form, 0, "Applicant", new JLabel(valueOrDash(applicant.getName())));
+        UiTheme.addFormRow(form, 2, "Job", new JLabel(job.getModuleCode() + " - " + job.getModuleTitle()));
+        UiTheme.addFormRow(form, 4, "Time", timeField);
+        UiTheme.addFormRow(form, 6, "Location / Link", locationField);
+        UiTheme.addFormRow(form, 8, "Details", wrapArea(detailsArea));
+
+        int result = JOptionPane.showConfirmDialog(this, form, "Invite Interview", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result != JOptionPane.OK_OPTION) {
+            return Optional.empty();
+        }
+
+        String time = timeField.getText().trim();
+        String location = locationField.getText().trim();
+        if (time.isBlank() || location.isBlank()) {
+            UiMessage.error(this, "Interview time and location/link are required.");
+            return Optional.empty();
+        }
+
+        String note = "Interview invited. Time: " + time + ". Location/Link: " + location + ".";
+        String details = detailsArea.getText().trim();
+        if (!details.isBlank()) {
+            note += " Details: " + details;
+        }
+        return Optional.of(note);
+    }
+
     private void removeShortlist() {
         int row = applicantTable.getSelectedRow();
         if (row < 0) {
@@ -806,6 +903,130 @@ public class MOManagementFrame extends JFrame {
         }
         notificationService.markAllRead(currentUser.getUserId());
         UiMessage.info(this, builder.toString());
+    }
+
+    private void showMessages() {
+        JDialog dialog = new JDialog(this, "Messages", true);
+        dialog.setSize(900, 520);
+        dialog.setMinimumSize(new Dimension(720, 420));
+        dialog.setLocationRelativeTo(this);
+
+        DefaultTableModel model = new DefaultTableModel(
+                new Object[]{"Message ID", "Time", "Job", "From/To", "Status", "Message"}, 0
+        );
+        JTable table = new PlaceholderTable(model, "No TA/MO messages yet.");
+        UiTheme.styleTable(table);
+        UiTheme.setColumnWidths(table, 110, 160, 220, 180, 80, 420);
+        Runnable refreshMessages = () -> {
+            model.setRowCount(0);
+            for (MessageRecord message : messageService.getConversationForUser(currentUser.getUserId())) {
+                JobPosting job = findJob(message.getJobId()).orElse(null);
+                boolean incoming = currentUser.getUserId().equals(message.getRecipientUserId());
+                model.addRow(new Object[]{
+                        message.getMessageId(),
+                        UiFormat.dateTime(message.getCreatedAt()),
+                        job == null ? valueOrDash(message.getJobId()) : job.getModuleCode() + " - " + job.getModuleTitle(),
+                        incoming ? "Incoming from " + displayNameForUser(message.getSenderUserId()) : "Outgoing to " + displayNameForUser(message.getRecipientUserId()),
+                        incoming && !message.isRead() ? "New" : "Read",
+                        message.getBody()
+                });
+            }
+        };
+        refreshMessages.run();
+
+        JButton replyButton = UiTheme.createPrimaryButton("Reply");
+        JButton markReadButton = UiTheme.createSecondaryButton("Mark Read");
+        JButton closeButton = UiTheme.createSecondaryButton("Close");
+        decorateButton(replyButton, SimpleLineIcon.Type.SEND);
+        decorateButton(markReadButton, SimpleLineIcon.Type.CHECK);
+        decorateButton(closeButton, SimpleLineIcon.Type.LOGOUT);
+
+        replyButton.addActionListener(event -> {
+            MessageRecord selected = selectedMessageFromTable(table, model);
+            if (selected == null) {
+                UiMessage.error(dialog, "Please select a message before replying.");
+                return;
+            }
+            replyToMessage(selected);
+            refreshMessages.run();
+        });
+        markReadButton.addActionListener(event -> {
+            messageService.markAllRead(currentUser.getUserId());
+            refreshMessages.run();
+        });
+        closeButton.addActionListener(event -> dialog.dispose());
+
+        JPanel panel = UiTheme.createCard("Messages", "Read applicant questions and send replies.");
+        panel.add(UiTheme.wrapTable(table), BorderLayout.CENTER);
+        panel.add(UiTheme.createButtonRow(FlowLayout.RIGHT, replyButton, markReadButton, closeButton), BorderLayout.SOUTH);
+        dialog.setContentPane(UiTheme.wrapPage(panel));
+        dialog.setVisible(true);
+    }
+
+    private MessageRecord selectedMessageFromTable(JTable table, DefaultTableModel model) {
+        int row = table.getSelectedRow();
+        if (row < 0) {
+            return null;
+        }
+        String messageId = String.valueOf(model.getValueAt(row, 0));
+        return messageService.getConversationForUser(currentUser.getUserId()).stream()
+                .filter(message -> messageId.equals(message.getMessageId()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private void replyToMessage(MessageRecord selected) {
+        String recipientUserId = currentUser.getUserId().equals(selected.getSenderUserId())
+                ? selected.getRecipientUserId()
+                : selected.getSenderUserId();
+        Optional<String> reply = promptForMessage("Reply", "Reply to " + displayNameForUser(recipientUserId) + ".");
+        if (reply.isEmpty()) {
+            return;
+        }
+
+        try {
+            MessageRecord sent = messageService.sendMessage(
+                    selected.getJobId(),
+                    selected.getApplicationId(),
+                    currentUser.getUserId(),
+                    recipientUserId,
+                    reply.get()
+            );
+            messageService.markRead(selected.getMessageId(), currentUser.getUserId());
+            notificationService.notifyUser(recipientUserId, displayName() + " replied to your message.");
+            UiMessage.info(this, "Reply sent. Reference: " + sent.getMessageId() + ".");
+        } catch (Exception ex) {
+            UiMessage.error(this, ex.getMessage());
+        }
+    }
+
+    private Optional<String> promptForMessage(String title, String helperText) {
+        JTextArea messageArea = new JTextArea(6, 42);
+        UiTheme.styleTextArea(messageArea, 6);
+        messageArea.setLineWrap(true);
+        messageArea.setWrapStyleWord(true);
+
+        JTextArea helperArea = new JTextArea(helperText);
+        helperArea.setEditable(false);
+        helperArea.setOpaque(false);
+        helperArea.setLineWrap(true);
+        helperArea.setWrapStyleWord(true);
+        helperArea.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
+
+        JPanel panel = new JPanel(new BorderLayout(0, 8));
+        panel.add(helperArea, BorderLayout.NORTH);
+        panel.add(new JScrollPane(messageArea), BorderLayout.CENTER);
+
+        int result = JOptionPane.showConfirmDialog(this, panel, title, JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result != JOptionPane.OK_OPTION) {
+            return Optional.empty();
+        }
+        String message = messageArea.getText().trim();
+        if (message.isBlank()) {
+            UiMessage.error(this, "Message cannot be empty.");
+            return Optional.empty();
+        }
+        return Optional.of(message);
     }
 
     private void loadApplicantsForJob(String jobId) {
@@ -1442,6 +1663,7 @@ public class MOManagementFrame extends JFrame {
             switch (status) {
                 case "SUBMITTED" -> label.setBackground(new Color(232, 240, 255));
                 case "SHORTLISTED" -> label.setBackground(new Color(255, 245, 204));
+                case "INTERVIEW_INVITED" -> label.setBackground(new Color(229, 241, 255));
                 case "ACCEPTED" -> label.setBackground(new Color(222, 245, 229));
                 case "REJECTED" -> label.setBackground(new Color(255, 224, 224));
                 case "WITHDRAWN", "CLOSED" -> label.setBackground(new Color(234, 234, 234));

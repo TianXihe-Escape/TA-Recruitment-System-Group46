@@ -4,6 +4,7 @@ import model.ApplicantProfile;
 import model.ApplicationRecord;
 import model.JobCategory;
 import model.JobPosting;
+import model.MessageRecord;
 import model.NotificationRecord;
 import model.User;
 import service.AuthService;
@@ -13,6 +14,7 @@ import service.CvStorageService;
 import service.DataService;
 import service.JobService;
 import service.MatchingService;
+import service.MessageService;
 import service.NotificationService;
 import service.ValidationService;
 import ui.dialogs.JobDetailsDialog;
@@ -63,6 +65,7 @@ public class TADashboardFrame extends JFrame {
      */
     private final ApplicationService applicationService;
     private final NotificationService notificationService;
+    private final MessageService messageService;
     /**
      * Validation helper for parsing form input.
      */
@@ -106,11 +109,15 @@ public class TADashboardFrame extends JFrame {
     private final DefaultTableModel notificationTableModel = new DefaultTableModel(
             new Object[]{"Time", "Status", "Message"}, 0);
     private final JTable notificationTable = new PlaceholderTable(notificationTableModel, "No notifications yet.");
+    private final DefaultTableModel messageTableModel = new DefaultTableModel(
+            new Object[]{"Message ID", "Time", "Job", "Direction", "Status", "Message"}, 0);
+    private final JTable messageTable = new PlaceholderTable(messageTableModel, "No TA/MO messages yet.");
     private static final int VIEW_AVAILABLE_JOBS = 0;
     private static final int VIEW_FAVOURITE_JOBS = 1;
     private static final int VIEW_APPLICATIONS = 2;
     private static final int VIEW_NOTIFICATIONS = 3;
-    private static final String[] VIEW_KEYS = {"available", "favourites", "applications", "notifications"};
+    private static final int VIEW_MESSAGES = 4;
+    private static final String[] VIEW_KEYS = {"available", "favourites", "applications", "notifications", "messages"};
     private final JPanel workspaceCards = new JPanel(new CardLayout());
     private final JPanel contextualActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
     private final JPanel jobFilterContainer = new JPanel(new BorderLayout());
@@ -128,6 +135,9 @@ public class TADashboardFrame extends JFrame {
     private final JButton applyButton = createIconButton("Apply", SimpleLineIcon.Type.SEND, true);
     private final JButton refreshButton = createIconButton("Refresh", SimpleLineIcon.Type.REFRESH, false);
     private final JButton markReadButton = createIconButton("Mark Notifications Read", SimpleLineIcon.Type.CHECK, false);
+    private final JButton messageMoButton = createIconButton("Message MO", SimpleLineIcon.Type.SEND, false);
+    private final JButton replyMessageButton = createIconButton("Reply", SimpleLineIcon.Type.SEND, false);
+    private final JButton markMessagesReadButton = createIconButton("Mark Messages Read", SimpleLineIcon.Type.CHECK, false);
 
     /**
      * Constructs the TA dashboard and loads the initial data snapshot.
@@ -151,6 +161,7 @@ public class TADashboardFrame extends JFrame {
                 new service.AllocationService(dataService.getAllocationRepository())
         );
         this.notificationService = new NotificationService(dataService.getNotificationRepository());
+        this.messageService = new MessageService(dataService.getMessageRepository());
         this.profile = applicantService.getProfileByUserId(currentUser.getUserId());
 
         setTitle("TA Dashboard - " + Constants.APP_TITLE);
@@ -174,6 +185,7 @@ public class TADashboardFrame extends JFrame {
         refreshJobs();
         refreshApplications();
         refreshNotifications();
+        refreshMessages();
         showWorkspace(VIEW_AVAILABLE_JOBS);
     }
 
@@ -191,6 +203,12 @@ public class TADashboardFrame extends JFrame {
         refreshButton.addActionListener(event -> refreshCurrentWorkspace());
         chooseCvButton.addActionListener(event -> chooseCvFile());
         chooseSupportingDocumentButton.addActionListener(event -> chooseSupportingDocumentFile());
+        messageMoButton.addActionListener(event -> sendMessageForCurrentSelection());
+        replyMessageButton.addActionListener(event -> replyToSelectedMessage());
+        markMessagesReadButton.addActionListener(event -> {
+            messageService.markAllRead(currentUser.getUserId());
+            refreshMessages();
+        });
     }
 
     private JPanel buildSidebar() {
@@ -226,6 +244,8 @@ public class TADashboardFrame extends JFrame {
         navigation.add(createNavButton("My Applications", SimpleLineIcon.Type.DOCUMENT, VIEW_APPLICATIONS));
         navigation.add(Box.createVerticalStrut(8));
         navigation.add(createNavButton("Notifications", SimpleLineIcon.Type.BELL, VIEW_NOTIFICATIONS));
+        navigation.add(Box.createVerticalStrut(8));
+        navigation.add(createNavButton("Messages", SimpleLineIcon.Type.SEND, VIEW_MESSAGES));
         sidebar.add(navigation, BorderLayout.CENTER);
         return sidebar;
     }
@@ -265,6 +285,7 @@ public class TADashboardFrame extends JFrame {
         workspaceCards.add(UiTheme.wrapTable(favoriteJobTable), VIEW_KEYS[VIEW_FAVOURITE_JOBS]);
         workspaceCards.add(UiTheme.wrapTable(applicationTable), VIEW_KEYS[VIEW_APPLICATIONS]);
         workspaceCards.add(UiTheme.wrapTable(notificationTable), VIEW_KEYS[VIEW_NOTIFICATIONS]);
+        workspaceCards.add(UiTheme.wrapTable(messageTable), VIEW_KEYS[VIEW_MESSAGES]);
 
         JPanel top = new JPanel(new BorderLayout(0, 12));
         top.setOpaque(false);
@@ -316,7 +337,8 @@ public class TADashboardFrame extends JFrame {
                         case VIEW_AVAILABLE_JOBS -> SimpleLineIcon.Type.BRIEFCASE;
                         case VIEW_FAVOURITE_JOBS -> SimpleLineIcon.Type.STAR;
                         case VIEW_APPLICATIONS -> SimpleLineIcon.Type.DOCUMENT;
-                        default -> SimpleLineIcon.Type.BELL;
+                        case VIEW_NOTIFICATIONS -> SimpleLineIcon.Type.BELL;
+                        default -> SimpleLineIcon.Type.SEND;
                     },
                     selected ? UiTheme.PRIMARY : UiTheme.MUTED_TEXT
             ));
@@ -347,6 +369,11 @@ public class TADashboardFrame extends JFrame {
                 workspaceSubtitleLabel.setText("Read application, review, and account updates.");
                 jobFilterContainer.setVisible(false);
             }
+            case VIEW_MESSAGES -> {
+                workspaceTitleLabel.setText("Messages");
+                workspaceSubtitleLabel.setText("Ask module organisers questions and follow up on replies.");
+                jobFilterContainer.setVisible(false);
+            }
             default -> {
                 workspaceTitleLabel.setText("TA Workspace");
                 workspaceSubtitleLabel.setText("");
@@ -358,10 +385,11 @@ public class TADashboardFrame extends JFrame {
     private void updateContextualActions() {
         contextualActions.removeAll();
         switch (currentWorkspaceView) {
-            case VIEW_AVAILABLE_JOBS -> addActions(viewDetailsButton, favouriteButton, applyButton, refreshButton);
-            case VIEW_FAVOURITE_JOBS -> addActions(viewDetailsButton, favouriteButton, applyButton, refreshButton);
-            case VIEW_APPLICATIONS -> addActions(viewApplicationButton, withdrawButton, refreshButton);
+            case VIEW_AVAILABLE_JOBS -> addActions(viewDetailsButton, favouriteButton, messageMoButton, applyButton, refreshButton);
+            case VIEW_FAVOURITE_JOBS -> addActions(viewDetailsButton, favouriteButton, messageMoButton, applyButton, refreshButton);
+            case VIEW_APPLICATIONS -> addActions(viewApplicationButton, messageMoButton, withdrawButton, refreshButton);
             case VIEW_NOTIFICATIONS -> addActions(markReadButton, refreshButton);
+            case VIEW_MESSAGES -> addActions(replyMessageButton, markMessagesReadButton, refreshButton);
             default -> addActions(refreshButton);
         }
         contextualActions.revalidate();
@@ -380,6 +408,7 @@ public class TADashboardFrame extends JFrame {
         refreshJobs();
         refreshApplications();
         refreshNotifications();
+        refreshMessages();
     }
 
     private void showProfileMenu() {
@@ -830,6 +859,152 @@ public class TADashboardFrame extends JFrame {
         }
     }
 
+    private void refreshMessages() {
+        messageTableModel.setRowCount(0);
+        for (MessageRecord message : messageService.getConversationForUser(currentUser.getUserId())) {
+            JobPosting job = findJob(message.getJobId()).orElse(null);
+            boolean incoming = currentUser.getUserId().equals(message.getRecipientUserId());
+            messageTableModel.addRow(new Object[]{
+                    message.getMessageId(),
+                    UiFormat.dateTime(message.getCreatedAt()),
+                    job == null ? valueOrDash(message.getJobId()) : job.getModuleCode() + " - " + job.getModuleTitle(),
+                    incoming ? "Incoming from " + displayNameForUser(message.getSenderUserId()) : "Outgoing to " + displayNameForUser(message.getRecipientUserId()),
+                    incoming && !message.isRead() ? "New" : "Read",
+                    message.getBody()
+            });
+        }
+    }
+
+    private void sendMessageForCurrentSelection() {
+        ApplicationRecord application = currentWorkspaceView == VIEW_APPLICATIONS ? selectedApplicationRecord() : null;
+        String jobId = application == null ? selectedJobId() : application.getJobId();
+        if (jobId == null) {
+            UiMessage.error(this, "Please select a job or application before sending a message.");
+            return;
+        }
+
+        JobPosting job = findJob(jobId).orElse(null);
+        if (job == null) {
+            UiMessage.error(this, "This job is no longer available. Please refresh the workspace.");
+            return;
+        }
+        String message = promptForMessage(
+                "Message MO",
+                "Send a message to the organiser of " + job.getModuleCode() + " - " + job.getModuleTitle() + "."
+        ).orElse(null);
+        if (message == null) {
+            return;
+        }
+
+        try {
+            MessageRecord sent = messageService.sendMessage(
+                    job.getJobId(),
+                    application == null ? null : application.getApplicationId(),
+                    currentUser.getUserId(),
+                    job.getPostedBy(),
+                    message
+            );
+            notificationService.notifyUser(job.getPostedBy(), profile.getName() + " sent a message about " + job.getModuleCode() + " " + job.getModuleTitle() + ".");
+            UiMessage.info(this, "Message sent. Reference: " + sent.getMessageId() + ".");
+            refreshMessages();
+            refreshNotifications();
+        } catch (Exception ex) {
+            UiMessage.error(this, ex.getMessage());
+        }
+    }
+
+    private void replyToSelectedMessage() {
+        MessageRecord selected = selectedMessageRecord();
+        if (selected == null) {
+            UiMessage.error(this, "Please select a message before replying.");
+            return;
+        }
+        String recipientUserId = currentUser.getUserId().equals(selected.getSenderUserId())
+                ? selected.getRecipientUserId()
+                : selected.getSenderUserId();
+        String message = promptForMessage("Reply", "Reply to " + displayNameForUser(recipientUserId) + ".").orElse(null);
+        if (message == null) {
+            return;
+        }
+
+        try {
+            MessageRecord reply = messageService.sendMessage(
+                    selected.getJobId(),
+                    selected.getApplicationId(),
+                    currentUser.getUserId(),
+                    recipientUserId,
+                    message
+            );
+            messageService.markRead(selected.getMessageId(), currentUser.getUserId());
+            notificationService.notifyUser(recipientUserId, profile.getName() + " replied to your message.");
+            UiMessage.info(this, "Reply sent. Reference: " + reply.getMessageId() + ".");
+            refreshMessages();
+        } catch (Exception ex) {
+            UiMessage.error(this, ex.getMessage());
+        }
+    }
+
+    private Optional<String> promptForMessage(String title, String helperText) {
+        JTextArea messageArea = new JTextArea(6, 42);
+        UiTheme.styleTextArea(messageArea, 6);
+        messageArea.setLineWrap(true);
+        messageArea.setWrapStyleWord(true);
+
+        JTextArea helperArea = new JTextArea(helperText);
+        helperArea.setEditable(false);
+        helperArea.setOpaque(false);
+        helperArea.setLineWrap(true);
+        helperArea.setWrapStyleWord(true);
+        helperArea.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
+
+        JPanel panel = new JPanel(new BorderLayout(0, 8));
+        panel.add(helperArea, BorderLayout.NORTH);
+        panel.add(new JScrollPane(messageArea), BorderLayout.CENTER);
+
+        int result = JOptionPane.showConfirmDialog(this, panel, title, JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result != JOptionPane.OK_OPTION) {
+            return Optional.empty();
+        }
+        String message = messageArea.getText().trim();
+        if (message.isBlank()) {
+            UiMessage.error(this, "Message cannot be empty.");
+            return Optional.empty();
+        }
+        return Optional.of(message);
+    }
+
+    private ApplicationRecord selectedApplicationRecord() {
+        int row = applicationTable.getSelectedRow();
+        if (row < 0) {
+            return null;
+        }
+        String applicationId = String.valueOf(applicationTableModel.getValueAt(row, 0));
+        return applicationService.getApplicationsForApplicant(profile.getApplicantId()).stream()
+                .filter(record -> applicationId.equals(record.getApplicationId()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private MessageRecord selectedMessageRecord() {
+        int row = messageTable.getSelectedRow();
+        if (row < 0) {
+            return null;
+        }
+        String messageId = String.valueOf(messageTableModel.getValueAt(row, 0));
+        return messageService.getConversationForUser(currentUser.getUserId()).stream()
+                .filter(message -> messageId.equals(message.getMessageId()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private String displayNameForUser(String userId) {
+        return dataService.getUserRepository().findAll().stream()
+                .filter(user -> userId != null && userId.equals(user.getUserId()))
+                .findFirst()
+                .map(user -> valueOrDash(user.getName()))
+                .orElse(valueOrDash(userId));
+    }
+
     private void toggleSelectedFavouriteJob() {
         String jobId = selectedJobId();
         if (jobId == null) {
@@ -1105,6 +1280,7 @@ public class TADashboardFrame extends JFrame {
         UiTheme.styleTable(favoriteJobTable);
         UiTheme.styleTable(applicationTable);
         UiTheme.styleTable(notificationTable);
+        UiTheme.styleTable(messageTable);
         jobTable.getColumnModel().getColumn(6).setCellRenderer(new DeadlineWarningRenderer());
         jobTable.getColumnModel().getColumn(9).setCellRenderer(new StatusBadgeRenderer());
         favoriteJobTable.getColumnModel().getColumn(6).setCellRenderer(new DeadlineWarningRenderer());
@@ -1114,6 +1290,7 @@ public class TADashboardFrame extends JFrame {
         UiTheme.setColumnWidths(favoriteJobTable, 90, 260, 130, 110, 70, 100, 120, 220, 90, 90);
         UiTheme.setColumnWidths(applicationTable, 120, 90, 120, 90, 220, 280);
         UiTheme.setColumnWidths(notificationTable, 160, 80, 560);
+        UiTheme.setColumnWidths(messageTable, 110, 160, 230, 190, 80, 520);
     }
 
     /**
@@ -1270,6 +1447,7 @@ public class TADashboardFrame extends JFrame {
             switch (status) {
                 case "SUBMITTED" -> label.setBackground(new Color(232, 240, 255));
                 case "SHORTLISTED" -> label.setBackground(new Color(255, 245, 204));
+                case "INTERVIEW_INVITED" -> label.setBackground(new Color(229, 241, 255));
                 case "ACCEPTED" -> label.setBackground(new Color(222, 245, 229));
                 case "REJECTED" -> label.setBackground(new Color(255, 224, 224));
                 case "WITHDRAWN" -> label.setBackground(new Color(234, 234, 234));

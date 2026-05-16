@@ -92,6 +92,11 @@ public final class Constants {
     public static final Path NOTIFICATIONS_FILE = DATA_DIR.resolve("notifications.json");
 
     /**
+     * File path for storing two-way TA/MO messages.
+     */
+    public static final Path MESSAGES_FILE = DATA_DIR.resolve("messages.json");
+
+    /**
      * File path for storing accepted applicant allocation records.
      */
     public static final Path ALLOCATIONS_FILE = DATA_DIR.resolve("allocations.json");

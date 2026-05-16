@@ -42,12 +42,12 @@ Use this screen to sign in, load sample data, or create a TA account.
 ![Login screen](screenshots/login-frame.png)
 
 ### TA Dashboard
-The TA dashboard is used to maintain the applicant profile, choose a CV and supporting document, search and filter open jobs, save favourite jobs, apply, withdraw eligible applications, view notifications, and track application results.
+The TA dashboard is used to maintain the applicant profile, choose a CV and supporting document, search and filter open jobs, save favourite jobs, apply, withdraw eligible applications, exchange messages with MOs, view notifications, and track application results.
 
 ![TA dashboard](screenshots/ta-dashboard.png)
 
 ### MO Dashboard
-The MO dashboard is used to manage jobs, review applicants, write reviewer notes, sort and filter applicants, and change job status through guarded selection workflows.
+The MO dashboard is used to manage jobs, review applicants, write reviewer notes, invite interviews, answer applicant messages, sort and filter applicants, and change job status through guarded selection workflows.
 
 ![MO dashboard](screenshots/mo-dashboard.png)
 
@@ -79,7 +79,9 @@ The Admin dashboard is used to monitor TA workloads, inspect jobs, view summary 
 - TA demand
 - deadline
 11. If an application is still under review and before the deadline, select it and click `Withdraw Application`.
-12. Open `Notifications` to read system messages about submissions and review decisions.
+12. Click `Message MO` from a selected job or application to ask the responsible organiser a question.
+13. Open `Messages` to review replies and send follow-up responses.
+14. Open `Notifications` to read system messages about submissions and review decisions.
 
 ### TA Notes
 - Only `OPEN` jobs are shown in `Available Jobs`.
@@ -100,15 +102,16 @@ The Admin dashboard is used to monitor TA workloads, inspect jobs, view summary 
 - applicant summary
 - CV and supporting document paths, which can be clicked to open the files
 - reviewer notes
-7. Use the applicant status filter to narrow the list to `Submitted`, `Shortlisted`, `Accepted`, `Rejected`, or `Withdrawn` records if needed.
+7. Use the applicant status filter to narrow the list to `Submitted`, `Shortlisted`, `Interview Invited`, `Accepted`, `Rejected`, or `Withdrawn` records if needed.
 8. Use the sort box to rank applicants by:
 - match score high to low
 - match score low to high
 - applicant name
 - status
-9. Use `Shortlist`, `Remove Shortlist`, `Accept`, `Reject`, or `Cancel Acceptance` as needed.
+9. Use `Shortlist`, `Remove Shortlist`, `Invite Interview`, `Accept`, `Reject`, or `Cancel Acceptance` as needed.
 10. Confirmation dialogs are shown before high-impact review actions. Accepting a TA who would exceed the workload threshold shows an additional warning.
-11. Use `View Notifications` to read application and review updates.
+11. Use `View Messages` to read TA questions and reply.
+12. Use `View Notifications` to read application and review updates.
 
 ### Job Status Rules
 - Changing `OPEN -> CLOSED` requires the MO to choose the TA(s) who will be accepted before the change is saved.
@@ -142,6 +145,7 @@ The application stores all data in:
 - `data/jobs.json`
 - `data/applications.json`
 - `data/notifications.json`
+- `data/messages.json`
 - `data/allocations.json`
 - `data/config.json`
 

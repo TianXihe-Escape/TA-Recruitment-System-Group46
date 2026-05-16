@@ -25,6 +25,7 @@
 | US17 | Review profile/CV | TC-MO-05 | Click CV/supporting document line | Correct file opens or clear error shown | Pass |
 | US18 | Shortlist/remove shortlist | TC-MO-06 | Shortlist then remove shortlist | Status moves `SUBMITTED` / `SHORTLISTED` correctly | Pass |
 | US19 | Hiring decision | TC-MO-07 | Accept/reject applicant | Decision timestamp/history updated | Pass |
+| US19 | Interview invitation | TC-MO-09 | Invite shortlisted applicant to interview | Status becomes `INTERVIEW_INVITED` and notification is sent | Pass |
 | US20 | Allocation | TC-ADM-01 | Accept applicant | Active allocation record created | Pass |
 | US21 | Workload dashboard | TC-ADM-02 | Open admin dashboard | Total accepted hours shown | Pass |
 | US22 | Workload warning | TC-MO-08 | Accept overloaded TA | Confirmation warning shown before accepting | Pass |
@@ -34,6 +35,7 @@
 | US26 | Missing-skill suggestion | TC-AI-02 | TA views application details | Missing skills converted to improvement suggestion | Pass |
 | US27 | Role permissions | TC-SEC-01 | TA/MO/Admin login | Only role dashboard/actions are accessible | Pass |
 | US28 | JSON storage | TC-DAT-01 | Save/read entities | JSON files persist and reload data | Pass |
+| US29 | TA/MO messages | TC-MSG-01 | TA sends message and MO replies | `messages.json` stores both directions with read tracking | Pass |
 
 ## Automated Unit Tests
 - `ApplicationServiceTest`
@@ -42,7 +44,8 @@
 - `JobServiceTest`
 - `MatchingServiceTest`
 - `NotificationServiceTest`
+- `MessageServiceTest`
 - `ValidationServiceTest`
 - `WorkloadServiceTest`
 
-Latest local JUnit run: 38 tests found, 38 successful, 0 failed.
+Latest local JUnit run: 46 tests found, 46 successful, 0 failed.
