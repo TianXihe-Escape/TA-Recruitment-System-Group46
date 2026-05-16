@@ -1,6 +1,7 @@
 [
   {
     "userId" : "user-ta-01",
+    "name" : "Li Hua",
     "username" : "ta1@bupt.edu.cn",
     "password" : "ta123",
     "role" : "TA",
@@ -8,6 +9,7 @@
   },
   {
     "userId" : "user-ta-02",
+    "name" : "Zhang Wei",
     "username" : "ta2@bupt.edu.cn",
     "password" : "ta123",
     "role" : "TA",
@@ -15,6 +17,7 @@
   },
   {
     "userId" : "user-ta-03",
+    "name" : "Chen Yu",
     "username" : "ta3@bupt.edu.cn",
     "password" : "ta123",
     "role" : "TA",
@@ -22,6 +25,7 @@
   },
   {
     "userId" : "user-mo-01",
+    "name" : "Alice Moore",
     "username" : "mo1@bupt.edu.cn",
     "password" : "mo123",
     "role" : "MO",
@@ -32,6 +36,7 @@
   },
   {
     "userId" : "user-mo-02",
+    "name" : "Brian Chen",
     "username" : "mo2@bupt.edu.cn",
     "password" : "mo123",
     "role" : "MO",
@@ -41,16 +46,10 @@
   },
   {
     "userId" : "user-admin-01",
+    "name" : "System Admin",
     "username" : "admin@bupt.edu.cn",
     "password" : "admin123",
     "role" : "ADMIN",
-    "managedModuleCodes" : [ ]
-  },
-  {
-    "userId" : "user-64b92970",
-    "username" : "ta4@bupt.edu.cn",
-    "password" : "ta456",
-    "role" : "TA",
     "managedModuleCodes" : [ ]
   }
 ]

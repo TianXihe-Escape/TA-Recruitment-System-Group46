@@ -42,7 +42,7 @@ Use this screen to sign in, load sample data, or create a TA account.
 ![Login screen](screenshots/login-frame.png)
 
 ### TA Dashboard
-The TA dashboard is used to maintain the applicant profile, choose a CV file, browse open jobs, apply, withdraw non-finalized applications, and track application results.
+The TA dashboard is used to maintain the applicant profile, choose a CV and supporting document, search and filter open jobs, save favourite jobs, apply, withdraw eligible applications, view notifications, and track application results.
 
 ![TA dashboard](screenshots/ta-dashboard.png)
 
@@ -59,42 +59,46 @@ The Admin dashboard is used to monitor TA workloads, inspect jobs, view summary 
 ## TA Applicant Workflow
 1. Log in as a TA user.
 2. Complete the profile form on the left side.
-3. Click `Choose File` to select a CV.
+3. Click `Choose File` to select a CV and optionally select a supporting document such as a transcript.
 4. Click `Save Profile`.
-5. In `Available Jobs`, select an open job.
-6. Click `View Job Details` if needed.
-7. Click `Apply` to submit the application.
-8. Open `My Applications` to track:
+5. In `Available Jobs`, use the search, module, and category filters to find relevant opportunities.
+6. Use `Toggle Favourite` to save a job to the `Favourite Jobs` tab if needed.
+7. Click `View Job Details` if needed.
+8. Click `Apply` to submit the application.
+9. Open `My Applications` to track:
 - status
 - match score
 - missing skills
 - reviewer notes
-9. Select any application and click `View Application Details` to open a summary popup with:
+10. Select any application and click `View Application Details` to open a summary popup with:
 - status
 - reviewer notes
 - match score
 - missing skills
+- missing-skill suggestions
 - TA demand
 - deadline
-10. If an application is still under review, select it and click `Withdraw Application`.
+11. If an application is still under review and before the deadline, select it and click `Withdraw Application`.
+12. Open `Notifications` to read system messages about submissions and review decisions.
 
 ### TA Notes
 - Only `OPEN` jobs are shown in `Available Jobs`.
 - `TA Demand` is shown as `accepted / required`.
 - Withdrawn applications are marked as `WITHDRAWN` instead of being deleted.
-- A withdrawn or rejected application can be submitted again later for the same job.
+- A withdrawn or rejected application can be submitted again later for the same job if the deadline has not passed.
 - Empty tables show a helper message instead of a blank area.
 
 ## MO Workflow
 1. Log in as an MO user.
 2. Select an existing job or create a new one.
-3. Fill in module code, title, hours, TA needed, skills, deadline, status, and duties.
+3. Fill in module code, title, category, semester, hours, TA needed, skills, deadline, status, and duties.
 4. Click `Save Job`.
 5. Select a job in the right table and click `Load Applicants`.
 6. Select an applicant to review:
 - match details
 - missing skills
 - applicant summary
+- CV and supporting document paths, which can be clicked to open the files
 - reviewer notes
 7. Use the applicant status filter to narrow the list to `Submitted`, `Shortlisted`, `Accepted`, `Rejected`, or `Withdrawn` records if needed.
 8. Use the sort box to rank applicants by:
@@ -102,8 +106,9 @@ The Admin dashboard is used to monitor TA workloads, inspect jobs, view summary 
 - match score low to high
 - applicant name
 - status
-9. Use `Shortlist`, `Accept`, `Reject`, or `Cancel Acceptance` as needed.
-10. Confirmation dialogs are shown before high-impact review actions.
+9. Use `Shortlist`, `Remove Shortlist`, `Accept`, `Reject`, or `Cancel Acceptance` as needed.
+10. Confirmation dialogs are shown before high-impact review actions. Accepting a TA who would exceed the workload threshold shows an additional warning.
+11. Use `View Notifications` to read application and review updates.
 
 ### Job Status Rules
 - Changing `OPEN -> CLOSED` requires the MO to choose the TA(s) who will be accepted before the change is saved.
@@ -126,7 +131,9 @@ The Admin dashboard is used to monitor TA workloads, inspect jobs, view summary 
 6. Use `Load Demo Data` to repopulate the sample dataset.
 7. Use `Reset Demo Data` to clear and reset the dataset.
 8. Use `Rebalance Suggestion` to view simple recommendations for open jobs.
-9. A confirmation dialog is shown before resetting demo data.
+9. Use `Export CSV` to write a recruitment report to the `exports/` folder.
+10. Use `View Notifications` to review admin notifications.
+11. A confirmation dialog is shown before resetting demo data.
 
 ## Data Files
 The application stores all data in:
@@ -134,6 +141,8 @@ The application stores all data in:
 - `data/profiles.json`
 - `data/jobs.json`
 - `data/applications.json`
+- `data/notifications.json`
+- `data/allocations.json`
 - `data/config.json`
 
 ## Common Notes

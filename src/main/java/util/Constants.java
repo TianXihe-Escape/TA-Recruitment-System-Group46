@@ -1,5 +1,6 @@
 package util;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -30,17 +31,31 @@ import java.nio.file.Paths;
 public final class Constants {
 
     /**
+     * The project directory used as the base for local application storage.
+     */
+    public static final Path PROJECT_DIR = resolveProjectDir();
+
+    /**
      * The directory path where all application data files are stored.
      * This path is dynamically resolved based on the project structure to ensure
      * consistent data location whether running from IDE or packaged application.
-     *
-     * The resolution logic checks if the current working directory is named
-     * "TA-Recruitment-System-Group46" and if so, uses the parent directory's "data" folder.
-     * Otherwise, it uses a "data" subdirectory of the current working directory.
-     *
-     * This approach allows the application to work correctly in different deployment scenarios.
      */
-    public static final Path DATA_DIR = resolveDataDir();
+    public static final Path DATA_DIR = PROJECT_DIR.resolve("data").normalize();
+
+    /**
+     * The directory path where uploaded CV copies are stored for MO review.
+     */
+    public static final Path CV_DIR = PROJECT_DIR.resolve("cv").normalize();
+
+    /**
+     * The directory path where supporting documents are copied for stable review.
+     */
+    public static final Path SUPPORTING_DOC_DIR = PROJECT_DIR.resolve("supporting-documents").normalize();
+
+    /**
+     * The directory path where generated CSV reports are written.
+     */
+    public static final Path EXPORTS_DIR = PROJECT_DIR.resolve("exports").normalize();
 
     /**
      * File path for storing user account information.
@@ -72,6 +87,16 @@ public final class Constants {
     public static final Path APPLICATIONS_FILE = DATA_DIR.resolve("applications.json");
 
     /**
+     * File path for storing in-system notifications.
+     */
+    public static final Path NOTIFICATIONS_FILE = DATA_DIR.resolve("notifications.json");
+
+    /**
+     * File path for storing accepted applicant allocation records.
+     */
+    public static final Path ALLOCATIONS_FILE = DATA_DIR.resolve("allocations.json");
+
+    /**
      * File path for storing system configuration settings.
      * Contains application-wide preferences, default values,
      * and configurable parameters that affect system behavior.
@@ -98,39 +123,29 @@ public final class Constants {
     }
 
     /**
-     * Resolves the data directory path based on the current working directory structure.
-     * This method implements intelligent path resolution to handle different deployment scenarios:
+     * Resolves the application root based on the current working directory.
      *
-     * 1. If the current directory is named "TA-Recruitment-System-Group46" (development setup),
-     *    it uses the parent directory's "data" folder. This allows the application to share
-     *    data with other components or maintain data outside the project directory.
-     *
-     * 2. Otherwise, it uses a "data" subdirectory within the current working directory.
-     *    This is suitable for standalone deployments where all files are contained within
-     *    the application directory.
-     *
-     * The method normalizes all paths to ensure consistent behavior across different
-     * operating systems and file system representations.
-     *
-     * @return The resolved Path to the data directory.
+     * @return The resolved Path to the project directory.
      */
-    private static Path resolveDataDir() {
+    private static Path resolveProjectDir() {
         // Get the current working directory as an absolute, normalized path
         Path workingDirectory = Paths.get("").toAbsolutePath().normalize();
+        String projectDirectoryName = "TA-Recruitment-System-Group46";
 
-        // Attempt to resolve parent data directory for development environment
-        Path parentDataDir = workingDirectory.getParent() == null
-                ? null  // No parent directory available
-                : workingDirectory.getParent().resolve("data").normalize();  // Parent's data directory
-
-        // Check if we should use the parent data directory
-        // Condition: parent exists AND current directory name matches expected project name
-        if (parentDataDir != null && workingDirectory.getFileName() != null
-                && "TA-Recruitment-System-Group46".equals(workingDirectory.getFileName().toString())) {
-            return parentDataDir;  // Use parent data directory for development
+        Path current = workingDirectory;
+        while (current != null) {
+            if (current.getFileName() != null && projectDirectoryName.equals(current.getFileName().toString())) {
+                return current.normalize();
+            }
+            current = current.getParent();
         }
 
-        // Default: use data subdirectory of current working directory
-        return workingDirectory.resolve("data").normalize();
+        Path projectDirectory = workingDirectory.resolve(projectDirectoryName);
+        if (Files.isDirectory(projectDirectory)) {
+            return projectDirectory.normalize();
+        }
+
+        // Default: use the current working directory as the application root.
+        return workingDirectory;
     }
 }

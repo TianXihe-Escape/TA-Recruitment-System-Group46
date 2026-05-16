@@ -16,17 +16,23 @@ public class SampleDataLoader {
     private final ApplicantProfileRepository profileRepository;
     private final JobRepository jobRepository;
     private final ApplicationRepository applicationRepository;
+    private final NotificationRepository notificationRepository;
+    private final AllocationRepository allocationRepository;
     private final ConfigRepository configRepository;
 
     public SampleDataLoader(UserRepository userRepository,
                             ApplicantProfileRepository profileRepository,
                             JobRepository jobRepository,
                             ApplicationRepository applicationRepository,
+                            NotificationRepository notificationRepository,
+                            AllocationRepository allocationRepository,
                             ConfigRepository configRepository) {
         this.userRepository = userRepository;
         this.profileRepository = profileRepository;
         this.jobRepository = jobRepository;
         this.applicationRepository = applicationRepository;
+        this.notificationRepository = notificationRepository;
+        this.allocationRepository = allocationRepository;
         this.configRepository = configRepository;
     }
 
@@ -45,33 +51,44 @@ public class SampleDataLoader {
         li.setName("Li Hua");
         li.setEmail("ta1@bupt.edu.cn");
         li.setPhone("13800000001");
+        li.setProgramme("Software Engineering");
+        li.setYearOfStudy("Year 3");
         li.setSkills(List.of("Java", "Communication", "Agile", "Tutoring"));
         li.setAvailability("Mon/Wed afternoon");
         li.setExperienceSummary("Supported Java lab sessions and peer tutoring.");
         li.setPreferredDuties("Lab support, marking");
         li.setCvPath("sample-cv/li-hua-cv.pdf");
+        li.setSupportingDocumentPath("");
+        li.setFavoriteJobIds(List.of("job-02"));
         profiles.add(li);
 
         ApplicantProfile zhang = new ApplicantProfile("applicant-02", "user-ta-02");
         zhang.setName("Zhang Wei");
         zhang.setEmail("ta2@bupt.edu.cn");
         zhang.setPhone("13800000002");
+        zhang.setProgramme("Data Science");
+        zhang.setYearOfStudy("Year 2");
         zhang.setSkills(List.of("Python", "Data Analysis", "Communication"));
         zhang.setAvailability("Tue/Thu full day");
         zhang.setExperienceSummary("Assisted with data science tutorials.");
         zhang.setPreferredDuties("Tutorial support");
         zhang.setCvPath("sample-cv/zhang-wei-cv.pdf");
+        zhang.setSupportingDocumentPath("");
+        zhang.setFavoriteJobIds(List.of("job-03"));
         profiles.add(zhang);
 
         ApplicantProfile chen = new ApplicantProfile("applicant-03", "user-ta-03");
         chen.setName("Chen Yu");
         chen.setEmail("ta3@bupt.edu.cn");
         chen.setPhone("13800000003");
+        chen.setProgramme("Artificial Intelligence");
+        chen.setYearOfStudy("Year 3");
         chen.setSkills(List.of("Python", "SQL", "Marking", "Communication"));
         chen.setAvailability("Fri afternoon and weekend");
         chen.setExperienceSummary("Helped grade quizzes and maintain course datasets.");
         chen.setPreferredDuties("Marking, office hours");
         chen.setCvPath("sample-cv/chen-yu-cv.pdf");
+        chen.setSupportingDocumentPath("");
         profiles.add(chen);
         profileRepository.saveAll(profiles);
 
@@ -80,6 +97,8 @@ public class SampleDataLoader {
         javaJob.setJobId("job-01");
         javaJob.setModuleCode("COMP1001");
         javaJob.setModuleTitle("Programming Fundamentals");
+        javaJob.setCategory(JobCategory.MODULE_TA);
+        javaJob.setSemester("2026 Spring");
         javaJob.setDuties("Support labs, answer questions, mark exercises");
         javaJob.setHours(6);
         javaJob.setRequiredTaCount(1);
@@ -93,6 +112,8 @@ public class SampleDataLoader {
         dataJob.setJobId("job-02");
         dataJob.setModuleCode("DATA2002");
         dataJob.setModuleTitle("Data Analytics");
+        dataJob.setCategory(JobCategory.MODULE_TA);
+        dataJob.setSemester("2026 Spring");
         dataJob.setDuties("Prepare tutorial materials and support datasets");
         dataJob.setHours(8);
         dataJob.setRequiredTaCount(3);
@@ -106,6 +127,8 @@ public class SampleDataLoader {
         aiJob.setJobId("job-03");
         aiJob.setModuleCode("COMP3003");
         aiJob.setModuleTitle("Introduction to AI");
+        aiJob.setCategory(JobCategory.MODULE_TA);
+        aiJob.setSemester("2026 Spring");
         aiJob.setDuties("Support seminars, prepare examples, and help with marking.");
         aiJob.setHours(5);
         aiJob.setRequiredTaCount(2);
@@ -151,6 +174,24 @@ public class SampleDataLoader {
         applications.add(thirdRecord);
         applicationRepository.saveAll(applications);
 
+        AllocationRecord allocation = new AllocationRecord();
+        allocation.setAllocationId("alloc-01");
+        allocation.setApplicationId("apply-01");
+        allocation.setApplicantId("applicant-01");
+        allocation.setJobId("job-01");
+        allocation.setAllocatedByUserId("user-mo-01");
+        allocation.setAllocatedAt(LocalDateTime.now().minusDays(1));
+        allocation.setActive(true);
+        allocationRepository.saveAll(List.of(allocation));
+
+        NotificationRecord notification = new NotificationRecord();
+        notification.setNotificationId("note-01");
+        notification.setUserId("user-ta-01");
+        notification.setMessage("Your application for COMP1001 Programming Fundamentals was accepted.");
+        notification.setCreatedAt(LocalDateTime.now().minusDays(1));
+        notification.setRead(false);
+        notificationRepository.saveAll(List.of(notification));
+
         SystemConfig config = new SystemConfig();
         config.setWorkloadThreshold(10);
         configRepository.save(config);
@@ -161,6 +202,8 @@ public class SampleDataLoader {
         profileRepository.saveAll(new ArrayList<>());
         jobRepository.saveAll(new ArrayList<>());
         applicationRepository.saveAll(new ArrayList<>());
+        notificationRepository.saveAll(new ArrayList<>());
+        allocationRepository.saveAll(new ArrayList<>());
         configRepository.save(new SystemConfig());
     }
 }

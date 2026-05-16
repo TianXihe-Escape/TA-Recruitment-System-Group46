@@ -67,6 +67,8 @@ public class ApplicantService {
         updatedProfile.setName(validationService.normalizePersonName(updatedProfile.getName()));
         updatedProfile.setEmail(validationService.normalizeEmail(updatedProfile.getEmail()));
         updatedProfile.setPhone(validationService.normalizePhone(updatedProfile.getPhone()));
+        updatedProfile.setProgramme(validationService.normalizeText(updatedProfile.getProgramme()));
+        updatedProfile.setYearOfStudy(validationService.normalizeText(updatedProfile.getYearOfStudy()));
         updatedProfile.setAvailability(validationService.normalizeText(updatedProfile.getAvailability()));
         updatedProfile.setPreferredDuties(validationService.normalizeText(updatedProfile.getPreferredDuties()));
         updatedProfile.setExperienceSummary(validationService.normalizeMultilineText(updatedProfile.getExperienceSummary()));
@@ -78,7 +80,12 @@ public class ApplicantService {
                 updatedProfile.getEmail(),
                 updatedProfile.getPhone()
         );
+        errors.addAll(validationService.validateAcademicProfile(
+                updatedProfile.getProgramme(),
+                updatedProfile.getYearOfStudy()
+        ));
         errors.addAll(validationService.validateCvPath(updatedProfile.getCvPath()));
+        errors.addAll(validationService.validateSupportingDocumentPath(updatedProfile.getSupportingDocumentPath()));
         if (!errors.isEmpty()) {
             throw new IllegalArgumentException(String.join("\n", errors));
         }

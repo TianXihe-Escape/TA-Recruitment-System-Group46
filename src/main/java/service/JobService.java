@@ -1,5 +1,6 @@
 package service;
 
+import model.JobCategory;
 import model.JobPosting;
 import model.JobStatus;
 import repository.JobRepository;
@@ -8,6 +9,7 @@ import util.IdGenerator;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 /**
@@ -59,6 +61,16 @@ public class JobService {
                 .collect(Collectors.toList());
     }
 
+    public List<JobPosting> searchOpenJobs(String keyword, String moduleCode, JobCategory category) {
+        String normalizedKeyword = validationService.normalizeText(keyword).toLowerCase(Locale.ROOT);
+        String normalizedModule = validationService.normalizeModuleCode(moduleCode);
+        return getOpenJobs().stream()
+                .filter(job -> normalizedModule.isBlank() || normalizedModule.equals(job.getModuleCode()))
+                .filter(job -> category == null || category == job.getCategory())
+                .filter(job -> normalizedKeyword.isBlank() || matchesKeyword(job, normalizedKeyword))
+                .collect(Collectors.toList());
+    }
+
     /**
      * Finds a single job by id.
      *
@@ -81,6 +93,7 @@ public class JobService {
         // even when different MOs type the same information in different formats.
         jobPosting.setModuleCode(validationService.normalizeModuleCode(jobPosting.getModuleCode()));
         jobPosting.setModuleTitle(validationService.normalizeText(jobPosting.getModuleTitle()));
+        jobPosting.setSemester(validationService.normalizeText(jobPosting.getSemester()));
         jobPosting.setDuties(validationService.normalizeMultilineText(jobPosting.getDuties()));
         jobPosting.setRequiredSkills(validationService.parseSkills(String.join(", ", jobPosting.getRequiredSkills())));
 
@@ -115,5 +128,21 @@ public class JobService {
             }
         }
         jobRepository.saveAll(jobs);
+    }
+
+    private boolean matchesKeyword(JobPosting job, String keyword) {
+        String haystack = String.join(" ",
+                valueOrEmpty(job.getModuleCode()),
+                valueOrEmpty(job.getModuleTitle()),
+                valueOrEmpty(job.getSemester()),
+                job.getCategory() == null ? "" : job.getCategory().getDisplayName(),
+                valueOrEmpty(job.getDuties()),
+                String.join(" ", job.getRequiredSkills())
+        ).toLowerCase(Locale.ROOT);
+        return haystack.contains(keyword);
+    }
+
+    private String valueOrEmpty(String value) {
+        return value == null ? "" : value;
     }
 }

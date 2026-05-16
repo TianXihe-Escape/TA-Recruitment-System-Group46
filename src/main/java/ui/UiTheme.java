@@ -422,7 +422,7 @@ public final class UiTheme {
     }
 
     public static JPanel createButtonRow(int align, JButton... buttons) {
-        JPanel panel = new JPanel(new FlowLayout(align, 10, 10));
+        JPanel panel = new WrappingFlowPanel(new FlowLayout(align, 10, 10));
         panel.setOpaque(false);
         for (JButton button : buttons) {
             panel.add(button);
@@ -544,6 +544,55 @@ public final class UiTheme {
         button.setForeground(Color.WHITE);
         button.setBorder(new EmptyBorder(10, 16, 10, 16));
         return button;
+    }
+
+    private static class WrappingFlowPanel extends JPanel {
+        WrappingFlowPanel(FlowLayout layout) {
+            super(layout);
+        }
+
+        @Override
+        public Dimension getPreferredSize() {
+            Dimension preferred = super.getPreferredSize();
+            Container parent = getParent();
+            if (parent == null || parent.getWidth() <= 0) {
+                return preferred;
+            }
+
+            FlowLayout layout = (FlowLayout) getLayout();
+            Insets insets = getInsets();
+            int maxWidth = Math.max(1, parent.getWidth() - insets.left - insets.right);
+            int rowWidth = 0;
+            int rowHeight = 0;
+            int totalHeight = insets.top + insets.bottom + layout.getVgap() * 2;
+            int maxRowWidth = 0;
+            boolean hasVisibleComponent = false;
+
+            for (Component component : getComponents()) {
+                if (!component.isVisible()) {
+                    continue;
+                }
+                hasVisibleComponent = true;
+                Dimension size = component.getPreferredSize();
+                int nextWidth = rowWidth == 0 ? size.width : rowWidth + layout.getHgap() + size.width;
+                if (nextWidth > maxWidth && rowWidth > 0) {
+                    totalHeight += rowHeight + layout.getVgap();
+                    maxRowWidth = Math.max(maxRowWidth, rowWidth);
+                    rowWidth = size.width;
+                    rowHeight = size.height;
+                } else {
+                    rowWidth = nextWidth;
+                    rowHeight = Math.max(rowHeight, size.height);
+                }
+            }
+
+            if (hasVisibleComponent) {
+                totalHeight += rowHeight;
+                maxRowWidth = Math.max(maxRowWidth, rowWidth);
+            }
+            int width = Math.min(preferred.width, Math.max(maxRowWidth + insets.left + insets.right, 1));
+            return new Dimension(width, Math.max(preferred.height, totalHeight));
+        }
     }
 
     private static String resolveFontFamily() {

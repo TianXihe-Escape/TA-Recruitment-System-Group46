@@ -11,6 +11,8 @@ public class JobPosting {
     private String jobId;
     private String moduleCode;
     private String moduleTitle;
+    private JobCategory category = JobCategory.MODULE_TA;
+    private String semester;
     private String duties;
     private int hours;
     private int requiredTaCount = 1;
@@ -41,6 +43,22 @@ public class JobPosting {
 
     public void setModuleTitle(String moduleTitle) {
         this.moduleTitle = moduleTitle;
+    }
+
+    public JobCategory getCategory() {
+        return category;
+    }
+
+    public void setCategory(JobCategory category) {
+        this.category = category == null ? JobCategory.MODULE_TA : category;
+    }
+
+    public String getSemester() {
+        return semester;
+    }
+
+    public void setSemester(String semester) {
+        this.semester = semester;
     }
 
     public String getDuties() {

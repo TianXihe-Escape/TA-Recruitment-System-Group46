@@ -3,15 +3,17 @@
     "jobId" : "job-01",
     "moduleCode" : "COMP1001",
     "moduleTitle" : "Programming Fundamentals",
+    "category" : "MODULE_TA",
+    "semester" : "2026 Spring",
     "duties" : "Support labs, answer questions, mark exercises",
-    "hours" : 5,
+    "hours" : 6,
     "requiredTaCount" : 1,
     "requiredSkills" : [
       "Java",
       "Communication",
       "Agile"
     ],
-    "applicationDeadline" : "2026-04-26",
+    "applicationDeadline" : "2026-06-05",
     "status" : "CLOSED",
     "postedBy" : "user-mo-01"
   },
@@ -19,6 +21,8 @@
     "jobId" : "job-02",
     "moduleCode" : "DATA2002",
     "moduleTitle" : "Data Analytics",
+    "category" : "MODULE_TA",
+    "semester" : "2026 Spring",
     "duties" : "Prepare tutorial materials and support datasets",
     "hours" : 8,
     "requiredTaCount" : 3,
@@ -27,7 +31,7 @@
       "Data Analysis",
       "Communication"
     ],
-    "applicationDeadline" : "2026-04-19",
+    "applicationDeadline" : "2026-05-29",
     "status" : "OPEN",
     "postedBy" : "user-mo-01"
   },
@@ -35,6 +39,8 @@
     "jobId" : "job-03",
     "moduleCode" : "COMP3003",
     "moduleTitle" : "Introduction to AI",
+    "category" : "MODULE_TA",
+    "semester" : "2026 Spring",
     "duties" : "Support seminars, prepare examples, and help with marking.",
     "hours" : 5,
     "requiredTaCount" : 2,
@@ -43,7 +49,7 @@
       "Communication",
       "Marking"
     ],
-    "applicationDeadline" : "2026-04-15",
+    "applicationDeadline" : "2026-05-25",
     "status" : "OPEN",
     "postedBy" : "user-mo-02"
   }
