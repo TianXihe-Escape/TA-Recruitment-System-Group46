@@ -42,6 +42,21 @@ class JobServiceTest {
         assertEquals(1, jobService.searchOpenJobs("", "comp1001", null).size());
     }
 
+    @Test
+    void shouldHideExpiredOpenJobsFromApplicantSearch() {
+        JobPosting available = buildJob("j1", "COMP1001", "Programming Fundamentals", JobCategory.MODULE_TA);
+        JobPosting expired = buildJob("j2", "COMP1002", "Expired Vacancy", JobCategory.MODULE_TA);
+        expired.setApplicationDeadline(LocalDate.now().minusDays(1));
+        JobPosting closed = buildJob("j3", "COMP1003", "Closed Vacancy", JobCategory.MODULE_TA);
+        closed.setStatus(JobStatus.CLOSED);
+        jobRepository.saveAll(List.of(available, expired, closed));
+
+        List<JobPosting> openJobs = jobService.getOpenJobs();
+
+        assertEquals(1, openJobs.size());
+        assertEquals("j1", openJobs.get(0).getJobId());
+    }
+
     private JobPosting buildJob(String id, String code, String title, JobCategory category) {
         JobPosting job = new JobPosting();
         job.setJobId(id);

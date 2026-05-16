@@ -7,6 +7,7 @@ import model.AllocationRecord;
 import model.JobCategory;
 import model.JobPosting;
 import model.JobStatus;
+import model.MessageRecord;
 import model.NotificationRecord;
 import model.Role;
 import model.StatusHistoryEntry;
@@ -215,6 +216,19 @@ public class JsonDataStore {
             notification.setRead(booleanValue(map.get("read")));
             return (T) notification;
         }
+        if (clazz == MessageRecord.class) {
+            MessageRecord message = new MessageRecord();
+            message.setMessageId(stringValue(map.get("messageId")));
+            message.setJobId(stringValue(map.get("jobId")));
+            message.setApplicationId(stringValue(map.get("applicationId")));
+            message.setSenderUserId(stringValue(map.get("senderUserId")));
+            message.setRecipientUserId(stringValue(map.get("recipientUserId")));
+            message.setBody(stringValue(map.get("body")));
+            String createdAt = stringValue(map.get("createdAt"));
+            message.setCreatedAt(createdAt == null || createdAt.isBlank() ? null : LocalDateTime.parse(createdAt));
+            message.setRead(booleanValue(map.get("read")));
+            return (T) message;
+        }
         if (clazz == AllocationRecord.class) {
             AllocationRecord allocation = new AllocationRecord();
             allocation.setAllocationId(stringValue(map.get("allocationId")));
@@ -313,6 +327,18 @@ public class JsonDataStore {
             map.put("message", notification.getMessage());
             map.put("createdAt", notification.getCreatedAt() == null ? null : notification.getCreatedAt().toString());
             map.put("read", notification.isRead());
+            return map;
+        }
+        if (value instanceof MessageRecord message) {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("messageId", message.getMessageId());
+            map.put("jobId", message.getJobId());
+            map.put("applicationId", message.getApplicationId());
+            map.put("senderUserId", message.getSenderUserId());
+            map.put("recipientUserId", message.getRecipientUserId());
+            map.put("body", message.getBody());
+            map.put("createdAt", message.getCreatedAt() == null ? null : message.getCreatedAt().toString());
+            map.put("read", message.isRead());
             return map;
         }
         if (value instanceof AllocationRecord allocation) {

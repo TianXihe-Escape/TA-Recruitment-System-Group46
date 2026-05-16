@@ -39,6 +39,7 @@ public class ApplicationService {
      * Service used to calculate skill-match scores during submission.
      */
     private final MatchingService matchingService;
+    private final ValidationService validationService = new ValidationService();
 
     /**
      * Optional allocation writer used by the UI runtime. Tests can construct the
@@ -162,6 +163,10 @@ public class ApplicationService {
                 || record.getStatus() == ApplicationStatus.ACCEPTED
                 || record.getStatus() == ApplicationStatus.WITHDRAWN) {
             throw new IllegalStateException("Finalized applications cannot be changed.");
+        }
+
+        if (status == ApplicationStatus.ACCEPTED) {
+            validateAcceptanceCapacity(record, applications);
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -369,6 +374,10 @@ public class ApplicationService {
         if (applicantProfile.getCvPath() == null || applicantProfile.getCvPath().isBlank()) {
             throw new IllegalStateException("Please provide a CV path before applying.");
         }
+        List<String> cvErrors = validationService.validateCvPath(applicantProfile.getCvPath());
+        if (!cvErrors.isEmpty()) {
+            throw new IllegalStateException(String.join("\n", cvErrors));
+        }
         boolean duplicate = applicationRepository.findByApplicantId(applicantProfile.getApplicantId()).stream()
                 .anyMatch(existing -> existing.getJobId().equals(jobPosting.getJobId())
                         && existing.getStatus() != ApplicationStatus.REJECTED
@@ -444,6 +453,20 @@ public class ApplicationService {
             }
         }
         jobRepository.saveAll(jobs);
+    }
+
+    private void validateAcceptanceCapacity(ApplicationRecord record, List<ApplicationRecord> applications) {
+        JobPosting job = jobRepository.findById(record.getJobId())
+                .orElseThrow(() -> new IllegalArgumentException("Job not found."));
+
+        long acceptedCount = applications.stream()
+                .filter(application -> record.getJobId().equals(application.getJobId()))
+                .filter(application -> application.getStatus() == ApplicationStatus.ACCEPTED)
+                .count();
+
+        if (acceptedCount >= job.getRequiredTaCount()) {
+            throw new IllegalStateException("This job already has the required number of accepted TAs.");
+        }
     }
 
     /**

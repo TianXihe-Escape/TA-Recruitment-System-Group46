@@ -57,6 +57,11 @@ public class DataService {
     private final NotificationRepository notificationRepository;
 
     /**
+     * Repository for TA/MO message records.
+     */
+    private final MessageRepository messageRepository;
+
+    /**
      * Repository for accepted applicant allocation records.
      */
     private final AllocationRepository allocationRepository;
@@ -95,6 +100,7 @@ public class DataService {
         this.jobRepository = new JobRepository(dataStore, Constants.JOBS_FILE);
         this.applicationRepository = new ApplicationRepository(dataStore, Constants.APPLICATIONS_FILE);
         this.notificationRepository = new NotificationRepository(dataStore, Constants.NOTIFICATIONS_FILE);
+        this.messageRepository = new MessageRepository(dataStore, Constants.MESSAGES_FILE);
         this.allocationRepository = new AllocationRepository(dataStore, Constants.ALLOCATIONS_FILE);
         this.configRepository = new ConfigRepository(dataStore, Constants.CONFIG_FILE);
 
@@ -106,6 +112,7 @@ public class DataService {
                 jobRepository,
                 applicationRepository,
                 notificationRepository,
+                messageRepository,
                 allocationRepository,
                 configRepository
         );
@@ -151,6 +158,10 @@ public class DataService {
         return notificationRepository;
     }
 
+    public MessageRepository getMessageRepository() {
+        return messageRepository;
+    }
+
     public AllocationRepository getAllocationRepository() {
         return allocationRepository;
     }
@@ -180,6 +191,7 @@ public class DataService {
         jobRepository.findAll();
         applicationRepository.findAll();
         notificationRepository.findAll();
+        messageRepository.findAll();
         allocationRepository.findAll();
 
         // Load configuration, which might have different initialization logic

@@ -62,6 +62,17 @@ class ApplicationServiceTest {
     }
 
     @Test
+    void shouldRejectUnsupportedCvFormatOnApply() {
+        ApplicantProfile profile = buildProfile();
+        profile.setCvPath("cv.png");
+        JobPosting job = buildJob();
+        jobRepository.saveAll(List.of(job));
+
+        assertThrows(IllegalStateException.class, () -> applicationService.apply(profile, job));
+        assertTrue(applicationRepository.findAll().isEmpty());
+    }
+
+    @Test
     void shouldAllowReapplyByOverwritingRejectedApplication() {
         ApplicantProfile profile = buildProfile();
         JobPosting job = buildJob();
@@ -137,6 +148,24 @@ class ApplicationServiceTest {
         List<ApplicationRecord> records = applicationRepository.findAll();
 
         assertEquals(ApplicationStatus.SHORTLISTED, records.get(0).getStatus());
+    }
+
+    @Test
+    void shouldUpdateStatusToInterviewInvited() {
+        ApplicationRecord record = new ApplicationRecord();
+        record.setApplicationId("x1");
+        record.setApplicantId("a1");
+        record.setJobId("j1");
+        record.setStatus(ApplicationStatus.SHORTLISTED);
+        applicationRepository.saveAll(new ArrayList<>(List.of(record)));
+        jobRepository.saveAll(List.of(buildJob()));
+
+        applicationService.updateStatus("x1", ApplicationStatus.INTERVIEW_INVITED, "Interview invited. Time: Monday 10:00.", "mo1");
+
+        ApplicationRecord updated = applicationRepository.findAll().get(0);
+        assertEquals(ApplicationStatus.INTERVIEW_INVITED, updated.getStatus());
+        assertTrue(updated.getReviewerNotes().contains("Monday 10:00"));
+        assertEquals(1, updated.getStatusHistory().size());
     }
 
     @Test
@@ -264,6 +293,31 @@ class ApplicationServiceTest {
         // The second acceptance fills the final vacancy, so the job should become closed automatically.
         assertEquals(JobStatus.CLOSED, updatedJob.getStatus());
         assertEquals(1, allocationRepository.findAll().stream().filter(allocation -> allocation.isActive()).count());
+    }
+
+    @Test
+    void shouldRejectAcceptanceWhenRequiredTaCountIsAlreadyFilled() {
+        ApplicationRecord first = new ApplicationRecord();
+        first.setApplicationId("x1");
+        first.setApplicantId("a1");
+        first.setJobId("j1");
+        first.setStatus(ApplicationStatus.ACCEPTED);
+
+        ApplicationRecord second = new ApplicationRecord();
+        second.setApplicationId("x2");
+        second.setApplicantId("a2");
+        second.setJobId("j1");
+        second.setStatus(ApplicationStatus.SHORTLISTED);
+
+        applicationRepository.saveAll(new ArrayList<>(List.of(first, second)));
+        JobPosting job = buildJob();
+        job.setRequiredTaCount(1);
+        jobRepository.saveAll(List.of(job));
+
+        assertThrows(IllegalStateException.class,
+                () -> applicationService.updateStatus("x2", ApplicationStatus.ACCEPTED, "too many"));
+        assertEquals(ApplicationStatus.SHORTLISTED, applicationRepository.findById("x2").orElseThrow().getStatus());
+        assertTrue(allocationRepository.findAll().isEmpty());
     }
 
     @Test

@@ -17,8 +17,8 @@ The implementation is aligned with the coursework direction:
 - wuyanze-zyy: 31222291 (Member)
 
 ## Key Features By Role
-- `TA Applicant`: register, reset password, log in, edit profile with programme/year, upload a CV and supporting document, search/filter open jobs, save favourites, view job details, apply, withdraw before the deadline, track application status, open application detail popups, read reviewer notes, view missing-skill suggestions, and read notifications.
-- `Module Organiser`: create and edit module, invigilation, or other activity jobs; reopen closed jobs; view applicants per job; inspect match score, missing skills, profiles, CVs, and supporting documents; filter and sort applicants; shortlist, remove shortlist, accept, reject, add reviewer notes, receive notifications, and see workload warnings before accepting overloaded TAs.
+- `TA Applicant`: register, reset password, log in, edit profile with programme/year, upload a CV and supporting document, search/filter open jobs, save favourites, view job details, apply, withdraw before the deadline, track application status, open application detail popups, read reviewer notes, view missing-skill suggestions, exchange messages with MOs, and read notifications.
+- `Module Organiser`: create and edit module, invigilation, or other activity jobs; reopen closed jobs; view applicants per job; inspect match score, missing skills, profiles, CVs, and supporting documents; filter and sort applicants; shortlist, remove shortlist, invite interviews, accept, reject, add reviewer notes, reply to applicant messages, receive notifications, and see workload warnings before accepting overloaded TAs.
 - `Admin`: monitor workloads, inspect all jobs, view summary cards for open jobs, closed jobs, applications, and accepted TAs, load or reset sample data, create MO accounts, open hiring management, export CSV recruitment reports, and view rebalance suggestions and notifications.
 
 ## Reliability Improvements
@@ -34,10 +34,11 @@ The implementation is aligned with the coursework direction:
 - TA applicants can withdraw non-finalized applications, and withdrawn records stay in the audit trail while still allowing re-application later
 - MO applicants can be filtered by status and sorted by match score, applicant name, or status during review
 - Empty-state hints explain whether a table has no data yet or whether the current filter produced no matching rows
-- Status badges highlight `SUBMITTED`, `SHORTLISTED`, `ACCEPTED`, `REJECTED`, `WITHDRAWN`, `OPEN`, and `CLOSED` states more clearly in TA and MO tables
+- Status badges highlight `SUBMITTED`, `SHORTLISTED`, `INTERVIEW_INVITED`, `ACCEPTED`, `REJECTED`, `WITHDRAWN`, `OPEN`, and `CLOSED` states more clearly in TA and MO tables
 - Deadline warnings now highlight near-due and overdue jobs in TA and MO job tables
 - Accepted applications create allocation records, and application decisions store update timestamps plus status history.
 - In-system notifications are generated for application submission, withdrawal, review decisions, MO account creation, and CSV exports.
+- Two-way TA/MO messages are stored in `messages.json`, with unread/read tracking and notification prompts for replies.
 - Admin CSV export writes recruitment summary data to the `exports/` directory.
 - Confirmation dialogs protect high-impact actions such as accept, reject, cancel acceptance, and reset demo data
 - Admin analytics cards give a fast snapshot of open jobs, closed jobs, total applications, and accepted TAs
@@ -104,7 +105,7 @@ docs/
   design, traceability, demo, tests, team split, user manual, screenshots
 
 data/
-  users.json, profiles.json, jobs.json, applications.json, notifications.json, allocations.json, config.json
+  users.json, profiles.json, jobs.json, applications.json, notifications.json, messages.json, allocations.json, config.json
 ```
 
 ## Testing
@@ -122,6 +123,7 @@ data/
 - When reopening a closed job, the MO must choose which accepted TA records move back to a reviewable state.
 - When closing an open job, the MO must choose which applicants become accepted before the status change is saved.
 - TA applicants can save favourite jobs and filter jobs by keyword, module, or activity category.
+- TA applicants can message the responsible MO from a job or application, and MOs can reply from the review queue.
 - Admin users can export CSV reports to the `exports/` folder.
 
 ## User Manual
