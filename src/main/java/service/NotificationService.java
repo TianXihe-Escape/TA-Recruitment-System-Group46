@@ -49,6 +49,11 @@ public class NotificationService {
                 .toList();
     }
 
+    public boolean hasUnreadNotifications(String userId) {
+        return notificationRepository.findByUserId(userId).stream()
+                .anyMatch(notification -> !notification.isRead());
+    }
+
     public void markAllRead(String userId) {
         List<NotificationRecord> notifications = new ArrayList<>(notificationRepository.findAll());
         boolean updated = false;

@@ -6,7 +6,7 @@
 | US02 | Log in | `AuthService.login` | `LoginFrame` | manual |
 | US03 | Reset password | `AuthService.resetPassword` | `ResetPasswordFrame` | `AuthServiceTest` |
 | US04 | Create applicant profile | `ApplicantProfile`, `ApplicantService` | `TADashboardFrame` | `ValidationServiceTest` |
-| US05 | Upload CV/supporting documents | `CvStorageService`, `supportingDocumentPath` | TA profile, MO applicant details | manual |
+| US05 | Upload CV/supporting documents | `CvStorageService`, `supportingDocumentPath`, `supportingDocumentPaths` | TA profile, MO applicant details | manual |
 | US06 | Browse TA vacancies | `JobService.getOpenJobs` | TA Available Jobs tab | manual |
 | US07 | View vacancy details | `JobDetailsDialog` | TA View Job Details | manual |
 | US08 | Search/filter vacancies | `JobService.searchOpenJobs` | TA search/module/category filters | `JobServiceTest` |

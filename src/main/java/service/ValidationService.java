@@ -1,10 +1,12 @@
 package service;
 
+import model.JobCategory;
 import model.JobPosting;
 import util.FileUtil;
 
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -228,6 +230,11 @@ public class ValidationService {
             errors.add("Application deadline is required.");
         } else if (jobPosting.getApplicationDeadline().isBefore(LocalDate.now())) {
             errors.add("Application deadline cannot be in the past.");
+        } else if (isOneOffActivity(jobPosting)
+                && !FileUtil.isBlank(jobPosting.getStartDate())
+                && parseDateOrNull(jobPosting.getStartDate()) != null
+                && !jobPosting.getApplicationDeadline().isBefore(parseDateOrNull(jobPosting.getStartDate()))) {
+            errors.add("Application deadline must be before the activity start date.");
         }
         if (requiredSkills.isEmpty()) {
             errors.add("At least one required skill is needed.");
@@ -243,6 +250,23 @@ public class ValidationService {
             errors.add("Duties must be 300 characters or fewer.");
         }
         return errors;
+    }
+
+    private boolean isOneOffActivity(JobPosting jobPosting) {
+        return JobPosting.WORKLOAD_TYPE_TOTAL.equals(jobPosting.getWorkloadType())
+                || jobPosting.getCategory() == JobCategory.INVIGILATION
+                || jobPosting.getCategory() == JobCategory.OTHER_ACTIVITY
+                || JobPosting.JOB_TYPE_INVIGILATION.equals(jobPosting.getJobType())
+                || JobPosting.JOB_TYPE_DEMO_SUPPORT.equals(jobPosting.getJobType())
+                || JobPosting.JOB_TYPE_WORKSHOP_SUPPORT.equals(jobPosting.getJobType());
+    }
+
+    private LocalDate parseDateOrNull(String value) {
+        try {
+            return LocalDate.parse(value);
+        } catch (DateTimeParseException ex) {
+            return null;
+        }
     }
 
     public List<String> parseSkills(String commaSeparatedSkills) {

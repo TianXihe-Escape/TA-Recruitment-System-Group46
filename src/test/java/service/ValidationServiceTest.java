@@ -92,4 +92,24 @@ class ValidationServiceTest {
 
         assertFalse(validationService.validateJobPosting(job).isEmpty());
     }
+
+    @Test
+    void shouldRejectOneOffActivityDeadlineOnOrAfterStartDate() {
+        JobPosting job = new JobPosting();
+        job.setModuleCode("EBU6304");
+        job.setModuleTitle("Demo Support");
+        job.setSemester("2025/26");
+        job.setHours(4);
+        job.setRequiredTaCount(1);
+        job.setStatus(JobStatus.OPEN);
+        job.setJobType(JobPosting.JOB_TYPE_DEMO_SUPPORT);
+        job.setWorkloadType(JobPosting.WORKLOAD_TYPE_TOTAL);
+        job.setStartDate(LocalDate.now().plusDays(7).toString());
+        job.setApplicationDeadline(LocalDate.now().plusDays(7));
+        job.setRequiredSkills(List.of("Communication"));
+        job.setDuties("Support a one-off assessment activity.");
+
+        assertTrue(validationService.validateJobPosting(job)
+                .contains("Application deadline must be before the activity start date."));
+    }
 }

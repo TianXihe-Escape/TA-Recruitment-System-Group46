@@ -8,7 +8,7 @@
 | US02 | Login validation | TC-LOG-02 | Wrong password or role | Error shown | Pass |
 | US03 | Reset password | TC-RST-01 | Existing email and matching new password | Password updates and login succeeds | Pass |
 | US04 | Edit profile | TC-PRO-01 | Save name/email/phone/programme/year/skills | Profile saved to JSON | Pass |
-| US05 | Upload documents | TC-DOC-01 | Choose CV/supporting document and save | Files copied to managed folders and paths saved | Pass |
+| US05 | Upload documents | TC-DOC-01 | Choose CV/multiple supporting documents and save | Files copied to managed folders and paths saved | Pass |
 | US06 | Browse jobs | TC-JOB-01 | Open TA dashboard | Open, non-expired jobs listed | Pass |
 | US07 | Job details | TC-JOB-02 | Select job and open details | Category, semester, duties, job type, schedule, location, workload type, hours, deadline shown | Pass |
 | US08 | Search/filter jobs | TC-JOB-03 | Search keyword, module, or category | Matching jobs only are shown | Pass |
@@ -42,6 +42,9 @@
 | US33 | Workload demo | TC-SEED-04 | Open Admin workload monitor | Demo threshold is 10 hours/week; Frank Zhao has two accepted weekly jobs totalling 11 hours/week and triggers the weekly workload warning | Pass |
 | US34 | Admin application review overview | TC-ADM-03 | Admin opens Application Reviews | All applications show TA, course, job type, schedule, location, workload, MO, status, match score, missing skills, and reviewer notes | Pass |
 | US35 | One-off workload demo | TC-SEED-05 | Load demo data and open Admin workload monitor | Alice Chen has 3 h total invigilation and Jason Wu has 4 h total demo support; these are shown separately from weekly threshold calculation | Pass |
+| US36 | Multiple supporting documents | TC-SEED-06 | Load demo data and open a TA/MO profile document area | Each fictional TA has demo PDF supporting documents, the profile experience summary mentions them, and the UI allows selecting which supporting document to open | Pass |
+| US36 | Flexible supporting document upload | TC-DOC-02 | Select any number of local supporting documents and save the TA profile | All selected files are copied into `supporting-documents/` and stored in the profile document list | Pass |
+| US37 | One-off activity deadline | TC-JOB-04 | Create or load an invigilation/demo-support activity | Application deadline is before the activity start date; invalid on/after-start deadlines are rejected | Pass |
 
 ## Automated Unit Tests
 - `ApplicationServiceTest`

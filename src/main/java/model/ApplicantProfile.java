@@ -70,9 +70,16 @@ public class ApplicantProfile {
     private String cvPath;
 
     /**
-     * Optional supporting document, such as a transcript or certificate.
+     * Legacy single supporting document path. Kept for compatibility with older
+     * JSON files and code paths that still expect one primary document.
      */
     private String supportingDocumentPath;
+
+    /**
+     * Optional supporting documents, such as transcripts, certificates, or proof
+     * materials. The first entry is mirrored into supportingDocumentPath.
+     */
+    private List<String> supportingDocumentPaths = new ArrayList<>();
 
     /**
      * Jobs saved by the applicant for later review.
@@ -198,7 +205,30 @@ public class ApplicantProfile {
     }
 
     public void setSupportingDocumentPath(String supportingDocumentPath) {
-        this.supportingDocumentPath = supportingDocumentPath;
+        String normalizedPath = supportingDocumentPath == null ? "" : supportingDocumentPath.trim();
+        this.supportingDocumentPath = normalizedPath;
+        this.supportingDocumentPaths = new ArrayList<>();
+        if (!normalizedPath.isBlank()) {
+            this.supportingDocumentPaths.add(normalizedPath);
+        }
+    }
+
+    public List<String> getSupportingDocumentPaths() {
+        return new ArrayList<>(supportingDocumentPaths);
+    }
+
+    public void setSupportingDocumentPaths(List<String> supportingDocumentPaths) {
+        this.supportingDocumentPaths = new ArrayList<>();
+        if (supportingDocumentPaths != null) {
+            for (String documentPath : supportingDocumentPaths) {
+                if (documentPath != null && !documentPath.trim().isBlank()) {
+                    this.supportingDocumentPaths.add(documentPath.trim());
+                }
+            }
+        }
+        this.supportingDocumentPath = this.supportingDocumentPaths.isEmpty()
+                ? ""
+                : this.supportingDocumentPaths.get(0);
     }
 
     public List<String> getFavoriteJobIds() {

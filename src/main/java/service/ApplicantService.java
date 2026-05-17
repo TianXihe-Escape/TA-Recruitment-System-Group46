@@ -85,7 +85,9 @@ public class ApplicantService {
                 updatedProfile.getYearOfStudy()
         ));
         errors.addAll(validationService.validateCvPath(updatedProfile.getCvPath()));
-        errors.addAll(validationService.validateSupportingDocumentPath(updatedProfile.getSupportingDocumentPath()));
+        for (String supportingDocumentPath : updatedProfile.getSupportingDocumentPaths()) {
+            errors.addAll(validationService.validateSupportingDocumentPath(supportingDocumentPath));
+        }
         if (!errors.isEmpty()) {
             throw new IllegalArgumentException(String.join("\n", errors));
         }

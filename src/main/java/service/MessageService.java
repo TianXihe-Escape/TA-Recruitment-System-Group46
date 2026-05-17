@@ -66,6 +66,13 @@ public class MessageService {
                 .toList();
     }
 
+    public boolean hasUnreadMessages(String userId) {
+        return messageRepository.findAll().stream()
+                .anyMatch(message -> userId != null
+                        && userId.equals(message.getRecipientUserId())
+                        && !message.isRead());
+    }
+
     public void markAllRead(String userId) {
         List<MessageRecord> messages = new ArrayList<>(messageRepository.findAll());
         boolean updated = false;
