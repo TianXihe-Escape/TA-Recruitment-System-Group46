@@ -7,7 +7,9 @@ import service.MatchingService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Loads deterministic local-only demo data for viva use.
@@ -45,25 +47,77 @@ public class SampleDataLoader {
     }
 
     public void loadSampleData() {
+        List<NotificationRecord> existingNotifications = notificationRepository.findAll();
+        List<MessageRecord> existingMessages = messageRepository.findAll();
+        List<JobPosting> existingJobs = jobRepository.findAll();
+
         List<User> users = buildUsers();
         userRepository.saveAll(users);
 
         List<ApplicantProfile> profiles = buildProfiles();
         profileRepository.saveAll(profiles);
 
-        List<JobPosting> jobs = buildJobs();
+        List<JobPosting> jobs = mergeJobsPreservingExistingEdits(buildJobs(), existingJobs);
         jobRepository.saveAll(jobs);
 
         List<ApplicationRecord> applications = buildApplications(profiles, jobs);
         applicationRepository.saveAll(applications);
 
         allocationRepository.saveAll(buildAllocations(applications, jobs));
-        notificationRepository.saveAll(buildNotifications());
-        messageRepository.saveAll(buildMessages());
+        notificationRepository.saveAll(preserveNotificationReadState(buildNotifications(), existingNotifications));
+        messageRepository.saveAll(preserveMessageReadState(buildMessages(), existingMessages));
 
         SystemConfig config = new SystemConfig();
         config.setWorkloadThreshold(10);
         configRepository.save(config);
+    }
+
+    private List<JobPosting> mergeJobsPreservingExistingEdits(List<JobPosting> demoJobs, List<JobPosting> existingJobs) {
+        Map<String, JobPosting> mergedJobs = new LinkedHashMap<>();
+        for (JobPosting demoJob : demoJobs) {
+            mergedJobs.put(demoJob.getJobId(), demoJob);
+        }
+        for (JobPosting existingJob : existingJobs) {
+            if (existingJob.getJobId() != null && !existingJob.getJobId().isBlank()) {
+                mergedJobs.put(existingJob.getJobId(), existingJob);
+            }
+        }
+        return new ArrayList<>(mergedJobs.values());
+    }
+
+    private List<NotificationRecord> preserveNotificationReadState(List<NotificationRecord> freshNotifications,
+                                                                   List<NotificationRecord> existingNotifications) {
+        for (NotificationRecord fresh : freshNotifications) {
+            existingNotifications.stream()
+                    .filter(existing -> sameNotification(fresh, existing))
+                    .findFirst()
+                    .ifPresent(existing -> fresh.setRead(existing.isRead()));
+        }
+        return freshNotifications;
+    }
+
+    private boolean sameNotification(NotificationRecord left, NotificationRecord right) {
+        return left.getNotificationId().equals(right.getNotificationId())
+                && left.getUserId().equals(right.getUserId())
+                && left.getMessage().equals(right.getMessage());
+    }
+
+    private List<MessageRecord> preserveMessageReadState(List<MessageRecord> freshMessages,
+                                                         List<MessageRecord> existingMessages) {
+        for (MessageRecord fresh : freshMessages) {
+            existingMessages.stream()
+                    .filter(existing -> sameMessage(fresh, existing))
+                    .findFirst()
+                    .ifPresent(existing -> fresh.setRead(existing.isRead()));
+        }
+        return freshMessages;
+    }
+
+    private boolean sameMessage(MessageRecord left, MessageRecord right) {
+        return left.getMessageId().equals(right.getMessageId())
+                && left.getSenderUserId().equals(right.getSenderUserId())
+                && left.getRecipientUserId().equals(right.getRecipientUserId())
+                && left.getBody().equals(right.getBody());
     }
 
     public void resetData() {
@@ -195,12 +249,12 @@ public class SampleDataLoader {
                 oneOffJob("job-ebu6304-invigilation", "EBU6304", "Invigilation Assistant for EBU6304 Final Assessment",
                         "Assist with exam room preparation, student check-in, invigilation support, and post-exam material collection.",
                         3, List.of("Responsibility", "Communication", "Time Management", "Exam Procedure Awareness"),
-                        LocalDate.now().plusDays(28), "user-mo-ling", JobPosting.JOB_TYPE_INVIGILATION,
+                        LocalDate.parse("2026-05-23"), "user-mo-ling", JobPosting.JOB_TYPE_INVIGILATION,
                         "2026-05-24", "2026-05-24", "09:00-12:00", "Teaching Building Room 302", JobCategory.INVIGILATION),
                 oneOffJob("job-ebu6304-demo", "EBU6304", "Demo Support Assistant for EBU6304 Final Assessment",
                         "Support final coursework demonstration sessions, help organise demo order, assist with technical checks, and support marking logistics.",
                         4, List.of("Software Engineering", "Communication", "Java", "Testing"),
-                        LocalDate.now().plusDays(28), "user-mo-ling", JobPosting.JOB_TYPE_DEMO_SUPPORT,
+                        LocalDate.parse("2026-05-23"), "user-mo-ling", JobPosting.JOB_TYPE_DEMO_SUPPORT,
                         "2026-05-24", "2026-05-24", "13:00-17:00", "Software Engineering Lab", JobCategory.OTHER_ACTIVITY)
         );
     }
@@ -348,12 +402,24 @@ public class SampleDataLoader {
         profile.setYearOfStudy(year);
         profile.setSkills(skills);
         profile.setAvailability(availability);
-        profile.setExperienceSummary(selfEvaluation);
+        profile.setExperienceSummary(selfEvaluation
+                + "\n\nSupporting documents include: award certificate, competition participation proof, and additional evidence material.");
         profile.setPreferredDuties(preferredDuties);
         profile.setCvPath(cvPath);
-        profile.setSupportingDocumentPath("");
+        profile.setSupportingDocumentPaths(supportingDocumentsFor(name));
         profile.setFavoriteJobIds(favouriteJobs);
         return profile;
+    }
+
+    private List<String> supportingDocumentsFor(String applicantName) {
+        String slug = applicantName.toLowerCase()
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("^-|-$", "");
+        return List.of(
+                "supporting-documents/" + slug + "-award-certificate.pdf",
+                "supporting-documents/" + slug + "-competition-proof.pdf",
+                "supporting-documents/" + slug + "-supporting-evidence.pdf"
+        );
     }
 
     private JobPosting job(String jobId,

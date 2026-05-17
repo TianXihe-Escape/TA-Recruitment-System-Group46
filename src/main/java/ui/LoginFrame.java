@@ -96,8 +96,9 @@ public class LoginFrame extends JFrame {
         UiTheme.addFormRow(form, 6, "Role", roleBox);  // Role selection dropdown
 
         // Create the action buttons panel (login and secondary actions)
-        JPanel actionRow = new JPanel(new BorderLayout(0, 16));
+        JPanel actionRow = new JPanel(new BorderLayout(0, 18));
         actionRow.setOpaque(false);  // Transparent background
+        actionRow.setBorder(BorderFactory.createEmptyBorder(12, 0, 0, 0));
 
         // Panel for secondary action buttons (load sample data and register)
         JPanel secondaryActions = new JPanel(new FlowLayout(FlowLayout.CENTER, 16, 0));
@@ -110,7 +111,7 @@ public class LoginFrame extends JFrame {
         actionRow.add(secondaryActions, BorderLayout.SOUTH);
 
         // Assemble the login card body with form, demo info, and actions
-        JPanel cardBody = new JPanel(new BorderLayout(0, 22));
+        JPanel cardBody = new JPanel(new BorderLayout(0, 28));
         cardBody.setOpaque(false);  // Transparent background
 
         JPanel mainStack = new JPanel();
@@ -194,7 +195,7 @@ public class LoginFrame extends JFrame {
     private JPanel createCenteredLoginCard() {
         JPanel card = new JPanel(new BorderLayout(0, 22));
         card.setBackground(new Color(255, 255, 255, 238));
-        card.setPreferredSize(new Dimension(430, 520));
+        card.setPreferredSize(new Dimension(430, 560));
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(212, 222, 236), 1, true),
                 BorderFactory.createEmptyBorder(34, 36, 30, 36)

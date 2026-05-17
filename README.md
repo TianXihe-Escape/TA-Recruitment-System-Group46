@@ -17,7 +17,7 @@ The implementation is aligned with the coursework direction:
 - wuyanze-zyy: 31222291 (Member)
 
 ## Key Features By Role
-- `TA Applicant`: register, reset password, log in, edit profile with programme/year, upload a CV and supporting document, search/filter open jobs, save favourites, view job details, apply, withdraw before the deadline, track application status, open application detail popups, read reviewer notes, view missing-skill suggestions, exchange messages with MOs, and read notifications.
+- `TA Applicant`: register, reset password, log in, edit profile with programme/year, upload a CV and multiple supporting documents, search/filter open jobs, save favourites, view job details, apply, withdraw before the deadline, track application status, open application detail popups, read reviewer notes, view missing-skill suggestions, exchange messages with MOs, and read notifications.
 - `Module Organiser`: create and edit module, invigilation, or other activity jobs; reopen closed jobs; view applicants per job; inspect match score, missing skills, profiles, CVs, and supporting documents; filter and sort applicants; shortlist, remove shortlist, invite interviews, accept, reject, add reviewer notes, reply to applicant messages, receive notifications, and see workload warnings before accepting overloaded TAs.
 - `Admin`: monitor workloads, inspect all jobs, review all applications and MO reviewer notes, view summary cards for open jobs, closed jobs, applications, and accepted TAs, load or reset sample data, create MO accounts, open hiring management, export CSV recruitment reports, and view rebalance suggestions and notifications.
 
@@ -96,9 +96,13 @@ Click `Load Demo Data` from the login screen, or sign in as Admin and use `Load 
 
 Final demo data contains 7 course support jobs, 2 one-off event jobs, 7 MO accounts, 10 fictional TA accounts, sample applications with MO evaluations, notifications/messages, and workload examples. These sample accounts and module data are used only for local coursework demonstration. The system does not send real emails. TA accounts use `@demo.local` because they are fictional users.
 
-Each fictional TA profile points to a local demo CV in the `cv/` folder, such as `cv/alice-chen-cv.docx`, so TA and MO users can click the CV path in the UI and open a real document.
+For a compact account handout, see [docs/demo-accounts.md](docs/demo-accounts.md).
+
+Each fictional TA profile points to a local demo CV in the `cv/` folder, such as `cv/alice-chen-cv.docx`, so TA and MO users can click the CV path in the UI and open a real document. The demo dataset includes several local PDF supporting documents per TA in `supporting-documents/`, such as award certificates, competition participation proof, and additional evidence material. TA users can upload any number of supporting documents; selected local files are copied into `supporting-documents/` when the profile is saved. These documents are listed in the TA profile experience summary and can be opened from the TA profile menu or the MO review panel.
 
 The system separates schedule and workload. Schedule explains when and where the work happens, while workload measures effort. Course support jobs use weekly workload; one-off jobs such as invigilation and demo support use total workload.
+
+For one-off activities such as invigilation and demo support, the application deadline is kept before the activity start date so applicants cannot apply after the event has begun.
 
 In the demo dataset, the workload threshold is set to 10 hours/week. Frank Zhao is accepted for both `EBU6475` (6 hours/week) and `EBU6366` (5 hours/week), so his accepted weekly workload is 11 hours/week. Alice Chen is accepted for EBU6304 final assessment invigilation at 3 hours total, and Jason Wu is accepted for EBU6304 final demo support at 4 hours total. Admin workload monitoring shows weekly workload separately from one-off event workload, and one-off workload does not trigger the weekly overload warning.
 

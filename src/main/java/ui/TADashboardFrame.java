@@ -29,6 +29,8 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.time.LocalDate;
@@ -92,7 +94,7 @@ public class TADashboardFrame extends JFrame {
     private final JTextField cvPathField = new JTextField();
     private final JTextField supportingDocumentPathField = new JTextField();
     private final JButton chooseCvButton = UiTheme.createSecondaryButton("Choose File");
-    private final JButton chooseSupportingDocumentButton = UiTheme.createSecondaryButton("Choose File");
+    private final JButton chooseSupportingDocumentButton = UiTheme.createSecondaryButton("Choose Files");
     private final JTextField jobSearchField = new JTextField();
     private final JComboBox<String> moduleFilterBox = new JComboBox<>();
     private final JComboBox<String> categoryFilterBox = new JComboBox<>();
@@ -112,6 +114,9 @@ public class TADashboardFrame extends JFrame {
     private final DefaultTableModel messageTableModel = new DefaultTableModel(
             new Object[]{"Message ID", "Time", "Job", "Direction", "Status", "Message"}, 0);
     private final JTable messageTable = new PlaceholderTable(messageTableModel, "No TA/MO messages yet.");
+    private final JLabel notificationStatusLabel = new JLabel();
+    private final JLabel messageStatusLabel = new JLabel();
+    private JPanel workspaceShell;
     private static final int VIEW_AVAILABLE_JOBS = 0;
     private static final int VIEW_FAVOURITE_JOBS = 1;
     private static final int VIEW_APPLICATIONS = 2;
@@ -133,7 +138,6 @@ public class TADashboardFrame extends JFrame {
     private final JButton withdrawButton = createIconButton("Withdraw Application", SimpleLineIcon.Type.LOGOUT, false);
     private final JButton favouriteButton = createIconButton("Toggle Favourite", SimpleLineIcon.Type.STAR, false);
     private final JButton applyButton = createIconButton("Apply", SimpleLineIcon.Type.SEND, true);
-    private final JButton refreshButton = createIconButton("Refresh", SimpleLineIcon.Type.REFRESH, false);
     private final JButton markReadButton = createIconButton("Mark Notifications Read", SimpleLineIcon.Type.CHECK, false);
     private final JButton messageMoButton = createIconButton("Message MO", SimpleLineIcon.Type.SEND, false);
     private final JButton replyMessageButton = createIconButton("Reply", SimpleLineIcon.Type.SEND, false);
@@ -173,6 +177,12 @@ public class TADashboardFrame extends JFrame {
 
         styleComponents();
         wireActions();
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowActivated(WindowEvent event) {
+                refreshCurrentWorkspaceWithoutEffect();
+            }
+        });
 
         JPanel root = new JPanel(new BorderLayout(18, 0));
         root.setBackground(UiTheme.BACKGROUND);
@@ -199,8 +209,8 @@ public class TADashboardFrame extends JFrame {
         markReadButton.addActionListener(event -> {
             notificationService.markAllRead(currentUser.getUserId());
             refreshNotifications();
+            updateUnreadBadges();
         });
-        refreshButton.addActionListener(event -> refreshCurrentWorkspace());
         chooseCvButton.addActionListener(event -> chooseCvFile());
         chooseSupportingDocumentButton.addActionListener(event -> chooseSupportingDocumentFile());
         messageMoButton.addActionListener(event -> sendMessageForCurrentSelection());
@@ -208,6 +218,7 @@ public class TADashboardFrame extends JFrame {
         markMessagesReadButton.addActionListener(event -> {
             messageService.markAllRead(currentUser.getUserId());
             refreshMessages();
+            updateUnreadBadges();
         });
     }
 
@@ -251,9 +262,9 @@ public class TADashboardFrame extends JFrame {
     }
 
     private JPanel buildWorkspacePanel() {
-        JPanel shell = new JPanel(new BorderLayout(0, 14));
-        shell.setBackground(UiTheme.SURFACE);
-        shell.setBorder(BorderFactory.createCompoundBorder(
+        workspaceShell = new JPanel(new BorderLayout(0, 14));
+        workspaceShell.setBackground(UiTheme.SURFACE);
+        workspaceShell.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UiTheme.BORDER),
                 BorderFactory.createEmptyBorder(18, 18, 18, 18)
         ));
@@ -284,16 +295,16 @@ public class TADashboardFrame extends JFrame {
         workspaceCards.add(UiTheme.wrapTable(jobTable), VIEW_KEYS[VIEW_AVAILABLE_JOBS]);
         workspaceCards.add(UiTheme.wrapTable(favoriteJobTable), VIEW_KEYS[VIEW_FAVOURITE_JOBS]);
         workspaceCards.add(UiTheme.wrapTable(applicationTable), VIEW_KEYS[VIEW_APPLICATIONS]);
-        workspaceCards.add(UiTheme.wrapTable(notificationTable), VIEW_KEYS[VIEW_NOTIFICATIONS]);
-        workspaceCards.add(UiTheme.wrapTable(messageTable), VIEW_KEYS[VIEW_MESSAGES]);
+        workspaceCards.add(buildStatusTablePanel(notificationStatusLabel, notificationTable), VIEW_KEYS[VIEW_NOTIFICATIONS]);
+        workspaceCards.add(buildStatusTablePanel(messageStatusLabel, messageTable), VIEW_KEYS[VIEW_MESSAGES]);
 
         JPanel top = new JPanel(new BorderLayout(0, 12));
         top.setOpaque(false);
         top.add(header, BorderLayout.NORTH);
         top.add(jobFilterContainer, BorderLayout.SOUTH);
-        shell.add(top, BorderLayout.NORTH);
-        shell.add(workspaceCards, BorderLayout.CENTER);
-        return shell;
+        workspaceShell.add(top, BorderLayout.NORTH);
+        workspaceShell.add(workspaceCards, BorderLayout.CENTER);
+        return workspaceShell;
     }
 
     private JToggleButton createNavButton(String text, SimpleLineIcon.Type iconType, int viewIndex) {
@@ -332,19 +343,43 @@ public class TADashboardFrame extends JFrame {
             button.setSelected(selected);
             button.setBackground(selected ? Color.WHITE : new Color(235, 242, 252));
             button.setForeground(selected ? UiTheme.PRIMARY : UiTheme.TEXT);
-            button.setIcon(new SimpleLineIcon(
-                    switch (i) {
-                        case VIEW_AVAILABLE_JOBS -> SimpleLineIcon.Type.BRIEFCASE;
-                        case VIEW_FAVOURITE_JOBS -> SimpleLineIcon.Type.STAR;
-                        case VIEW_APPLICATIONS -> SimpleLineIcon.Type.DOCUMENT;
-                        case VIEW_NOTIFICATIONS -> SimpleLineIcon.Type.BELL;
-                        default -> SimpleLineIcon.Type.SEND;
-                    },
-                    selected ? UiTheme.PRIMARY : UiTheme.MUTED_TEXT
-            ));
+            button.setIcon(navIconFor(i, selected));
         }
         updateWorkspaceHeader();
         updateContextualActions();
+        updateUnreadBadges();
+    }
+
+    private Icon navIconFor(int viewIndex, boolean selected) {
+        SimpleLineIcon.Type iconType = switch (viewIndex) {
+            case VIEW_AVAILABLE_JOBS -> SimpleLineIcon.Type.BRIEFCASE;
+            case VIEW_FAVOURITE_JOBS -> SimpleLineIcon.Type.STAR;
+            case VIEW_APPLICATIONS -> SimpleLineIcon.Type.DOCUMENT;
+            case VIEW_NOTIFICATIONS -> SimpleLineIcon.Type.BELL;
+            default -> SimpleLineIcon.Type.SEND;
+        };
+        boolean unread = (viewIndex == VIEW_NOTIFICATIONS && notificationService.hasUnreadNotifications(currentUser.getUserId()))
+                || (viewIndex == VIEW_MESSAGES && messageService.hasUnreadMessages(currentUser.getUserId()));
+        return new UnreadBadgeIcon(new SimpleLineIcon(iconType, selected ? UiTheme.PRIMARY : UiTheme.MUTED_TEXT), unread);
+    }
+
+    private void updateUnreadBadges() {
+        boolean hasUnreadNotifications = notificationService.hasUnreadNotifications(currentUser.getUserId());
+        boolean hasUnreadMessages = messageService.hasUnreadMessages(currentUser.getUserId());
+        for (int i = 0; i < navigationButtons.size(); i++) {
+            JToggleButton button = navigationButtons.get(i);
+            button.setIcon(navIconFor(i, button.isSelected()));
+        }
+        markReadButton.setIcon(new UnreadBadgeIcon(new SimpleLineIcon(SimpleLineIcon.Type.CHECK, Color.WHITE),
+                hasUnreadNotifications));
+        markMessagesReadButton.setIcon(new UnreadBadgeIcon(new SimpleLineIcon(SimpleLineIcon.Type.CHECK, Color.WHITE),
+                hasUnreadMessages));
+        markReadButton.setEnabled(hasUnreadNotifications);
+        markMessagesReadButton.setEnabled(hasUnreadMessages);
+        markReadButton.setVisible(hasUnreadNotifications);
+        markMessagesReadButton.setVisible(hasUnreadMessages);
+        contextualActions.revalidate();
+        contextualActions.repaint();
     }
 
     private void updateWorkspaceHeader() {
@@ -385,12 +420,13 @@ public class TADashboardFrame extends JFrame {
     private void updateContextualActions() {
         contextualActions.removeAll();
         switch (currentWorkspaceView) {
-            case VIEW_AVAILABLE_JOBS -> addActions(viewDetailsButton, favouriteButton, messageMoButton, applyButton, refreshButton);
-            case VIEW_FAVOURITE_JOBS -> addActions(viewDetailsButton, favouriteButton, messageMoButton, applyButton, refreshButton);
-            case VIEW_APPLICATIONS -> addActions(viewApplicationButton, messageMoButton, withdrawButton, refreshButton);
-            case VIEW_NOTIFICATIONS -> addActions(markReadButton, refreshButton);
-            case VIEW_MESSAGES -> addActions(replyMessageButton, markMessagesReadButton, refreshButton);
-            default -> addActions(refreshButton);
+            case VIEW_AVAILABLE_JOBS -> addActions(viewDetailsButton, favouriteButton, messageMoButton, applyButton);
+            case VIEW_FAVOURITE_JOBS -> addActions(viewDetailsButton, favouriteButton, messageMoButton, applyButton);
+            case VIEW_APPLICATIONS -> addActions(viewApplicationButton, messageMoButton, withdrawButton);
+            case VIEW_NOTIFICATIONS -> addActions(markReadButton);
+            case VIEW_MESSAGES -> addActions(replyMessageButton, markMessagesReadButton);
+            default -> {
+            }
         }
         contextualActions.revalidate();
         contextualActions.repaint();
@@ -403,12 +439,43 @@ public class TADashboardFrame extends JFrame {
     }
 
     private void refreshCurrentWorkspace() {
+        playRefreshEffect();
+        refreshCurrentWorkspaceWithoutEffect();
+    }
+
+    private void refreshCurrentWorkspaceWithoutEffect() {
         profile = applicantService.getProfileByUserId(currentUser.getUserId());
         loadProfile();
         refreshJobs();
         refreshApplications();
         refreshNotifications();
         refreshMessages();
+        updateUnreadBadges();
+    }
+
+    private void playRefreshEffect() {
+        if (workspaceShell == null) {
+            return;
+        }
+        Color original = workspaceShell.getBackground();
+        Color[] frames = {
+                new Color(225, 236, 255),
+                new Color(239, 246, 255),
+                UiTheme.SURFACE
+        };
+        final int[] index = {0};
+        Timer timer = new Timer(80, null);
+        timer.addActionListener(event -> {
+            workspaceShell.setBackground(frames[index[0]]);
+            workspaceShell.repaint();
+            index[0]++;
+            if (index[0] >= frames.length) {
+                workspaceShell.setBackground(original);
+                workspaceShell.repaint();
+                timer.stop();
+            }
+        });
+        timer.start();
     }
 
     private void showProfileMenu() {
@@ -422,9 +489,9 @@ public class TADashboardFrame extends JFrame {
         menu.add(menuItem("Edit Profile", SimpleLineIcon.Type.EDIT, this::showProfileDialog));
         menu.add(menuItem("Change Password", SimpleLineIcon.Type.SAVE, this::showChangePasswordDialog));
         menu.add(menuItem("Open CV", SimpleLineIcon.Type.FILE, this::openCvFile));
-        menu.add(menuItem("Open Supporting Document", SimpleLineIcon.Type.DOCUMENT, this::openSupportingDocumentFile));
+        menu.add(menuItem("Open Supporting Documents", SimpleLineIcon.Type.DOCUMENT, this::openSupportingDocumentFile));
         menu.addSeparator();
-        menu.add(menuItem("Refresh Workspace", SimpleLineIcon.Type.REFRESH, this::refreshCurrentWorkspace));
+        menu.add(menuItem("Refresh", SimpleLineIcon.Type.REFRESH, this::refreshCurrentWorkspace));
         menu.add(menuItem("Logout", SimpleLineIcon.Type.LOGOUT, this::returnToLogin));
         menu.addSeparator();
         JMenuItem deleteItem = menuItem("Delete Account", SimpleLineIcon.Type.TRASH, this::deleteCurrentAccount);
@@ -496,7 +563,7 @@ public class TADashboardFrame extends JFrame {
         UiTheme.addFormRow(form, 14, "Preferred Duties", preferredDutiesField);
         UiTheme.addFormRow(form, 16, "Experience Summary", wrapArea(experienceArea));
         UiTheme.addFormRow(form, 18, "CV Path", buildCvPathPicker());
-        UiTheme.addFormRow(form, 20, "Supporting Document", buildSupportingDocumentPicker());
+        UiTheme.addFormRow(form, 20, "Supporting Documents", buildSupportingDocumentPicker());
 
         JButton closeButton = createIconButton("Close", SimpleLineIcon.Type.LOGOUT, false);
         JButton saveButton = createIconButton("Save Profile", SimpleLineIcon.Type.SAVE, true);
@@ -557,6 +624,17 @@ public class TADashboardFrame extends JFrame {
         return panel;
     }
 
+    private JPanel buildStatusTablePanel(JLabel statusLabel, JTable table) {
+        statusLabel.setForeground(UiTheme.MUTED_TEXT);
+        statusLabel.setFont(UiTheme.uiFont(Font.PLAIN, 12));
+
+        JPanel panel = new JPanel(new BorderLayout(0, 8));
+        panel.setOpaque(false);
+        panel.add(statusLabel, BorderLayout.NORTH);
+        panel.add(UiTheme.wrapTable(table), BorderLayout.CENTER);
+        return panel;
+    }
+
     private JPanel labeledControl(String labelText, JComponent control) {
         JPanel panel = new JPanel(new BorderLayout(0, 4));
         panel.setOpaque(false);
@@ -583,7 +661,7 @@ public class TADashboardFrame extends JFrame {
         experienceArea.setText(profile.getExperienceSummary());
         cvPathField.setText(profile.getCvPath());
         updateCvPathOpenState();
-        supportingDocumentPathField.setText(profile.getSupportingDocumentPath());
+        supportingDocumentPathField.setText(joinDocumentPaths(profile.getSupportingDocumentPaths()));
         updateSupportingDocumentOpenState();
         avatarButton.setInitials(initialsForProfile());
         sidebarNameLabel.setText(valueOrDash(profile.getName()));
@@ -619,7 +697,10 @@ public class TADashboardFrame extends JFrame {
                     profile.getYearOfStudy()
             ));
             profileErrors.addAll(validationService.validateCvPath(cvPathField.getText().trim()));
-            profileErrors.addAll(validationService.validateSupportingDocumentPath(supportingDocumentPathField.getText().trim()));
+            List<String> supportingDocumentPaths = parseDocumentPaths(supportingDocumentPathField.getText());
+            for (String supportingDocumentPath : supportingDocumentPaths) {
+                profileErrors.addAll(validationService.validateSupportingDocumentPath(supportingDocumentPath));
+            }
             if (!profileErrors.isEmpty()) {
                 throw new IllegalArgumentException(String.join("\n", profileErrors));
             }
@@ -628,16 +709,16 @@ public class TADashboardFrame extends JFrame {
                     cvPathField.getText().trim(),
                     profile.getCvPath()
             );
-            String storedSupportingDocumentPath = cvStorageService.storeSupportingDocumentForApplicant(
+            List<String> storedSupportingDocumentPaths = cvStorageService.storeSupportingDocumentsForApplicant(
                     profile.getApplicantId(),
-                    supportingDocumentPathField.getText().trim(),
-                    profile.getSupportingDocumentPath()
+                    supportingDocumentPaths,
+                    profile.getSupportingDocumentPaths()
             );
             profile.setCvPath(storedCvPath);
-            profile.setSupportingDocumentPath(storedSupportingDocumentPath);
+            profile.setSupportingDocumentPaths(storedSupportingDocumentPaths);
             applicantService.saveProfile(profile);
             cvPathField.setText(profile.getCvPath());
-            supportingDocumentPathField.setText(profile.getSupportingDocumentPath());
+            supportingDocumentPathField.setText(joinDocumentPaths(profile.getSupportingDocumentPaths()));
             updateCvPathOpenState();
             updateSupportingDocumentOpenState();
             avatarButton.setInitials(initialsForProfile());
@@ -856,20 +937,32 @@ public class TADashboardFrame extends JFrame {
 
     private void refreshNotifications() {
         notificationTableModel.setRowCount(0);
+        int unreadCount = 0;
         for (NotificationRecord notification : notificationService.getNotificationsForUser(currentUser.getUserId())) {
+            if (!notification.isRead()) {
+                unreadCount++;
+            }
             notificationTableModel.addRow(new Object[]{
                     UiFormat.dateTime(notification.getCreatedAt()),
                     notification.isRead() ? "Read" : "New",
                     notification.getMessage()
             });
         }
+        notificationStatusLabel.setText(unreadCount == 0
+                ? "All notifications are read."
+                : "Unread notifications: " + unreadCount + ". Click Mark Notifications Read to clear the badge.");
+        updateUnreadBadges();
     }
 
     private void refreshMessages() {
         messageTableModel.setRowCount(0);
+        int unreadCount = 0;
         for (MessageRecord message : messageService.getConversationForUser(currentUser.getUserId())) {
             JobPosting job = findJob(message.getJobId()).orElse(null);
             boolean incoming = currentUser.getUserId().equals(message.getRecipientUserId());
+            if (incoming && !message.isRead()) {
+                unreadCount++;
+            }
             messageTableModel.addRow(new Object[]{
                     message.getMessageId(),
                     UiFormat.dateTime(message.getCreatedAt()),
@@ -879,6 +972,10 @@ public class TADashboardFrame extends JFrame {
                     message.getBody()
             });
         }
+        messageStatusLabel.setText(unreadCount == 0
+                ? "All incoming messages are read."
+                : "Unread incoming messages: " + unreadCount + ". Click Mark Messages Read to clear the badge.");
+        updateUnreadBadges();
     }
 
     private void sendMessageForCurrentSelection() {
@@ -1111,7 +1208,7 @@ public class TADashboardFrame extends JFrame {
         try {
             applicationService.removeApplicationsForApplicant(profile.getApplicantId());
             cvStorageService.deleteManagedCv(profile.getCvPath());
-            cvStorageService.deleteManagedSupportingDocument(profile.getSupportingDocumentPath());
+            cvStorageService.deleteManagedSupportingDocuments(profile.getSupportingDocumentPaths());
 
             List<ApplicantProfile> profiles = new ArrayList<>(dataService.getProfileRepository().findAll());
             profiles.removeIf(existingProfile -> profile.getApplicantId().equals(existingProfile.getApplicantId()));
@@ -1159,8 +1256,9 @@ public class TADashboardFrame extends JFrame {
 
     private void chooseDocumentFile(JTextField targetField, boolean cvFile) {
         JFileChooser chooser = new JFileChooser();
-        chooser.setDialogTitle(cvFile ? "Select CV File" : "Select Supporting Document");
+        chooser.setDialogTitle(cvFile ? "Select CV File" : "Select Supporting Documents");
         chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        chooser.setMultiSelectionEnabled(!cvFile);
         chooser.setAcceptAllFileFilterUsed(false);
         chooser.setFileFilter(new FileNameExtensionFilter(
                 cvFile ? CV_FILE_DESCRIPTION : "Supporting Documents (*.pdf, *.doc, *.docx, *.rtf, *.txt)",
@@ -1168,7 +1266,7 @@ public class TADashboardFrame extends JFrame {
         ));
         UiTheme.styleFileChooser(chooser);
 
-        String existingPath = targetField.getText().trim();
+        String existingPath = cvFile ? targetField.getText().trim() : firstDocumentPath(targetField.getText());
         if (!existingPath.isBlank()) {
             File existingFile = cvStorageService.resolveCvPath(existingPath).toFile();
             if (existingFile.exists()) {
@@ -1178,16 +1276,18 @@ public class TADashboardFrame extends JFrame {
 
         int result = chooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION && chooser.getSelectedFile() != null) {
-            File selectedFile = chooser.getSelectedFile();
-            String selectedPath = selectedFile.getAbsolutePath();
-            List<String> errors = cvFile
-                    ? validationService.validateCvPath(selectedPath)
-                    : validationService.validateSupportingDocumentPath(selectedPath);
+            List<String> selectedPaths = selectedDocumentPaths(chooser, cvFile);
+            List<String> errors = new ArrayList<>();
+            for (String selectedPath : selectedPaths) {
+                errors.addAll(cvFile
+                        ? validationService.validateCvPath(selectedPath)
+                        : validationService.validateSupportingDocumentPath(selectedPath));
+            }
             if (!errors.isEmpty()) {
                 UiMessage.error(this, String.join("\n", errors));
                 return;
             }
-            targetField.setText(selectedPath);
+            targetField.setText(cvFile ? selectedPaths.get(0) : joinDocumentPaths(selectedPaths));
             if (cvFile) {
                 updateCvPathOpenState();
             } else {
@@ -1204,10 +1304,12 @@ public class TADashboardFrame extends JFrame {
     }
 
     private void updateSupportingDocumentOpenState() {
-        String documentPath = supportingDocumentPathField.getText().trim();
-        boolean hasDocument = !documentPath.isBlank();
+        List<String> documentPaths = parseDocumentPaths(supportingDocumentPathField.getText());
+        boolean hasDocument = !documentPaths.isEmpty();
         supportingDocumentPathField.setCursor(Cursor.getPredefinedCursor(hasDocument ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
-        supportingDocumentPathField.setToolTipText(hasDocument ? "Click to open " + documentPath : "Optionally choose a transcript or supporting document.");
+        supportingDocumentPathField.setToolTipText(hasDocument
+                ? "Click to open one of " + documentPaths.size() + " supporting document(s)."
+                : "Optionally choose transcripts, certificates, or supporting documents.");
     }
 
     private void openCvFile() {
@@ -1215,7 +1317,67 @@ public class TADashboardFrame extends JFrame {
     }
 
     private void openSupportingDocumentFile() {
-        openDocumentFile(supportingDocumentPathField.getText().trim(), "supporting document");
+        List<String> documentPaths = parseDocumentPaths(supportingDocumentPathField.getText());
+        if (documentPaths.isEmpty()) {
+            UiMessage.error(this, "No supporting document is available. Please choose a file first.");
+            return;
+        }
+        if (documentPaths.size() == 1) {
+            openDocumentFile(documentPaths.get(0), "supporting document");
+            return;
+        }
+        String selectedPath = (String) JOptionPane.showInputDialog(
+                this,
+                "Choose a supporting document to open:",
+                "Open Supporting Document",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                documentPaths.toArray(new String[0]),
+                documentPaths.get(0)
+        );
+        if (selectedPath != null && !selectedPath.isBlank()) {
+            openDocumentFile(selectedPath, "supporting document");
+        }
+    }
+
+    private List<String> selectedDocumentPaths(JFileChooser chooser, boolean cvFile) {
+        List<String> paths = new ArrayList<>();
+        if (cvFile) {
+            paths.add(chooser.getSelectedFile().getAbsolutePath());
+            return paths;
+        }
+        for (File selectedFile : chooser.getSelectedFiles()) {
+            paths.add(selectedFile.getAbsolutePath());
+        }
+        if (paths.isEmpty() && chooser.getSelectedFile() != null) {
+            paths.add(chooser.getSelectedFile().getAbsolutePath());
+        }
+        return paths;
+    }
+
+    private List<String> parseDocumentPaths(String documentText) {
+        List<String> paths = new ArrayList<>();
+        if (documentText == null || documentText.isBlank()) {
+            return paths;
+        }
+        for (String path : documentText.split("[;\\n]")) {
+            if (!path.trim().isBlank()) {
+                paths.add(path.trim());
+            }
+        }
+        return paths;
+    }
+
+    private String firstDocumentPath(String documentText) {
+        List<String> paths = parseDocumentPaths(documentText);
+        return paths.isEmpty() ? "" : paths.get(0);
+    }
+
+    private String joinDocumentPaths(List<String> documentPaths) {
+        if (documentPaths == null || documentPaths.isEmpty()) {
+            return "";
+        }
+        return String.join("; ", documentPaths);
     }
 
     private void openDocumentFile(String documentPath, String label) {
@@ -1271,7 +1433,7 @@ public class TADashboardFrame extends JFrame {
             }
         });
         supportingDocumentPathField.setEditable(false);
-        supportingDocumentPathField.setToolTipText("Optionally choose a transcript or supporting document.");
+        supportingDocumentPathField.setToolTipText("Optionally choose transcripts, certificates, or supporting documents.");
         updateSupportingDocumentOpenState();
         supportingDocumentPathField.addMouseListener(new MouseAdapter() {
             @Override
