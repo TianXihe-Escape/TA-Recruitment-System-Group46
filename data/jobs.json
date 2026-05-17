@@ -39,7 +39,7 @@
     "schedule" : "Tuesday 10:00-12:00 lab support",
     "location" : "Embedded Systems Lab",
     "workloadType" : "WEEKLY",
-    "requiredTaCount" : 2,
+    "requiredTaCount" : 4,
     "requiredSkills" : [
       "C Programming",
       "Microcontrollers",
@@ -202,7 +202,7 @@
       "Time Management",
       "Exam Procedure Awareness"
     ],
-    "applicationDeadline" : "2026-06-14",
+    "applicationDeadline" : "2026-05-23",
     "status" : "OPEN",
     "postedBy" : "user-mo-ling"
   },
@@ -227,8 +227,52 @@
       "Java",
       "Testing"
     ],
-    "applicationDeadline" : "2026-06-14",
+    "applicationDeadline" : "2026-05-23",
     "status" : "OPEN",
     "postedBy" : "user-mo-ling"
+  },
+  {
+    "jobId" : "job-ebu6366-01",
+    "moduleCode" : "EBU6366",
+    "moduleTitle" : "study",
+    "category" : "INVIGILATION",
+    "semester" : "2025/26",
+    "duties" : "study",
+    "hours" : 10,
+    "jobType" : "INVIGILATION",
+    "startDate" : "2026-06-20",
+    "endDate" : "2026-06-20",
+    "schedule" : "8：00-18：00",
+    "location" : "805",
+    "workloadType" : "TOTAL",
+    "requiredTaCount" : 2,
+    "requiredSkills" : [
+      "java"
+    ],
+    "applicationDeadline" : "2026-06-19",
+    "status" : "OPEN",
+    "postedBy" : "user-mo-jin-zhang"
+  },
+  {
+    "jobId" : "job-ebu6304-01",
+    "moduleCode" : "EBU6304",
+    "moduleTitle" : "play game",
+    "category" : "INVIGILATION",
+    "semester" : "2025/2026",
+    "duties" : "python",
+    "hours" : 12,
+    "jobType" : "INVIGILATION",
+    "startDate" : "2026-06-20",
+    "endDate" : "2026-06-20",
+    "schedule" : "8:00-20:00",
+    "location" : "105",
+    "workloadType" : "TOTAL",
+    "requiredTaCount" : 2,
+    "requiredSkills" : [
+      "python"
+    ],
+    "applicationDeadline" : "2026-06-18",
+    "status" : "OPEN",
+    "postedBy" : "user-admin-01"
   }
 ]

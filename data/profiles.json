@@ -15,10 +15,15 @@
       "Testing"
     ],
     "availability" : "8 hours/week",
-    "experienceSummary" : "I have strong Java programming experience and have completed several coursework projects using GitHub and Agile development practices. I am confident in supporting EBU6304 labs and helping students debug basic software engineering issues.",
+    "experienceSummary" : "I have strong Java programming experience and have completed several coursework projects using GitHub and Agile development practices. I am confident in supporting EBU6304 labs and helping students debug basic software engineering issues.\n\nSupporting documents include: award certificate, competition participation proof, and additional evidence material.",
     "preferredDuties" : "EBU6304 lab support",
     "cvPath" : "cv/alice-chen-cv.docx",
-    "supportingDocumentPath" : "",
+    "supportingDocumentPath" : "supporting-documents/alice-chen-award-certificate.pdf",
+    "supportingDocumentPaths" : [
+      "supporting-documents/alice-chen-award-certificate.pdf",
+      "supporting-documents/alice-chen-competition-proof.pdf",
+      "supporting-documents/alice-chen-supporting-evidence.pdf"
+    ],
     "favoriteJobIds" : [
       "job-ebu6304"
     ]
@@ -39,10 +44,15 @@
       "Debugging"
     ],
     "availability" : "7 hours/week",
-    "experienceSummary" : "I am familiar with C programming and embedded system debugging. I have experience with microcontroller labs and can help students understand hardware/software interaction.",
+    "experienceSummary" : "I am familiar with C programming and embedded system debugging. I have experience with microcontroller labs and can help students understand hardware/software interaction.\n\nSupporting documents include: award certificate, competition participation proof, and additional evidence material.",
     "preferredDuties" : "EBU6475 lab support",
     "cvPath" : "cv/ben-wang-cv.docx",
-    "supportingDocumentPath" : "",
+    "supportingDocumentPath" : "supporting-documents/ben-wang-award-certificate.pdf",
+    "supportingDocumentPaths" : [
+      "supporting-documents/ben-wang-award-certificate.pdf",
+      "supporting-documents/ben-wang-competition-proof.pdf",
+      "supporting-documents/ben-wang-supporting-evidence.pdf"
+    ],
     "favoriteJobIds" : [
       "job-ebu6475"
     ]
@@ -62,10 +72,15 @@
       "Microwave Engineering"
     ],
     "availability" : "6 hours/week",
-    "experienceSummary" : "I have a good background in communication systems and MATLAB-based signal analysis. I can support students in understanding RF and microwave-related exercises.",
+    "experienceSummary" : "I have a good background in communication systems and MATLAB-based signal analysis. I can support students in understanding RF and microwave-related exercises.\n\nSupporting documents include: award certificate, competition participation proof, and additional evidence material.",
     "preferredDuties" : "EBU6366 tutorials",
     "cvPath" : "cv/chloe-li-cv.docx",
-    "supportingDocumentPath" : "",
+    "supportingDocumentPath" : "supporting-documents/chloe-li-award-certificate.pdf",
+    "supportingDocumentPaths" : [
+      "supporting-documents/chloe-li-award-certificate.pdf",
+      "supporting-documents/chloe-li-competition-proof.pdf",
+      "supporting-documents/chloe-li-supporting-evidence.pdf"
+    ],
     "favoriteJobIds" : [
       "job-ebu6366"
     ]
@@ -86,10 +101,15 @@
       "Presentation"
     ],
     "availability" : "5 hours/week",
-    "experienceSummary" : "I have experience preparing business reports and product concept evaluations. I can support students with customer needs analysis, report structure and presentation preparation.",
+    "experienceSummary" : "I have experience preparing business reports and product concept evaluations. I can support students with customer needs analysis, report structure and presentation preparation.\n\nSupporting documents include: award certificate, competition participation proof, and additional evidence material.",
     "preferredDuties" : "EBU5606 workshops",
     "cvPath" : "cv/daniel-zhang-cv.docx",
-    "supportingDocumentPath" : "",
+    "supportingDocumentPath" : "supporting-documents/daniel-zhang-award-certificate.pdf",
+    "supportingDocumentPaths" : [
+      "supporting-documents/daniel-zhang-award-certificate.pdf",
+      "supporting-documents/daniel-zhang-competition-proof.pdf",
+      "supporting-documents/daniel-zhang-supporting-evidence.pdf"
+    ],
     "favoriteJobIds" : [
       "job-ebu5606"
     ]
@@ -109,10 +129,15 @@
       "Mathematics"
     ],
     "availability" : "6 hours/week",
-    "experienceSummary" : "I am strong in Python and data analysis, but I have limited experience in Java and Agile project management. I am willing to learn missing skills before supporting software engineering modules.",
+    "experienceSummary" : "I am strong in Python and data analysis, but I have limited experience in Java and Agile project management. I am willing to learn missing skills before supporting software engineering modules.\n\nSupporting documents include: award certificate, competition participation proof, and additional evidence material.",
     "preferredDuties" : "EBU6304 after preparation",
     "cvPath" : "cv/emma-liu-cv.docx",
-    "supportingDocumentPath" : "",
+    "supportingDocumentPath" : "supporting-documents/emma-liu-award-certificate.pdf",
+    "supportingDocumentPaths" : [
+      "supporting-documents/emma-liu-award-certificate.pdf",
+      "supporting-documents/emma-liu-competition-proof.pdf",
+      "supporting-documents/emma-liu-supporting-evidence.pdf"
+    ],
     "favoriteJobIds" : [
       "job-ebu6304"
     ]
@@ -133,10 +158,15 @@
       "Presentation"
     ],
     "availability" : "10 hours/week",
-    "experienceSummary" : "I have a mixed technical background and can support programming-related lab sessions. I am available for multiple modules but my workload should be monitored carefully.",
+    "experienceSummary" : "I have a mixed technical background and can support programming-related lab sessions. I am available for multiple modules but my workload should be monitored carefully.\n\nSupporting documents include: award certificate, competition participation proof, and additional evidence material.",
     "preferredDuties" : "Programming and lab support",
     "cvPath" : "cv/frank-zhao-cv.docx",
-    "supportingDocumentPath" : "",
+    "supportingDocumentPath" : "supporting-documents/frank-zhao-award-certificate.pdf",
+    "supportingDocumentPaths" : [
+      "supporting-documents/frank-zhao-award-certificate.pdf",
+      "supporting-documents/frank-zhao-competition-proof.pdf",
+      "supporting-documents/frank-zhao-supporting-evidence.pdf"
+    ],
     "favoriteJobIds" : [
       "job-ebu6304",
       "job-ebu6475",
@@ -159,10 +189,15 @@
       "Debugging"
     ],
     "availability" : "6 hours/week",
-    "experienceSummary" : "I have experience with Java socket programming and client-server coursework. I can help students debug network applications and explain basic communication protocols.",
+    "experienceSummary" : "I have experience with Java socket programming and client-server coursework. I can help students debug network applications and explain basic communication protocols.\n\nSupporting documents include: award certificate, competition participation proof, and additional evidence material.",
     "preferredDuties" : "EBU5042 lab support",
     "cvPath" : "cv/grace-xu-cv.docx",
-    "supportingDocumentPath" : "",
+    "supportingDocumentPath" : "supporting-documents/grace-xu-award-certificate.pdf",
+    "supportingDocumentPaths" : [
+      "supporting-documents/grace-xu-award-certificate.pdf",
+      "supporting-documents/grace-xu-competition-proof.pdf",
+      "supporting-documents/grace-xu-supporting-evidence.pdf"
+    ],
     "favoriteJobIds" : [
       "job-ebu5042"
     ]
@@ -183,10 +218,15 @@
       "Jupyter Notebook"
     ],
     "availability" : "7 hours/week",
-    "experienceSummary" : "I am confident in Python, Jupyter Notebook and basic machine learning models. I can support students with data preprocessing, model training and coursework notebooks.",
+    "experienceSummary" : "I am confident in Python, Jupyter Notebook and basic machine learning models. I can support students with data preprocessing, model training and coursework notebooks.\n\nSupporting documents include: award certificate, competition participation proof, and additional evidence material.",
     "preferredDuties" : "Machine Learning tutorials",
     "cvPath" : "cv/henry-sun-cv.docx",
-    "supportingDocumentPath" : "",
+    "supportingDocumentPath" : "supporting-documents/henry-sun-award-certificate.pdf",
+    "supportingDocumentPaths" : [
+      "supporting-documents/henry-sun-award-certificate.pdf",
+      "supporting-documents/henry-sun-competition-proof.pdf",
+      "supporting-documents/henry-sun-supporting-evidence.pdf"
+    ],
     "favoriteJobIds" : [
       "job-cbu5201"
     ]
@@ -207,10 +247,15 @@
       "Debugging"
     ],
     "availability" : "6 hours/week",
-    "experienceSummary" : "I have completed digital systems and FPGA-related projects. I can help students with Verilog syntax, waveform debugging and digital logic design.",
+    "experienceSummary" : "I have completed digital systems and FPGA-related projects. I can help students with Verilog syntax, waveform debugging and digital logic design.\n\nSupporting documents include: award certificate, competition participation proof, and additional evidence material.",
     "preferredDuties" : "EBU6335 lab support",
     "cvPath" : "cv/ivy-huang-cv.docx",
-    "supportingDocumentPath" : "",
+    "supportingDocumentPath" : "supporting-documents/ivy-huang-award-certificate.pdf",
+    "supportingDocumentPaths" : [
+      "supporting-documents/ivy-huang-award-certificate.pdf",
+      "supporting-documents/ivy-huang-competition-proof.pdf",
+      "supporting-documents/ivy-huang-supporting-evidence.pdf"
+    ],
     "favoriteJobIds" : [
       "job-ebu6335"
     ]
@@ -231,10 +276,15 @@
       "Presentation"
     ],
     "availability" : "9 hours/week",
-    "experienceSummary" : "I have a broad technical background and can support programming, data analysis and report preparation. However, I may need additional preparation for specialised RF or FPGA topics.",
+    "experienceSummary" : "I have a broad technical background and can support programming, data analysis and report preparation. However, I may need additional preparation for specialised RF or FPGA topics.\n\nSupporting documents include: award certificate, competition participation proof, and additional evidence material.",
     "preferredDuties" : "Programming and report support",
     "cvPath" : "cv/jason-wu-cv.docx",
-    "supportingDocumentPath" : "",
+    "supportingDocumentPath" : "supporting-documents/jason-wu-award-certificate.pdf",
+    "supportingDocumentPaths" : [
+      "supporting-documents/jason-wu-award-certificate.pdf",
+      "supporting-documents/jason-wu-competition-proof.pdf",
+      "supporting-documents/jason-wu-supporting-evidence.pdf"
+    ],
     "favoriteJobIds" : [
       "job-ebu6304",
       "job-cbu5201",

@@ -190,7 +190,12 @@ public class JsonDataStore {
             profile.setExperienceSummary(stringValue(map.get("experienceSummary")));
             profile.setPreferredDuties(stringValue(map.get("preferredDuties")));
             profile.setCvPath(stringValue(map.get("cvPath")));
-            profile.setSupportingDocumentPath(stringValue(map.get("supportingDocumentPath")));
+            List<String> supportingDocumentPaths = stringList(map.get("supportingDocumentPaths"));
+            if (supportingDocumentPaths.isEmpty()) {
+                profile.setSupportingDocumentPath(stringValue(map.get("supportingDocumentPath")));
+            } else {
+                profile.setSupportingDocumentPaths(supportingDocumentPaths);
+            }
             profile.setFavoriteJobIds(stringList(map.get("favoriteJobIds")));
             return (T) profile;
         }
@@ -312,6 +317,7 @@ public class JsonDataStore {
             map.put("preferredDuties", profile.getPreferredDuties());
             map.put("cvPath", profile.getCvPath());
             map.put("supportingDocumentPath", profile.getSupportingDocumentPath());
+            map.put("supportingDocumentPaths", new ArrayList<>(profile.getSupportingDocumentPaths()));
             map.put("favoriteJobIds", new ArrayList<>(profile.getFavoriteJobIds()));
             return map;
         }

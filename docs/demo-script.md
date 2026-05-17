@@ -8,7 +8,7 @@
 ## Speaker 2: TA Flow
 - Click `Load Demo Data`.
 - Log in as `alice.chen@demo.local`.
-- Show profile editing, CV path storage, and available jobs.
+- Show profile editing, CV path storage, multiple PDF supporting documents, and available jobs.
 - View a job detail dialog and point out job type, period, schedule, location, and weekly/total workload.
 - Open `My Applications` to show accepted one-off invigilation workload, match score, missing skills, and MO reviewer notes.
 - Log in as `emma.liu@demo.local` if time allows to show the EBU6304 missing-skills case.
@@ -18,6 +18,7 @@
 - Log in as `ling.ma@qmul.ac.uk`.
 - Show job creation/editing, including job type, start/end date, schedule, location, and workload type.
 - Select a job, load applicants, and show the match score and missing skills.
+- Click the supporting documents line to show that reviewers can choose from the applicant's award certificate, competition proof, and additional evidence PDFs.
 - Add reviewer notes and accept or reject an applicant.
 - Repeat briefly with:
 - `chao.shu@qmul.ac.uk` for EBU6475 applicants Ben Wang and Frank Zhao.

@@ -16,7 +16,6 @@ import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.MouseWheelEvent;
-import java.awt.geom.Line2D;
 import java.awt.geom.RoundRectangle2D;
 
 /**
@@ -684,16 +683,17 @@ public final class UiTheme {
             @Override
             public Dimension getPreferredSize() {
                 Dimension preferred = super.getPreferredSize();
-                return new Dimension(preferred.width, Math.max(42, preferred.height));
+                return new Dimension(preferred.width, Math.max(46, preferred.height));
             }
 
             @Override
             public Dimension getMinimumSize() {
                 Dimension minimum = super.getMinimumSize();
-                return new Dimension(Math.max(80, minimum.width), Math.max(42, minimum.height));
+                return new Dimension(Math.max(80, minimum.width), Math.max(46, minimum.height));
             }
         };
         field.setOpaque(false);
+        field.setBorder(new EmptyBorder(1, 0, 2, 0));
         field.add(comboBox, BorderLayout.CENTER);
 
         comboBox.addFocusListener(new FocusAdapter() {
@@ -719,10 +719,10 @@ public final class UiTheme {
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g.setColor(component.isEnabled() ? SURFACE_ALT : new Color(241, 244, 249));
         g.fill(new RoundRectangle2D.Float(
-                0.5f,
-                0.5f,
-                Math.max(0, width - 1f),
-                Math.max(0, height - 1f),
+                1f,
+                1f,
+                Math.max(0, width - 2f),
+                Math.max(0, height - 2f),
                 8f,
                 8f
         ));
@@ -730,22 +730,20 @@ public final class UiTheme {
 
     private static void paintComboBoxBorder(Component component, Graphics2D g, int x, int y, int width, int height) {
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g.setStroke(new BasicStroke(1f));
         boolean focused = isFocusedWithin(component);
         Color borderColor = focused ? new Color(124, 158, 255)
                 : (component.isEnabled() ? BORDER : new Color(225, 230, 238));
         g.setColor(borderColor);
+        g.setStroke(new BasicStroke(1.2f));
         g.draw(new RoundRectangle2D.Float(
-                x + 0.5f,
-                y + 0.5f,
-                Math.max(0, width - 1f),
-                Math.max(0, height - 1f),
+                x + 1f,
+                y + 1f,
+                Math.max(0, width - 2f),
+                Math.max(0, height - 2f),
                 8f,
                 8f
         ));
 
-        float bottomY = y + Math.max(1.5f, height - 1.5f);
-        g.draw(new Line2D.Float(x + 4.5f, bottomY, x + Math.max(4.5f, width - 4.5f), bottomY));
     }
 
     private static boolean hasExternalComboBoxBorder(Component component) {

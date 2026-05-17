@@ -39,14 +39,41 @@ class JsonDataStoreTest {
         ApplicantProfile profile = new ApplicantProfile("a1", "u1");
         profile.setProgramme("Software Engineering");
         profile.setYearOfStudy("Year 3");
-        profile.setSupportingDocumentPath("supporting-documents/a1-supporting.pdf");
+        profile.setSupportingDocumentPaths(List.of(
+                "supporting-documents/a1-award.pdf",
+                "supporting-documents/a1-proof.pdf"
+        ));
         profile.setFavoriteJobIds(List.of("j1", "j2"));
 
         store.writeList(file, List.of(profile));
         List<ApplicantProfile> loaded = store.readList(file, ApplicantProfile.class);
 
         assertEquals("Software Engineering", loaded.get(0).getProgramme());
+        assertEquals("supporting-documents/a1-award.pdf", loaded.get(0).getSupportingDocumentPath());
+        assertEquals(List.of("supporting-documents/a1-award.pdf", "supporting-documents/a1-proof.pdf"),
+                loaded.get(0).getSupportingDocumentPaths());
         assertEquals(List.of("j1", "j2"), loaded.get(0).getFavoriteJobIds());
+    }
+
+    @Test
+    void shouldReadLegacySingleSupportingDocumentPath() throws Exception {
+        JsonDataStore store = new JsonDataStore();
+        Path file = tempDir.resolve("profiles.json");
+        Files.writeString(file, """
+                [
+                  {
+                    "applicantId": "a1",
+                    "userId": "u1",
+                    "supportingDocumentPath": "supporting-documents/a1-supporting.pdf",
+                    "favoriteJobIds": []
+                  }
+                ]
+                """);
+
+        List<ApplicantProfile> loaded = store.readList(file, ApplicantProfile.class);
+
+        assertEquals("supporting-documents/a1-supporting.pdf", loaded.get(0).getSupportingDocumentPath());
+        assertEquals(List.of("supporting-documents/a1-supporting.pdf"), loaded.get(0).getSupportingDocumentPaths());
     }
 
     @Test

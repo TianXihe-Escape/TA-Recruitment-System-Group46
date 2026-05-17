@@ -5,6 +5,7 @@ service\WorkloadServiceTest.class
 service\JobServiceTest.class
 service\JsonDataStoreTest.class
 service\SampleDataLoaderTest.class
+service\AccountCleanupServiceTest.class
 service\ApplicationServiceTest.class
 service\MessageServiceTest.class
 service\MatchingServiceTest.class

@@ -4,6 +4,7 @@ import model.ApplicantProfile;
 import model.ApplicationRecord;
 import model.ApplicationStatus;
 import model.JobPosting;
+import model.MessageRecord;
 import model.User;
 import model.WorkloadRecord;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +22,8 @@ import repository.UserRepository;
 import util.SampleDataLoader;
 
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -90,6 +93,119 @@ class SampleDataLoaderTest {
     }
 
     @Test
+    void shouldPreserveReadStateWhenReloadingSampleData() {
+        new NotificationService(notificationRepository).markAllRead("user-ta-alice");
+        new MessageService(messageRepository).markAllRead("user-ta-alice");
+
+        new SampleDataLoader(
+                userRepository,
+                profileRepository,
+                jobRepository,
+                applicationRepository,
+                notificationRepository,
+                messageRepository,
+                allocationRepository,
+                configRepository
+        ).loadSampleData();
+
+        assertFalse(new NotificationService(notificationRepository).hasUnreadNotifications("user-ta-alice"));
+        assertFalse(new MessageService(messageRepository).hasUnreadMessages("user-ta-alice"));
+        assertTrue(new NotificationService(notificationRepository).hasUnreadNotifications("user-ta-ben"));
+        assertTrue(new MessageService(messageRepository).hasUnreadMessages("user-ta-ben"));
+    }
+
+    @Test
+    void shouldPreserveMoCreatedJobsWhenReloadingSampleData() {
+        JobPosting customJob = new JobPosting();
+        customJob.setJobId("job-ebu6475-01");
+        customJob.setModuleCode("EBU6475");
+        customJob.setModuleTitle("Extra Microprocessor Lab Support");
+        customJob.setCategory(model.JobCategory.INVIGILATION);
+        customJob.setSemester("2025/26");
+        customJob.setDuties("Support extra assessment activity.");
+        customJob.setHours(2);
+        customJob.setJobType(JobPosting.JOB_TYPE_INVIGILATION);
+        customJob.setWorkloadType(JobPosting.WORKLOAD_TYPE_TOTAL);
+        customJob.setStartDate("2026-06-20");
+        customJob.setEndDate("2026-06-20");
+        customJob.setSchedule("15:00-17:00");
+        customJob.setLocation("805");
+        customJob.setRequiredTaCount(1);
+        customJob.setRequiredSkills(List.of("Java"));
+        customJob.setApplicationDeadline(java.time.LocalDate.parse("2026-06-19"));
+        customJob.setStatus(model.JobStatus.OPEN);
+        customJob.setPostedBy("user-mo-chao-shu");
+
+        List<JobPosting> jobs = new java.util.ArrayList<>(jobRepository.findAll());
+        jobs.add(customJob);
+        jobRepository.saveAll(jobs);
+
+        new SampleDataLoader(
+                userRepository,
+                profileRepository,
+                jobRepository,
+                applicationRepository,
+                notificationRepository,
+                messageRepository,
+                allocationRepository,
+                configRepository
+        ).loadSampleData();
+
+        JobPosting savedJob = jobRepository.findById("job-ebu6475-01").orElseThrow();
+        assertEquals("Extra Microprocessor Lab Support", savedJob.getModuleTitle());
+        assertEquals("805", savedJob.getLocation());
+        assertEquals(10, jobRepository.findAll().size());
+    }
+
+    @Test
+    void shouldPreserveEditedProfilesApplicationsAndMessagesWhenReloadingSampleData() {
+        ApplicantProfile jasonProfile = profileRepository.findByApplicantId("applicant-jason").orElseThrow();
+        jasonProfile.setExperienceSummary("Jason manually edited this profile during the demo.");
+        List<ApplicantProfile> profiles = new ArrayList<>(profileRepository.findAll());
+        profileRepository.saveAll(profiles.stream()
+                .map(profile -> "applicant-jason".equals(profile.getApplicantId()) ? jasonProfile : profile)
+                .collect(Collectors.toList()));
+
+        ApplicationRecord jasonApplication = applicationRepository.findById("apply-12").orElseThrow();
+        jasonApplication.setReviewerNotes("Manual reviewer note that should survive Load Demo Data.");
+        List<ApplicationRecord> applications = new ArrayList<>(applicationRepository.findAll());
+        applicationRepository.saveAll(applications.stream()
+                .map(application -> "apply-12".equals(application.getApplicationId()) ? jasonApplication : application)
+                .collect(Collectors.toList()));
+
+        MessageRecord customMessage = new MessageRecord();
+        customMessage.setMessageId("msg-custom-jason");
+        customMessage.setJobId("job-ebu6366");
+        customMessage.setApplicationId("apply-12");
+        customMessage.setSenderUserId("user-ta-jason");
+        customMessage.setRecipientUserId("user-mo-jin-zhang");
+        customMessage.setBody("Custom message created during the demo.");
+        customMessage.setCreatedAt(LocalDateTime.now());
+        customMessage.setRead(false);
+        List<MessageRecord> messages = new ArrayList<>(messageRepository.findAll());
+        messages.add(customMessage);
+        messageRepository.saveAll(messages);
+
+        new SampleDataLoader(
+                userRepository,
+                profileRepository,
+                jobRepository,
+                applicationRepository,
+                notificationRepository,
+                messageRepository,
+                allocationRepository,
+                configRepository
+        ).loadSampleData();
+
+        assertEquals("Jason manually edited this profile during the demo.",
+                profileRepository.findByApplicantId("applicant-jason").orElseThrow().getExperienceSummary());
+        assertEquals("Manual reviewer note that should survive Load Demo Data.",
+                applicationRepository.findById("apply-12").orElseThrow().getReviewerNotes());
+        assertTrue(messageRepository.findAll().stream()
+                .anyMatch(message -> "msg-custom-jason".equals(message.getMessageId())));
+    }
+
+    @Test
     void shouldIncludeRequestedCoursesAndMoAccounts() {
         assertCourseOwner("EBU6304", "Dr Ling Ma", "ling.ma@qmul.ac.uk");
         assertCourseOwner("EBU6475", "Dr Chao Shu", "chao.shu@qmul.ac.uk");
@@ -141,6 +257,11 @@ class SampleDataLoaderTest {
             assertTrue(profile.getEmail().endsWith("@demo.local"));
             assertTrue(profile.getCvPath().startsWith("cv/"));
             assertTrue(profile.getCvPath().endsWith(".docx"));
+            assertTrue(profile.getExperienceSummary().contains("Supporting documents include"));
+            assertFalse(profile.getSupportingDocumentPaths().isEmpty());
+            assertEquals(profile.getSupportingDocumentPaths().get(0), profile.getSupportingDocumentPath());
+            assertTrue(profile.getSupportingDocumentPaths().stream()
+                    .allMatch(path -> path.startsWith("supporting-documents/") && path.endsWith(".pdf")));
         }
     }
 
@@ -261,6 +382,8 @@ class SampleDataLoaderTest {
         JobPosting demo = jobRepository.findById("job-ebu6304-demo").orElseThrow();
         assertEquals(JobPosting.JOB_TYPE_INVIGILATION, invigilation.getJobType());
         assertEquals(JobPosting.JOB_TYPE_DEMO_SUPPORT, demo.getJobType());
+        assertTrue(invigilation.getApplicationDeadline().isBefore(java.time.LocalDate.parse(invigilation.getStartDate())));
+        assertTrue(demo.getApplicationDeadline().isBefore(java.time.LocalDate.parse(demo.getStartDate())));
         assertEquals(10, configRepository.load().getWorkloadThreshold());
     }
 

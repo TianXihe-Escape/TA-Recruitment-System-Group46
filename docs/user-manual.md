@@ -57,7 +57,7 @@ mvn test
 
 All sample accounts are local coursework-demo accounts only. The application does not send real email.
 
-The final demo dataset contains 7 course support jobs, 2 one-off event jobs, 7 MO accounts, 10 fictional TA accounts, sample applications with reviewer notes, notifications/messages, and workload examples. The demo workload threshold is 10 hours/week; Frank Zhao is intentionally accepted for EBU6475 and EBU6366 so his 11 hours/week accepted weekly workload demonstrates Admin workload balancing. Alice Chen's 3 h total invigilation and Jason Wu's 4 h total demo support are displayed separately as event workload.
+The final demo dataset contains 7 course support jobs, 2 one-off event jobs, 7 MO accounts, 10 fictional TA accounts, sample applications with reviewer notes, notifications/messages, workload examples, and multiple PDF supporting documents per TA. The demo workload threshold is 10 hours/week; Frank Zhao is intentionally accepted for EBU6475 and EBU6366 so his 11 hours/week accepted weekly workload demonstrates Admin workload balancing. Alice Chen's 3 h total invigilation and Jason Wu's 4 h total demo support are displayed separately as event workload.
 
 ## Demo Course Set
 - `EBU6304`: Software Engineering - 2025/26, Module Organiser Dr Ling Ma.
@@ -76,7 +76,7 @@ Use this screen to sign in, load sample data, or create a TA account.
 ![Login screen](screenshots/login-frame.png)
 
 ### TA Dashboard
-The TA dashboard is used to maintain the applicant profile, choose a CV and supporting document, search and filter open jobs, save favourite jobs, apply, withdraw eligible applications, exchange messages with MOs, view notifications, and track application results.
+The TA dashboard is used to maintain the applicant profile, choose a CV and multiple supporting documents, search and filter open jobs, save favourite jobs, apply, withdraw eligible applications, exchange messages with MOs, view notifications, and track application results.
 
 ![TA dashboard](screenshots/ta-dashboard.png)
 
@@ -93,7 +93,7 @@ The Admin dashboard is used to monitor TA workloads, inspect jobs, view all appl
 ## TA Applicant Workflow
 1. Log in as a TA user.
 2. Complete the profile form on the left side.
-3. Click `Choose File` to select a CV and optionally select a supporting document such as a transcript.
+3. Click `Choose File` to select a CV, and click `Choose Files` to select any number of supporting documents such as award certificates, competition participation proof, transcripts, or other evidence. When the profile is saved, those local files are copied into `supporting-documents/`.
 4. Click `Save Profile`.
 5. In `Available Jobs`, use the search, module, and category filters to find relevant opportunities.
 6. Use `Toggle Favourite` to save a job to the `Favourite Jobs` tab if needed.
@@ -134,7 +134,7 @@ The Admin dashboard is used to monitor TA workloads, inspect jobs, view all appl
 - match details
 - missing skills
 - applicant summary
-- CV and supporting document paths, which can be clicked to open the files
+- CV and supporting document paths, which can be clicked to open the files. If multiple supporting documents exist, choose the exact file from the popup list.
 - reviewer notes
 7. Use the applicant status filter to narrow the list to `Submitted`, `Shortlisted`, `Interview Invited`, `Accepted`, `Rejected`, or `Withdrawn` records if needed.
 8. Use the sort box to rank applicants by:
