@@ -9,6 +9,7 @@ import model.WorkloadRecord;
 import service.ApplicantService;
 import service.ApplicationService;
 import service.AuthService;
+import service.AccountCleanupService;
 import service.CvStorageService;
 import service.DataService;
 import service.JobService;
@@ -1047,8 +1048,13 @@ public class AdminDashboardFrame extends JFrame {
         try {
             // Reuse the service-layer deletion path so removing a TA also reopens any
             // jobs whose accepted headcount drops below the required demand.
+            Set<String> deletedApplicationIds = dataService.getApplicationRepository().findByApplicantId(profile.getApplicantId()).stream()
+                    .map(ApplicationRecord::getApplicationId)
+                    .collect(java.util.stream.Collectors.toSet());
             applicationService.removeApplicationsForApplicant(profile.getApplicantId());
             cvStorageService.deleteManagedCv(profile.getCvPath());
+            cvStorageService.deleteManagedSupportingDocuments(profile.getSupportingDocumentPaths());
+            cleanupService().cleanupDeletedApplicant(profile.getApplicantId(), profile.getUserId(), deletedApplicationIds);
 
             List<ApplicantProfile> profiles = new ArrayList<>(dataService.getProfileRepository().findAll());
             profiles.removeIf(existingProfile -> profile.getApplicantId().equals(existingProfile.getApplicantId()));
@@ -1090,8 +1096,13 @@ public class AdminDashboardFrame extends JFrame {
             dataService.getJobRepository().saveAll(jobs);
 
             List<ApplicationRecord> applications = new ArrayList<>(dataService.getApplicationRepository().findAll());
+            Set<String> deletedApplicationIds = applications.stream()
+                    .filter(application -> deletedJobIds.contains(application.getJobId()))
+                    .map(ApplicationRecord::getApplicationId)
+                    .collect(java.util.stream.Collectors.toSet());
             applications.removeIf(application -> deletedJobIds.contains(application.getJobId()));
             dataService.getApplicationRepository().saveAll(applications);
+            cleanupService().cleanupDeletedModuleOrganiser(moUser.getUserId(), deletedJobIds, deletedApplicationIds);
 
             List<User> users = new ArrayList<>(dataService.getUserRepository().findAll());
             users.removeIf(user -> moUser.getUserId().equals(user.getUserId()));
@@ -1102,6 +1113,14 @@ public class AdminDashboardFrame extends JFrame {
         } catch (Exception ex) {
             UiMessage.error(this, ex.getMessage());
         }
+    }
+
+    private AccountCleanupService cleanupService() {
+        return new AccountCleanupService(
+                dataService.getAllocationRepository(),
+                dataService.getMessageRepository(),
+                dataService.getNotificationRepository()
+        );
     }
 
     /**

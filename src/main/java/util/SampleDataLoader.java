@@ -47,29 +47,72 @@ public class SampleDataLoader {
     }
 
     public void loadSampleData() {
+        List<User> existingUsers = userRepository.findAll();
+        List<ApplicantProfile> existingProfiles = profileRepository.findAll();
         List<NotificationRecord> existingNotifications = notificationRepository.findAll();
         List<MessageRecord> existingMessages = messageRepository.findAll();
         List<JobPosting> existingJobs = jobRepository.findAll();
+        List<ApplicationRecord> existingApplications = applicationRepository.findAll();
+        List<AllocationRecord> existingAllocations = allocationRepository.findAll();
 
-        List<User> users = buildUsers();
+        List<User> users = mergeUsersPreservingExistingEdits(buildUsers(), existingUsers);
         userRepository.saveAll(users);
 
-        List<ApplicantProfile> profiles = buildProfiles();
+        List<ApplicantProfile> profiles = mergeProfilesPreservingExistingEdits(buildProfiles(), existingProfiles);
         profileRepository.saveAll(profiles);
 
         List<JobPosting> jobs = mergeJobsPreservingExistingEdits(buildJobs(), existingJobs);
         jobRepository.saveAll(jobs);
 
-        List<ApplicationRecord> applications = buildApplications(profiles, jobs);
+        List<ApplicationRecord> applications = mergeApplicationsPreservingExistingEdits(
+                buildApplications(profiles, jobs),
+                existingApplications
+        );
         applicationRepository.saveAll(applications);
 
-        allocationRepository.saveAll(buildAllocations(applications, jobs));
-        notificationRepository.saveAll(preserveNotificationReadState(buildNotifications(), existingNotifications));
-        messageRepository.saveAll(preserveMessageReadState(buildMessages(), existingMessages));
+        allocationRepository.saveAll(mergeAllocationsPreservingExistingEdits(
+                buildAllocations(applications, jobs),
+                existingAllocations
+        ));
+        notificationRepository.saveAll(mergeNotificationsPreservingExistingEdits(
+                preserveNotificationReadState(buildNotifications(), existingNotifications),
+                existingNotifications
+        ));
+        messageRepository.saveAll(mergeMessagesPreservingExistingEdits(
+                preserveMessageReadState(buildMessages(), existingMessages),
+                existingMessages
+        ));
 
         SystemConfig config = new SystemConfig();
         config.setWorkloadThreshold(10);
         configRepository.save(config);
+    }
+
+    private List<User> mergeUsersPreservingExistingEdits(List<User> demoUsers, List<User> existingUsers) {
+        Map<String, User> mergedUsers = new LinkedHashMap<>();
+        for (User demoUser : demoUsers) {
+            mergedUsers.put(demoUser.getUserId(), demoUser);
+        }
+        for (User existingUser : existingUsers) {
+            if (existingUser.getUserId() != null && !existingUser.getUserId().isBlank()) {
+                mergedUsers.put(existingUser.getUserId(), existingUser);
+            }
+        }
+        return new ArrayList<>(mergedUsers.values());
+    }
+
+    private List<ApplicantProfile> mergeProfilesPreservingExistingEdits(List<ApplicantProfile> demoProfiles,
+                                                                        List<ApplicantProfile> existingProfiles) {
+        Map<String, ApplicantProfile> mergedProfiles = new LinkedHashMap<>();
+        for (ApplicantProfile demoProfile : demoProfiles) {
+            mergedProfiles.put(demoProfile.getApplicantId(), demoProfile);
+        }
+        for (ApplicantProfile existingProfile : existingProfiles) {
+            if (existingProfile.getApplicantId() != null && !existingProfile.getApplicantId().isBlank()) {
+                mergedProfiles.put(existingProfile.getApplicantId(), existingProfile);
+            }
+        }
+        return new ArrayList<>(mergedProfiles.values());
     }
 
     private List<JobPosting> mergeJobsPreservingExistingEdits(List<JobPosting> demoJobs, List<JobPosting> existingJobs) {
@@ -83,6 +126,62 @@ public class SampleDataLoader {
             }
         }
         return new ArrayList<>(mergedJobs.values());
+    }
+
+    private List<ApplicationRecord> mergeApplicationsPreservingExistingEdits(List<ApplicationRecord> demoApplications,
+                                                                             List<ApplicationRecord> existingApplications) {
+        Map<String, ApplicationRecord> mergedApplications = new LinkedHashMap<>();
+        for (ApplicationRecord demoApplication : demoApplications) {
+            mergedApplications.put(demoApplication.getApplicationId(), demoApplication);
+        }
+        for (ApplicationRecord existingApplication : existingApplications) {
+            if (existingApplication.getApplicationId() != null && !existingApplication.getApplicationId().isBlank()) {
+                mergedApplications.put(existingApplication.getApplicationId(), existingApplication);
+            }
+        }
+        return new ArrayList<>(mergedApplications.values());
+    }
+
+    private List<AllocationRecord> mergeAllocationsPreservingExistingEdits(List<AllocationRecord> demoAllocations,
+                                                                           List<AllocationRecord> existingAllocations) {
+        Map<String, AllocationRecord> mergedAllocations = new LinkedHashMap<>();
+        for (AllocationRecord demoAllocation : demoAllocations) {
+            mergedAllocations.put(demoAllocation.getAllocationId(), demoAllocation);
+        }
+        for (AllocationRecord existingAllocation : existingAllocations) {
+            if (existingAllocation.getAllocationId() != null && !existingAllocation.getAllocationId().isBlank()) {
+                mergedAllocations.put(existingAllocation.getAllocationId(), existingAllocation);
+            }
+        }
+        return new ArrayList<>(mergedAllocations.values());
+    }
+
+    private List<NotificationRecord> mergeNotificationsPreservingExistingEdits(List<NotificationRecord> demoNotifications,
+                                                                               List<NotificationRecord> existingNotifications) {
+        Map<String, NotificationRecord> mergedNotifications = new LinkedHashMap<>();
+        for (NotificationRecord demoNotification : demoNotifications) {
+            mergedNotifications.put(demoNotification.getNotificationId(), demoNotification);
+        }
+        for (NotificationRecord existingNotification : existingNotifications) {
+            if (existingNotification.getNotificationId() != null && !existingNotification.getNotificationId().isBlank()) {
+                mergedNotifications.put(existingNotification.getNotificationId(), existingNotification);
+            }
+        }
+        return new ArrayList<>(mergedNotifications.values());
+    }
+
+    private List<MessageRecord> mergeMessagesPreservingExistingEdits(List<MessageRecord> demoMessages,
+                                                                     List<MessageRecord> existingMessages) {
+        Map<String, MessageRecord> mergedMessages = new LinkedHashMap<>();
+        for (MessageRecord demoMessage : demoMessages) {
+            mergedMessages.put(demoMessage.getMessageId(), demoMessage);
+        }
+        for (MessageRecord existingMessage : existingMessages) {
+            if (existingMessage.getMessageId() != null && !existingMessage.getMessageId().isBlank()) {
+                mergedMessages.put(existingMessage.getMessageId(), existingMessage);
+            }
+        }
+        return new ArrayList<>(mergedMessages.values());
     }
 
     private List<NotificationRecord> preserveNotificationReadState(List<NotificationRecord> freshNotifications,

@@ -4,6 +4,7 @@ import model.ApplicantProfile;
 import model.ApplicationRecord;
 import model.ApplicationStatus;
 import model.JobPosting;
+import model.MessageRecord;
 import model.User;
 import model.WorkloadRecord;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +22,8 @@ import repository.UserRepository;
 import util.SampleDataLoader;
 
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -152,6 +155,54 @@ class SampleDataLoaderTest {
         assertEquals("Extra Microprocessor Lab Support", savedJob.getModuleTitle());
         assertEquals("805", savedJob.getLocation());
         assertEquals(10, jobRepository.findAll().size());
+    }
+
+    @Test
+    void shouldPreserveEditedProfilesApplicationsAndMessagesWhenReloadingSampleData() {
+        ApplicantProfile jasonProfile = profileRepository.findByApplicantId("applicant-jason").orElseThrow();
+        jasonProfile.setExperienceSummary("Jason manually edited this profile during the demo.");
+        List<ApplicantProfile> profiles = new ArrayList<>(profileRepository.findAll());
+        profileRepository.saveAll(profiles.stream()
+                .map(profile -> "applicant-jason".equals(profile.getApplicantId()) ? jasonProfile : profile)
+                .collect(Collectors.toList()));
+
+        ApplicationRecord jasonApplication = applicationRepository.findById("apply-12").orElseThrow();
+        jasonApplication.setReviewerNotes("Manual reviewer note that should survive Load Demo Data.");
+        List<ApplicationRecord> applications = new ArrayList<>(applicationRepository.findAll());
+        applicationRepository.saveAll(applications.stream()
+                .map(application -> "apply-12".equals(application.getApplicationId()) ? jasonApplication : application)
+                .collect(Collectors.toList()));
+
+        MessageRecord customMessage = new MessageRecord();
+        customMessage.setMessageId("msg-custom-jason");
+        customMessage.setJobId("job-ebu6366");
+        customMessage.setApplicationId("apply-12");
+        customMessage.setSenderUserId("user-ta-jason");
+        customMessage.setRecipientUserId("user-mo-jin-zhang");
+        customMessage.setBody("Custom message created during the demo.");
+        customMessage.setCreatedAt(LocalDateTime.now());
+        customMessage.setRead(false);
+        List<MessageRecord> messages = new ArrayList<>(messageRepository.findAll());
+        messages.add(customMessage);
+        messageRepository.saveAll(messages);
+
+        new SampleDataLoader(
+                userRepository,
+                profileRepository,
+                jobRepository,
+                applicationRepository,
+                notificationRepository,
+                messageRepository,
+                allocationRepository,
+                configRepository
+        ).loadSampleData();
+
+        assertEquals("Jason manually edited this profile during the demo.",
+                profileRepository.findByApplicantId("applicant-jason").orElseThrow().getExperienceSummary());
+        assertEquals("Manual reviewer note that should survive Load Demo Data.",
+                applicationRepository.findById("apply-12").orElseThrow().getReviewerNotes());
+        assertTrue(messageRepository.findAll().stream()
+                .anyMatch(message -> "msg-custom-jason".equals(message.getMessageId())));
     }
 
     @Test

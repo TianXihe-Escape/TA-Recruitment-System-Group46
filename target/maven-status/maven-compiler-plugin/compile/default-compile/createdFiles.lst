@@ -48,6 +48,7 @@ repository\ApplicantProfileRepository.class
 ui\TADashboardFrame.class
 util\IdGenerator.class
 ui\MOManagementFrame$DeadlineWarningRenderer.class
+service\AccountCleanupService.class
 ui\UiFormat.class
 model\JobStatus.class
 ui\UiTheme$1$2.class

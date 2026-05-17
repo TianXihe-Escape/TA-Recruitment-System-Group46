@@ -581,10 +581,11 @@ public class MOManagementFrame extends JFrame {
         jobIdField.setText(NEW_JOB_PLACEHOLDER);
         if (moduleCodeBox.getItemCount() > 0) {
             moduleCodeBox.setSelectedIndex(0);
+            moduleTitleField.setText(resolveModuleTitle(String.valueOf(moduleCodeBox.getSelectedItem())).orElse(""));
         } else {
             moduleCodeBox.setSelectedItem(null);
+            moduleTitleField.setText("");
         }
-        moduleTitleField.setText("");
         categoryBox.setSelectedItem(JobCategory.MODULE_TA);
         jobTypeBox.setSelectedItem(JobPosting.JOB_TYPE_COURSE_SUPPORT);
         semesterField.setText("");
@@ -1567,38 +1568,30 @@ public class MOManagementFrame extends JFrame {
             return;
         }
 
-        Optional<JobPosting> existingJob = getScopedJobs().stream()
-                .filter(job -> moduleCode.equals(job.getModuleCode()))
-                .findFirst();
+        moduleTitleField.setText(resolveModuleTitle(moduleCode).orElse(""));
+    }
 
-        if (existingJob.isPresent()) {
-            applyJobToForm(existingJob.get());
-            selectJobRow(existingJob.get().getJobId());
-            return;
+    private Optional<String> resolveModuleTitle(String moduleCode) {
+        String normalizedModuleCode = validationService.normalizeModuleCode(moduleCode);
+        if (normalizedModuleCode.isBlank()) {
+            return Optional.empty();
         }
 
-        syncingForm = true;
-        jobTable.clearSelection();
-        applicantTable.clearSelection();
-        jobIdField.setForeground(Color.GRAY);
-        jobIdField.setText(NEW_JOB_PLACEHOLDER);
-        statusBox.setSelectedItem(JobStatus.OPEN);
-        categoryBox.setSelectedItem(JobCategory.MODULE_TA);
-        jobTypeBox.setSelectedItem(JobPosting.JOB_TYPE_COURSE_SUPPORT);
-        workloadTypeBox.setSelectedItem(JobPosting.WORKLOAD_TYPE_WEEKLY);
-        semesterField.setText("");
-        startDateField.setText("");
-        endDateField.setText("");
-        scheduleField.setText("");
-        locationField.setText("");
-        reviewArea.setText("");
-        setReviewText(applicantSummaryArea, "");
-        setReviewText(matchInfoArea, "");
-        clearSelectedApplicantCv();
-        applicantTableModel.setRowCount(0);
-        loadedApplicantJobId = null;
-        updateApplicantEmptyState();
-        syncingForm = false;
+        List<JobPosting> matchingJobs = getScopedJobs().stream()
+                .filter(job -> normalizedModuleCode.equals(validationService.normalizeModuleCode(job.getModuleCode())))
+                .filter(job -> job.getModuleTitle() != null && !job.getModuleTitle().isBlank())
+                .collect(Collectors.toList());
+
+        Optional<String> moduleTaTitle = matchingJobs.stream()
+                .filter(job -> job.getCategory() == JobCategory.MODULE_TA)
+                .map(JobPosting::getModuleTitle)
+                .findFirst();
+        if (moduleTaTitle.isPresent()) {
+            return moduleTaTitle;
+        }
+        return matchingJobs.stream()
+                .map(JobPosting::getModuleTitle)
+                .findFirst();
     }
 
     private void applyJobToForm(JobPosting job) {

@@ -5,7 +5,7 @@
     "applicantId" : "applicant-frank",
     "jobId" : "job-ebu6475",
     "allocatedByUserId" : "user-admin-01",
-    "allocatedAt" : "2026-05-16T17:46:43.536209",
+    "allocatedAt" : "2026-05-16T19:47:07.626877800",
     "active" : true
   },
   {
@@ -14,7 +14,7 @@
     "applicantId" : "applicant-frank",
     "jobId" : "job-ebu6366",
     "allocatedByUserId" : "user-mo-jin-zhang",
-    "allocatedAt" : "2026-05-16T17:46:43.536209",
+    "allocatedAt" : "2026-05-16T19:47:07.626877800",
     "active" : true
   },
   {
@@ -23,7 +23,7 @@
     "applicantId" : "applicant-jason",
     "jobId" : "job-ebu5606",
     "allocatedByUserId" : "user-mo-nickos",
-    "allocatedAt" : "2026-05-16T17:46:43.536209",
+    "allocatedAt" : "2026-05-16T19:47:07.626877800",
     "active" : true
   },
   {
@@ -32,7 +32,7 @@
     "applicantId" : "applicant-alice",
     "jobId" : "job-ebu6304-invigilation",
     "allocatedByUserId" : "user-mo-ling",
-    "allocatedAt" : "2026-05-16T17:46:43.536209",
+    "allocatedAt" : "2026-05-16T19:47:07.626877800",
     "active" : true
   },
   {
@@ -41,7 +41,7 @@
     "applicantId" : "applicant-jason",
     "jobId" : "job-ebu6304-demo",
     "allocatedByUserId" : "user-mo-ling",
-    "allocatedAt" : "2026-05-16T17:46:43.536209",
+    "allocatedAt" : "2026-05-16T19:47:07.626877800",
     "active" : true
   }
 ]

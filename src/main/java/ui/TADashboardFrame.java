@@ -8,6 +8,7 @@ import model.MessageRecord;
 import model.NotificationRecord;
 import model.User;
 import service.AuthService;
+import service.AccountCleanupService;
 import service.ApplicantService;
 import service.ApplicationService;
 import service.CvStorageService;
@@ -37,6 +38,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Main TA workspace.
@@ -1206,9 +1209,17 @@ public class TADashboardFrame extends JFrame {
         }
 
         try {
+            Set<String> deletedApplicationIds = dataService.getApplicationRepository().findByApplicantId(profile.getApplicantId()).stream()
+                    .map(ApplicationRecord::getApplicationId)
+                    .collect(Collectors.toSet());
             applicationService.removeApplicationsForApplicant(profile.getApplicantId());
             cvStorageService.deleteManagedCv(profile.getCvPath());
             cvStorageService.deleteManagedSupportingDocuments(profile.getSupportingDocumentPaths());
+            new AccountCleanupService(
+                    dataService.getAllocationRepository(),
+                    dataService.getMessageRepository(),
+                    dataService.getNotificationRepository()
+            ).cleanupDeletedApplicant(profile.getApplicantId(), currentUser.getUserId(), deletedApplicationIds);
 
             List<ApplicantProfile> profiles = new ArrayList<>(dataService.getProfileRepository().findAll());
             profiles.removeIf(existingProfile -> profile.getApplicantId().equals(existingProfile.getApplicantId()));
