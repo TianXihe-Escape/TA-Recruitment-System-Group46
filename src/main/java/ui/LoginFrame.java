@@ -19,7 +19,6 @@ import java.awt.*;
  * Key features:
  * - User authentication with username, password, and role selection
  * - Password visibility toggle for better usability
- * - Demo account information display
  * - Sample data loading functionality
  * - Registration link for new TA accounts
  * - Role-based dashboard redirection after successful login
@@ -63,8 +62,8 @@ public class LoginFrame extends JFrame {
 
         // Configure the main window properties
         setTitle(Constants.APP_TITLE);  // Set window title from constants
-        setSize(1080, 760);  // Set initial window size
-        setMinimumSize(new Dimension(980, 700));  // Set minimum window size for usability
+        setSize(760, 720);  // Set initial window size
+        setMinimumSize(new Dimension(620, 640));  // Set minimum window size for usability
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);  // Exit application when window is closed
         setLocationRelativeTo(null);  // Center the window on screen
         UiTheme.styleFrame(this);  // Apply custom UI styling to the frame
@@ -75,8 +74,8 @@ public class LoginFrame extends JFrame {
         char passwordEchoChar = passwordField.getEchoChar();  // Store original echo character for toggle
         JComboBox<Role> roleBox = new JComboBox<>(Role.values());  // Dropdown for role selection
         JButton loginButton = UiTheme.createPrimaryButton("Login");  // Primary login button
-        JButton registerButton = UiTheme.createSecondaryButton("Create TA Account");  // Button to open registration
-        JButton loadSampleButton = UiTheme.createSecondaryButton("Load Demo Data");  // Button to load sample data
+        JButton registerButton = createTextActionButton("Create TA Account");  // Button to open registration
+        JButton loadSampleButton = createTextActionButton("Load Demo Data");  // Button to load sample data
         JCheckBox showPasswordBox = new JCheckBox("Show Password");  // Checkbox to toggle password visibility
 
         // Apply consistent UI styling to all input components
@@ -86,13 +85,7 @@ public class LoginFrame extends JFrame {
         UiTheme.styleCheckBox(showPasswordBox);
 
         // Create the main content panel with themed styling
-        JPanel root = UiTheme.createPagePanel();
-
-        // Build the hero panel (left side) with system branding and information
-        JPanel hero = buildHeroPanel();
-
-        // Create the login card (right side) with form and supporting information
-        JPanel loginCard = UiTheme.createCard("Sign In", "Use one of the demo accounts or your registered TA account.");
+        JPanel root = buildLoginRoot();
 
         // Create the login form grid layout
         JPanel form = UiTheme.createFormGrid();
@@ -102,61 +95,33 @@ public class LoginFrame extends JFrame {
         UiTheme.addFormRow(form, 4, "", showPasswordBox);  // Password visibility toggle
         UiTheme.addFormRow(form, 6, "Role", roleBox);  // Role selection dropdown
 
-        // Create the demo accounts information panel
-        JPanel supportPanel = new JPanel();
-        supportPanel.setOpaque(false);  // Transparent background
-        supportPanel.setLayout(new BoxLayout(supportPanel, BoxLayout.Y_AXIS));  // Vertical layout
-
-        // Demo accounts title label
-        JLabel supportTitle = new JLabel("Demo Accounts");
-        supportTitle.setForeground(UiTheme.TEXT);  // Use theme text color
-        supportTitle.setFont(UiTheme.uiFont(Font.BOLD, 13));  // Bold font for emphasis
-        supportTitle.setAlignmentX(Component.CENTER_ALIGNMENT);  // Center alignment
-
-        // Text area displaying demo account credentials
-        JTextArea accountArea = new JTextArea(
-                "TA: alice.chen@demo.local / Password123\n" +
-                        "MO: ling.ma@qmul.ac.uk / Password123\n" +
-                        "Admin: admin@bupt.edu.cn / admin123"
-        );
-        accountArea.setEditable(false);  // Read-only
-        accountArea.setOpaque(false);  // Transparent background
-        accountArea.setForeground(UiTheme.MUTED_TEXT);  // Muted text color
-        accountArea.setFont(UiTheme.uiFont(Font.PLAIN, 13));  // Plain font
-        accountArea.setAlignmentX(Component.CENTER_ALIGNMENT);  // Center alignment
-        accountArea.setMaximumSize(new Dimension(Integer.MAX_VALUE, 96));  // Limit height
-
-        // Add components to the support panel with spacing
-        supportPanel.add(supportTitle);
-        supportPanel.add(Box.createVerticalStrut(8));  // Vertical spacing
-        supportPanel.add(accountArea);
-
         // Create the action buttons panel (login and secondary actions)
-        JPanel actionRow = new JPanel(new BorderLayout(0, 10));
+        JPanel actionRow = new JPanel(new BorderLayout(0, 16));
         actionRow.setOpaque(false);  // Transparent background
 
         // Panel for secondary action buttons (load sample data and register)
-        JPanel secondaryActions = new JPanel(new GridLayout(1, 2, 10, 0));
+        JPanel secondaryActions = new JPanel(new FlowLayout(FlowLayout.CENTER, 16, 0));
         secondaryActions.setOpaque(false);  // Transparent background
-        secondaryActions.add(loadSampleButton);
         secondaryActions.add(registerButton);
+        secondaryActions.add(loadSampleButton);
 
-        // Arrange action buttons: secondary actions on top, login button below
-        actionRow.add(secondaryActions, BorderLayout.NORTH);
-        actionRow.add(loginButton, BorderLayout.SOUTH);
+        // Arrange action buttons: primary login first, secondary actions below
+        actionRow.add(loginButton, BorderLayout.NORTH);
+        actionRow.add(secondaryActions, BorderLayout.SOUTH);
 
         // Assemble the login card body with form, demo info, and actions
-        JPanel cardBody = new JPanel(new BorderLayout(0, 18));
+        JPanel cardBody = new JPanel(new BorderLayout(0, 22));
         cardBody.setOpaque(false);  // Transparent background
-        cardBody.add(form, BorderLayout.NORTH);  // Form at the top
-        cardBody.add(supportPanel, BorderLayout.CENTER);  // Demo accounts in the middle
-        cardBody.add(actionRow, BorderLayout.SOUTH);  // Action buttons at the bottom
-        loginCard.add(cardBody, BorderLayout.CENTER);
 
-        // Create the main split-pane layout dividing hero and login sections
-        JSplitPane layout = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, hero, loginCard);
-        layout.setResizeWeight(0.5);  // Equal split initially
-        UiTheme.styleSplitPane(layout);  // Apply custom styling to the split pane
+        JPanel mainStack = new JPanel();
+        mainStack.setOpaque(false);
+        mainStack.setLayout(new BoxLayout(mainStack, BoxLayout.Y_AXIS));
+        mainStack.add(buildBrandHeader());
+        mainStack.add(form);
+        cardBody.add(mainStack, BorderLayout.CENTER);
+        cardBody.add(actionRow, BorderLayout.SOUTH);  // Action buttons at the bottom
+        JPanel loginCard = createCenteredLoginCard();
+        loginCard.add(cardBody, BorderLayout.CENTER);
 
         // Add event listener for the login button
         loginButton.addActionListener(event -> {
@@ -189,100 +154,92 @@ public class LoginFrame extends JFrame {
             // Load sample data into the system
             dataService.loadSampleData();
             // Display success message with demo account credentials
-            UiMessage.info(this, "Sample data loaded.\nTA: alice.chen@demo.local / Password123\nMO: ling.ma@qmul.ac.uk / Password123\nAdmin: admin@bupt.edu.cn / admin123");
+            UiMessage.info(this,
+                    "Sample data loaded.\n\n"
+                            + "Demo accounts:\n"
+                            + "TA: alice.chen@demo.local / Password123\n"
+                            + "MO: ling.ma@qmul.ac.uk / Password123\n"
+                            + "Admin: admin@bupt.edu.cn / admin123");
         });
 
-        // Add the main layout to the root panel and then to the frame
-        root.add(layout, BorderLayout.CENTER);
-        add(UiTheme.wrapPage(root), BorderLayout.CENTER);
+        // Add the main login card to the root panel and then to the frame
+        root.add(loginCard, new GridBagConstraints());
+        add(root, BorderLayout.CENTER);
     }
 
-    /**
-     * Builds the hero panel displayed on the left side of the login screen.
-     * This panel contains branding information, system description, and key metrics.
-     *
-     * @return A JPanel containing the hero content with branding and metrics.
-     */
-    private JPanel buildHeroPanel() {
-        // Create the main hero panel with vertical layout
-        JPanel hero = new JPanel(new BorderLayout(0, 16));
-        hero.setBackground(new Color(18, 52, 86));  // Dark blue background
-        hero.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(32, 74, 118), 1, true),  // Border color
-                BorderFactory.createEmptyBorder(28, 28, 28, 28)  // Padding
-        ));
-
-        // Top section with branding and description
-        JPanel top = new JPanel();
-        top.setOpaque(false);  // Transparent background
-        top.setLayout(new BoxLayout(top, BoxLayout.Y_AXIS));  // Vertical box layout
-
-        // School badge/eyebrow text
-        JLabel eyebrow = UiTheme.createBadge("BUPT International School", new Color(255, 255, 255, 40), Color.WHITE);
-        eyebrow.setAlignmentX(Component.LEFT_ALIGNMENT);  // Left align
-
-        // Main title with HTML formatting for multi-line display
-        JLabel title = new JLabel("<html><div style='width:260px;'>TA Recruitment<br>Management System</div></html>");
-        title.setForeground(Color.WHITE);  // White text
-        title.setFont(UiTheme.uiFont(Font.BOLD, 30));  // Large bold font
-        title.setBorder(BorderFactory.createEmptyBorder(18, 0, 14, 0));  // Spacing
-
-        // System description/summary text
-        JLabel summary = new JLabel("<html><div style='width:320px;'>Manage teaching assistant applications, publish module jobs, and balance workloads from one desktop system.</div></html>");
-        summary.setForeground(new Color(229, 236, 247));  // Light blue-gray text
-        summary.setFont(UiTheme.uiFont(Font.PLAIN, 16));  // Regular font
-
-        // Add branding elements to the top panel
-        top.add(eyebrow);
-        top.add(title);
-        top.add(summary);
-
-        // Bottom section with metrics cards
-        JPanel metrics = new JPanel(new GridLayout(1, 3, 12, 0));  // 3 columns, horizontal gap
-        metrics.setOpaque(false);  // Transparent background
-        metrics.add(buildMetricCard("3", "Roles"));  // Number of user roles
-        metrics.add(buildMetricCard("3+", "Demo Jobs"));  // Number of demo job postings
-        metrics.add(buildMetricCard("Live", "File Data"));  // Data storage type
-
-        // Assemble the hero panel
-        hero.add(top, BorderLayout.CENTER);  // Branding in center
-        hero.add(metrics, BorderLayout.SOUTH);  // Metrics at bottom
-
-        return hero;
+    private JPanel buildLoginRoot() {
+        JPanel root = new JPanel(new GridBagLayout()) {
+            @Override
+            protected void paintComponent(Graphics graphics) {
+                super.paintComponent(graphics);
+                Graphics2D g = (Graphics2D) graphics.create();
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                GradientPaint paint = new GradientPaint(
+                        0, 0, new Color(230, 241, 250),
+                        getWidth(), getHeight(), new Color(248, 250, 253)
+                );
+                g.setPaint(paint);
+                g.fillRect(0, 0, getWidth(), getHeight());
+                g.setColor(new Color(36, 99, 235, 18));
+                g.fillOval(-120, -100, 320, 320);
+                g.setColor(new Color(20, 184, 166, 16));
+                g.fillOval(getWidth() - 180, getHeight() - 180, 280, 280);
+                g.dispose();
+            }
+        };
+        root.setBorder(BorderFactory.createEmptyBorder(36, 36, 36, 36));
+        return root;
     }
 
-    /**
-     * Builds a metric card component for displaying key statistics in the hero panel.
-     * Each card shows a value and label in a styled container.
-     *
-     * @param value The numeric or text value to display (e.g., "3", "Live").
-     * @param label The descriptive label for the metric (e.g., "Roles", "File Data").
-     * @return A JPanel representing a styled metric card.
-     */
-    private JPanel buildMetricCard(String value, String label) {
-        // Create the metric card panel
-        JPanel panel = new JPanel(new BorderLayout(0, 6));
-        panel.setBackground(new Color(255, 255, 255, 24));  // Semi-transparent white background
-        panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(255, 255, 255, 35), 1, true),  // Light border
-                BorderFactory.createEmptyBorder(14, 14, 14, 14)  // Padding
+    private JPanel createCenteredLoginCard() {
+        JPanel card = new JPanel(new BorderLayout(0, 22));
+        card.setBackground(new Color(255, 255, 255, 238));
+        card.setPreferredSize(new Dimension(430, 520));
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(212, 222, 236), 1, true),
+                BorderFactory.createEmptyBorder(34, 36, 30, 36)
         ));
+        return card;
+    }
 
-        // Value label with large, bold font
-        JLabel valueLabel = new JLabel(value);
-        valueLabel.setForeground(Color.WHITE);  // White text
-        valueLabel.setFont(UiTheme.uiFont(Font.BOLD, 24));  // Large bold font
+    private JPanel buildBrandHeader() {
+        JPanel panel = new JPanel();
+        panel.setOpaque(false);
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
-        // Label text with smaller font
-        JLabel labelLabel = new JLabel(label);
-        labelLabel.setForeground(new Color(224, 232, 245));  // Light blue-gray text
-        labelLabel.setFont(UiTheme.uiFont(Font.PLAIN, 12));  // Small plain font
+        JLabel school = new JLabel("BUPT International School");
+        school.setAlignmentX(Component.CENTER_ALIGNMENT);
+        school.setForeground(UiTheme.MUTED_TEXT);
+        school.setFont(UiTheme.uiFont(Font.BOLD, 13));
 
-        // Arrange value and label vertically
-        panel.add(valueLabel, BorderLayout.CENTER);  // Value in center
-        panel.add(labelLabel, BorderLayout.SOUTH);  // Label at bottom
+        JLabel title = new JLabel("TA Recruitment");
+        title.setAlignmentX(Component.CENTER_ALIGNMENT);
+        title.setForeground(UiTheme.TEXT);
+        title.setFont(UiTheme.uiFont(Font.BOLD, 28));
 
+        JLabel subtitle = new JLabel("Management System");
+        subtitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+        subtitle.setForeground(UiTheme.TEXT);
+        subtitle.setFont(UiTheme.uiFont(Font.BOLD, 22));
+
+        panel.add(school);
+        panel.add(Box.createVerticalStrut(12));
+        panel.add(title);
+        panel.add(Box.createVerticalStrut(4));
+        panel.add(subtitle);
+        panel.add(Box.createVerticalStrut(28));
         return panel;
+    }
+
+    private JButton createTextActionButton(String text) {
+        JButton button = new JButton(text);
+        button.setFont(UiTheme.uiFont(Font.PLAIN, 13));
+        button.setForeground(UiTheme.PRIMARY);
+        button.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
+        button.setContentAreaFilled(false);
+        button.setFocusPainted(false);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return button;
     }
 
     /**
