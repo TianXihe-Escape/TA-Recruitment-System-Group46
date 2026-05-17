@@ -94,13 +94,15 @@ mvn exec:java
 ## Default Demo Accounts
 Click `Load Demo Data` from the login screen, or sign in as Admin and use `Load Demo Data`, to restore the full sample dataset. `Reset Demo Data` clears local JSON data; use `Load Demo Data` afterwards to repopulate it.
 
-Final demo data contains 7 courses, 7 MO accounts, 10 fictional TA accounts, sample applications with MO evaluations, notifications/messages, and workload examples. These sample accounts and module data are used only for local coursework demonstration. The system does not send real emails. TA accounts use `@demo.local` because they are fictional users.
+Final demo data contains 7 course support jobs, 2 one-off event jobs, 7 MO accounts, 10 fictional TA accounts, sample applications with MO evaluations, notifications/messages, and workload examples. These sample accounts and module data are used only for local coursework demonstration. The system does not send real emails. TA accounts use `@demo.local` because they are fictional users.
 
 Each fictional TA profile points to a local demo CV in the `cv/` folder, such as `cv/alice-chen-cv.docx`, so TA and MO users can click the CV path in the UI and open a real document.
 
-In the demo dataset, the workload threshold is set to 10 hours/week. Frank Zhao is accepted for both `EBU6475` (6 hours/week) and `EBU6366` (5 hours/week), so his total assigned workload is 11 hours/week. This demonstrates how the Admin workload monitor helps identify overloaded TAs and supports workload balancing decisions.
+The system separates schedule and workload. Schedule explains when and where the work happens, while workload measures effort. Course support jobs use weekly workload; one-off jobs such as invigilation and demo support use total workload.
 
-Admin users can open `Application Reviews` to view all applications in one place, including TA name, course, MO, status, match score, missing skills, and MO reviewer notes. This avoids switching between multiple MO and TA accounts during the demo.
+In the demo dataset, the workload threshold is set to 10 hours/week. Frank Zhao is accepted for both `EBU6475` (6 hours/week) and `EBU6366` (5 hours/week), so his accepted weekly workload is 11 hours/week. Alice Chen is accepted for EBU6304 final assessment invigilation at 3 hours total, and Jason Wu is accepted for EBU6304 final demo support at 4 hours total. Admin workload monitoring shows weekly workload separately from one-off event workload, and one-off workload does not trigger the weekly overload warning.
+
+Admin users can open `Application Reviews` to view all applications in one place, including TA name, course, job type, period/schedule, location, workload, MO, status, match score, missing skills, and MO reviewer notes. This avoids switching between multiple MO and TA accounts during the demo.
 
 Admin:
 - `Admin`: `admin@bupt.edu.cn` / `admin123`
@@ -127,8 +129,8 @@ TA:
 - `Jason Wu`: `jason.wu@demo.local` / `Password123`
 
 Recommended viva flow:
-1. Log in as Admin and check all 7 jobs plus the workload monitor.
-2. Open `Application Reviews` to inspect all applications, matching results, missing skills, and MO reviewer notes.
+1. Log in as Admin and check all 9 jobs plus the workload monitor.
+2. Open `Application Reviews` to inspect all applications, job types, schedules, locations, matching results, missing skills, and MO reviewer notes.
 3. Use the workload monitor to show Frank Zhao exceeding the 10 hours/week threshold because he has multiple accepted TA roles.
 4. In `Application Reviews`, identify Emma Liu and Jason Wu as missing-skill examples, and Alice Chen / Ben Wang / Grace Xu / Henry Sun / Ivy Huang as strong matches.
 5. Log in as Dr Ling Ma and review `EBU6304` applicants, comparing Alice Chen's high match with Emma Liu's missing skills.
@@ -138,7 +140,9 @@ Recommended viva flow:
 9. Log in as Dr Paula Fonseca, Dr Chao Liu, and Dr Athen Ma to review Grace Xu, Henry Sun, and Ivy Huang.
 10. Log in as Alice Chen to show shortlisted status, reviewer notes, notifications, and messages.
 11. Log in as Emma Liu or Jason Wu to demonstrate missing skills.
-12. Return to Admin and show workload balancing / warning for Frank Zhao.
+12. Return to Admin and show workload balancing / warning for Frank Zhao, plus Alice/Jason one-off event workload.
+
+Future work could expand the lightweight schedule conflict check into calendar-based workload planning.
 
 Sample course set:
 - `EBU6304`: Software Engineering - 2025/26, Module Organiser Dr Ling Ma; teaching team includes Dr Gokop Goteng, Dr Riasat Islam, Dr Salman Haleem, and Dr Alan Wong.

@@ -69,8 +69,23 @@ public class MOManagementFrame extends JFrame {
     private final JComboBox<String> moduleCodeBox = new JComboBox<>();
     private final JTextField moduleTitleField = new JTextField();
     private final JComboBox<JobCategory> categoryBox = new JComboBox<>(JobCategory.values());
+    private final JComboBox<String> jobTypeBox = new JComboBox<>(new String[]{
+            JobPosting.JOB_TYPE_COURSE_SUPPORT,
+            JobPosting.JOB_TYPE_INVIGILATION,
+            JobPosting.JOB_TYPE_DEMO_SUPPORT,
+            JobPosting.JOB_TYPE_WORKSHOP_SUPPORT,
+            JobPosting.JOB_TYPE_OTHER
+    });
     private final JTextField semesterField = new JTextField();
     private final JTextField hoursField = new JTextField();
+    private final JComboBox<String> workloadTypeBox = new JComboBox<>(new String[]{
+            JobPosting.WORKLOAD_TYPE_WEEKLY,
+            JobPosting.WORKLOAD_TYPE_TOTAL
+    });
+    private final JTextField startDateField = new JTextField();
+    private final JTextField endDateField = new JTextField();
+    private final JTextField scheduleField = new JTextField();
+    private final JTextField locationField = new JTextField();
     private final JTextField requiredTaCountField = new JTextField();
     private final JTextField skillsField = new JTextField();
     private final JTextField deadlineField = new JTextField();
@@ -86,7 +101,7 @@ public class MOManagementFrame extends JFrame {
             new String[]{"Match % (High to Low)", "Match % (Low to High)", "Applicant Name (A-Z)", "Applicant Name (Z-A)", "Status"}
     );
     private final DefaultTableModel jobTableModel = new DefaultTableModel(
-            new Object[]{"Job ID", "Module", "Category", "Semester", "Hours", "TA Demand", "Deadline", "Status"}, 0);
+            new Object[]{"Job ID", "Module", "Job Type", "Workload", "Schedule", "Location", "TA Demand", "Deadline", "Status"}, 0);
     private final PlaceholderTable jobTable = new PlaceholderTable(jobTableModel, "No jobs are assigned to this MO yet.");
     private final DefaultTableModel applicantTableModel = new DefaultTableModel(
             new Object[]{"Application ID", "Applicant", "Status", "Match %", "Missing"}, 0);
@@ -375,13 +390,19 @@ public class MOManagementFrame extends JFrame {
         UiTheme.addFormRow(form, 2, "Module Code", moduleCodeBox);
         UiTheme.addFormRow(form, 4, "Module Title", moduleTitleField);
         UiTheme.addFormRow(form, 6, "Category", categoryBox);
-        UiTheme.addFormRow(form, 8, "Semester", semesterField);
-        UiTheme.addFormRow(form, 10, "Hours", hoursField);
-        UiTheme.addFormRow(form, 12, "TA Needed", requiredTaCountField);
-        UiTheme.addFormRow(form, 14, "Required Skills", skillsField);
-        UiTheme.addFormRow(form, 16, "Deadline (YYYY-MM-DD)", deadlineField);
-        UiTheme.addFormRow(form, 18, "Status", statusBox);
-        UiTheme.addFormRow(form, 20, "Duties", wrapArea(dutiesArea));
+        UiTheme.addFormRow(form, 8, "Job Type", jobTypeBox);
+        UiTheme.addFormRow(form, 10, "Semester", semesterField);
+        UiTheme.addFormRow(form, 12, "Workload Hours", hoursField);
+        UiTheme.addFormRow(form, 14, "Workload Type", workloadTypeBox);
+        UiTheme.addFormRow(form, 16, "Start Date (YYYY-MM-DD)", startDateField);
+        UiTheme.addFormRow(form, 18, "End Date (YYYY-MM-DD)", endDateField);
+        UiTheme.addFormRow(form, 20, "Schedule", scheduleField);
+        UiTheme.addFormRow(form, 22, "Location", locationField);
+        UiTheme.addFormRow(form, 24, "TA Needed", requiredTaCountField);
+        UiTheme.addFormRow(form, 26, "Required Skills", skillsField);
+        UiTheme.addFormRow(form, 28, "Deadline (YYYY-MM-DD)", deadlineField);
+        UiTheme.addFormRow(form, 30, "Status", statusBox);
+        UiTheme.addFormRow(form, 32, "Duties", wrapArea(dutiesArea));
 
         JPanel lower = UiTheme.createCard("Applicant Match Details", "Review fit, missing skills, and applicant notes for the selected submission.");
         lower.add(wrapArea(matchInfoArea), BorderLayout.CENTER);
@@ -517,9 +538,10 @@ public class MOManagementFrame extends JFrame {
             jobTableModel.addRow(new Object[]{
                     job.getJobId(),
                     job.getModuleCode() + " - " + job.getModuleTitle(),
-                    job.getCategory() == null ? "-" : job.getCategory().getDisplayName(),
-                    valueOrDash(job.getSemester()),
-                    job.getHours(),
+                    UiFormat.valueOrDash(job.getJobType()),
+                    UiFormat.workload(job),
+                    valueOrDash(job.getSchedule()),
+                    valueOrDash(job.getLocation()),
                     buildTaDemandText(job),
                     job.getApplicationDeadline(),
                     job.getStatus()
@@ -556,8 +578,14 @@ public class MOManagementFrame extends JFrame {
         }
         moduleTitleField.setText("");
         categoryBox.setSelectedItem(JobCategory.MODULE_TA);
+        jobTypeBox.setSelectedItem(JobPosting.JOB_TYPE_COURSE_SUPPORT);
         semesterField.setText("");
         hoursField.setText("");
+        workloadTypeBox.setSelectedItem(JobPosting.WORKLOAD_TYPE_WEEKLY);
+        startDateField.setText("");
+        endDateField.setText("");
+        scheduleField.setText("");
+        locationField.setText("");
         requiredTaCountField.setText("1");
         skillsField.setText("");
         deadlineField.setText("");
@@ -603,8 +631,14 @@ public class MOManagementFrame extends JFrame {
             jobPosting.setModuleCode(moduleCode);
             jobPosting.setModuleTitle(moduleTitleField.getText().trim());
             jobPosting.setCategory((JobCategory) categoryBox.getSelectedItem());
+            jobPosting.setJobType(String.valueOf(jobTypeBox.getSelectedItem()));
             jobPosting.setSemester(semesterField.getText().trim());
             jobPosting.setHours(Integer.parseInt(hoursField.getText().trim()));
+            jobPosting.setWorkloadType(String.valueOf(workloadTypeBox.getSelectedItem()));
+            jobPosting.setStartDate(startDateField.getText().trim());
+            jobPosting.setEndDate(endDateField.getText().trim());
+            jobPosting.setSchedule(scheduleField.getText().trim());
+            jobPosting.setLocation(locationField.getText().trim());
             jobPosting.setRequiredTaCount(Integer.parseInt(requiredTaCountField.getText().trim()));
             jobPosting.setRequiredSkills(validationService.parseSkills(skillsField.getText()));
             jobPosting.setApplicationDeadline(LocalDate.parse(deadlineField.getText().trim()));
@@ -625,7 +659,7 @@ public class MOManagementFrame extends JFrame {
             refreshJobs();
             clearForm();
         } catch (NumberFormatException ex) {
-            UiMessage.error(this, "Hours and required TA count must be numbers.");
+            UiMessage.error(this, "Workload hours and required TA count must be numbers.");
         } catch (DateTimeParseException ex) {
             UiMessage.error(this, "Deadline must use YYYY-MM-DD format, for example 2026-04-30.");
         } catch (Exception ex) {
@@ -864,8 +898,8 @@ public class MOManagementFrame extends JFrame {
         }
 
         return UiMessage.confirm(this,
-                applicant.getName() + " would reach " + projectedHours + "h after this acceptance, above the "
-                        + threshold + "h workload threshold. Continue?",
+                applicant.getName() + " would reach " + projectedHours + " h/week after this acceptance, above the "
+                        + threshold + " h/week workload threshold. Continue?",
                 "Workload Warning");
     }
 
@@ -1115,6 +1149,11 @@ public class MOManagementFrame extends JFrame {
                 "CV Path: " + valueOrDash(applicant.getCvPath()) + "\n" +
                 "Supporting Document: " + valueOrDash(applicant.getSupportingDocumentPath()) + "\n" +
                 "For Job: " + job.getModuleCode() + " - " + job.getModuleTitle() + "\n\n" +
+                "Job Type: " + UiFormat.valueOrDash(job.getJobType()) + "\n" +
+                "Period: " + UiFormat.period(job) + "\n" +
+                "Schedule: " + valueOrDash(job.getSchedule()) + "\n" +
+                "Location: " + valueOrDash(job.getLocation()) + "\n" +
+                "Workload: " + UiFormat.workload(job) + "\n\n" +
                 "Experience Summary:\n" + valueOrDash(applicant.getExperienceSummary());
     }
 
@@ -1203,6 +1242,10 @@ public class MOManagementFrame extends JFrame {
         UiTheme.styleComboBox(categoryBox);
         UiTheme.styleTextField(semesterField);
         UiTheme.styleTextField(hoursField);
+        UiTheme.styleTextField(startDateField);
+        UiTheme.styleTextField(endDateField);
+        UiTheme.styleTextField(scheduleField);
+        UiTheme.styleTextField(locationField);
         UiTheme.styleTextField(requiredTaCountField);
         UiTheme.styleTextField(skillsField);
         UiTheme.styleTextField(deadlineField);
@@ -1225,7 +1268,7 @@ public class MOManagementFrame extends JFrame {
         jobTable.getColumnModel().getColumn(6).setCellRenderer(new DeadlineWarningRenderer());
         jobTable.getColumnModel().getColumn(7).setCellRenderer(new StatusBadgeRenderer());
         applicantTable.getColumnModel().getColumn(2).setCellRenderer(new StatusBadgeRenderer());
-        UiTheme.setColumnWidths(jobTable, 100, 280, 120, 110, 70, 110, 140, 100);
+        UiTheme.setColumnWidths(jobTable, 100, 280, 140, 110, 260, 180, 100, 140, 100);
         UiTheme.setColumnWidths(applicantTable, 130, 170, 120, 90, 220);
         applicantSummaryArea.setEditable(false);
     }
@@ -1325,7 +1368,13 @@ public class MOManagementFrame extends JFrame {
         jobIdField.setText(NEW_JOB_PLACEHOLDER);
         statusBox.setSelectedItem(JobStatus.OPEN);
         categoryBox.setSelectedItem(JobCategory.MODULE_TA);
+        jobTypeBox.setSelectedItem(JobPosting.JOB_TYPE_COURSE_SUPPORT);
+        workloadTypeBox.setSelectedItem(JobPosting.WORKLOAD_TYPE_WEEKLY);
         semesterField.setText("");
+        startDateField.setText("");
+        endDateField.setText("");
+        scheduleField.setText("");
+        locationField.setText("");
         reviewArea.setText("");
         applicantSummaryArea.setText("");
         matchInfoArea.setText("");
@@ -1343,8 +1392,14 @@ public class MOManagementFrame extends JFrame {
         moduleCodeBox.setSelectedItem(job.getModuleCode());
         moduleTitleField.setText(job.getModuleTitle());
         categoryBox.setSelectedItem(job.getCategory());
+        jobTypeBox.setSelectedItem(job.getJobType());
         semesterField.setText(job.getSemester());
         hoursField.setText(String.valueOf(job.getHours()));
+        workloadTypeBox.setSelectedItem(job.getWorkloadType());
+        startDateField.setText(job.getStartDate());
+        endDateField.setText(job.getEndDate());
+        scheduleField.setText(job.getSchedule());
+        locationField.setText(job.getLocation());
         requiredTaCountField.setText(String.valueOf(job.getRequiredTaCount()));
         skillsField.setText(String.join(", ", job.getRequiredSkills()));
         deadlineField.setText(String.valueOf(job.getApplicationDeadline()));
