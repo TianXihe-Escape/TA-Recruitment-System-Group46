@@ -169,6 +169,9 @@ public class AdminDashboardFrame extends JFrame {
         showWorkspace(VIEW_DASHBOARD);
     }
 
+    /**
+     * Builds the left admin navigation rail with account identity and workspace tabs.
+     */
     private JPanel buildSidebar() {
         JPanel sidebar = new JPanel(new BorderLayout(0, 18));
         sidebar.setPreferredSize(new Dimension(226, 0));
@@ -206,6 +209,9 @@ public class AdminDashboardFrame extends JFrame {
         return sidebar;
     }
 
+    /**
+     * Builds the admin shell that holds the title area and the card-based workspaces.
+     */
     private JPanel buildWorkspacePanel() {
         workspaceShell = new JPanel(new BorderLayout(0, 14));
         workspaceShell.setBackground(UiTheme.SURFACE);
@@ -235,6 +241,9 @@ public class AdminDashboardFrame extends JFrame {
         return workspaceShell;
     }
 
+    /**
+     * Creates one sidebar navigation button for the admin workspace switcher.
+     */
     private JToggleButton createNavButton(String text, SimpleLineIcon.Type iconType, int viewIndex) {
         JToggleButton button = new JToggleButton(text);
         button.setIcon(new SimpleLineIcon(iconType, UiTheme.MUTED_TEXT));
@@ -254,6 +263,9 @@ public class AdminDashboardFrame extends JFrame {
         return button;
     }
 
+    /**
+     * Switches the visible admin workspace and rewrites the header copy to match it.
+     */
     private void showWorkspace(int viewIndex) {
         currentWorkspaceView = viewIndex;
         ((CardLayout) workspaceCards.getLayout()).show(workspaceCards, VIEW_KEYS[viewIndex]);
@@ -276,6 +288,9 @@ public class AdminDashboardFrame extends JFrame {
         }
     }
 
+    /**
+     * Opens the admin account menu anchored to the avatar button.
+     */
     private void showAccountMenu() {
         JPopupMenu menu = new JPopupMenu();
         menu.setBorder(BorderFactory.createCompoundBorder(
@@ -293,6 +308,9 @@ public class AdminDashboardFrame extends JFrame {
         menu.show(avatarButton, 0, avatarButton.getHeight() + 6);
     }
 
+    /**
+     * Builds the identity header displayed at the top of the admin popup menu.
+     */
     private JPanel buildAccountHeader() {
         JPanel panel = new JPanel(new BorderLayout(12, 0));
         panel.setBackground(UiTheme.SURFACE);
@@ -322,6 +340,9 @@ public class AdminDashboardFrame extends JFrame {
         return panel;
     }
 
+    /**
+     * Creates one popup-menu entry with shared icon and spacing rules.
+     */
     private JMenuItem menuItem(String text, SimpleLineIcon.Type iconType, Runnable action) {
         JMenuItem item = new JMenuItem(text);
         item.setIcon(new SimpleLineIcon(iconType, UiTheme.MUTED_TEXT));
@@ -333,19 +354,31 @@ public class AdminDashboardFrame extends JFrame {
         return item;
     }
 
+    /**
+     * Applies the shared white-icon treatment used by admin action buttons.
+     */
     private void decorateButton(AbstractButton button, SimpleLineIcon.Type iconType) {
         button.setIcon(new SimpleLineIcon(iconType, Color.WHITE));
         button.setIconTextGap(8);
     }
 
+    /**
+     * Opens the standard password-change dialog for the logged-in admin.
+     */
     private void showChangePasswordDialog() {
         new ChangePasswordFrame(authService, currentUser).setVisible(true);
     }
 
+    /**
+     * Opens the administrator-only password reset dialog.
+     */
     private void showAdminResetPasswordDialog() {
         new AdminResetPasswordFrame(authService).setVisible(true);
     }
 
+    /**
+     * Returns the best available admin display name for headers and notifications.
+     */
     private String displayName() {
         if (currentUser.getName() != null && !currentUser.getName().isBlank()) {
             return currentUser.getName();
@@ -356,6 +389,9 @@ public class AdminDashboardFrame extends JFrame {
         return "Admin";
     }
 
+    /**
+     * Derives short avatar initials from a display name string.
+     */
     private String initialsFor(String value) {
         if (value == null || value.isBlank()) {
             return "AD";
@@ -597,6 +633,9 @@ public class AdminDashboardFrame extends JFrame {
         suggestionArea.setText("Click 'Generate Rebalance Suggestions' to recommend lower-load TAs for open jobs.");
     }
 
+    /**
+     * Plays a brief shell-background flash after full admin refreshes.
+     */
     private void playRefreshEffect() {
         if (workspaceShell == null) {
             return;
@@ -711,6 +750,9 @@ public class AdminDashboardFrame extends JFrame {
         }
     }
 
+    /**
+     * Expands the selected review row into a readable audit summary block.
+     */
     private void updateApplicationReviewDetails() {
         int selectedRow = applicationReviewTable.getSelectedRow();
         if (selectedRow < 0) {
@@ -736,6 +778,9 @@ public class AdminDashboardFrame extends JFrame {
         applicationReviewDetailArea.setCaretPosition(0);
     }
 
+    /**
+     * Finds one applicant profile by applicant id from a preloaded list.
+     */
     private ApplicantProfile findProfile(List<ApplicantProfile> profiles, String applicantId) {
         return profiles.stream()
                 .filter(profile -> applicantId != null && applicantId.equals(profile.getApplicantId()))
@@ -743,6 +788,9 @@ public class AdminDashboardFrame extends JFrame {
                 .orElse(null);
     }
 
+    /**
+     * Finds one job posting by job id from a preloaded list.
+     */
     private JobPosting findJob(List<JobPosting> jobs, String jobId) {
         return jobs.stream()
                 .filter(job -> jobId != null && jobId.equals(job.getJobId()))
@@ -750,6 +798,9 @@ public class AdminDashboardFrame extends JFrame {
                 .orElse(null);
     }
 
+    /**
+     * Finds one user by user id from a preloaded list.
+     */
     private User findUser(List<User> users, String userId) {
         return users.stream()
                 .filter(user -> userId != null && userId.equals(user.getUserId()))
@@ -824,6 +875,9 @@ public class AdminDashboardFrame extends JFrame {
         suggestionArea.setText(builder.toString());
     }
 
+    /**
+     * Exports the current recruitment snapshot to CSV and notifies the admin.
+     */
     private void exportCsvReport() {
         try {
             List<ApplicantProfile> profiles = dataService.getProfileRepository().findAll();
@@ -839,6 +893,10 @@ public class AdminDashboardFrame extends JFrame {
         }
     }
 
+    /**
+     * Shows the admin notification inbox in a simple modal summary and marks
+     * everything as read once displayed.
+     */
     private void showNotifications() {
         StringBuilder builder = new StringBuilder();
         for (model.NotificationRecord notification : notificationService.getNotificationsForUser(currentUser.getUserId())) {
@@ -1115,6 +1173,9 @@ public class AdminDashboardFrame extends JFrame {
         }
     }
 
+    /**
+     * Builds the cleanup helper used by account-deletion workflows.
+     */
     private AccountCleanupService cleanupService() {
         return new AccountCleanupService(
                 dataService.getAllocationRepository(),
@@ -1153,10 +1214,16 @@ public class AdminDashboardFrame extends JFrame {
         return value == null || value.isBlank() ? "-" : value;
     }
 
+    /**
+     * Provides a stable placeholder when an application has no reviewer notes yet.
+     */
     private String reviewerNotesOrPending(String value) {
         return value == null || value.isBlank() ? "Not yet reviewed" : value;
     }
 
+    /**
+     * Converts an application's missing-skill list into a compact table-friendly string.
+     */
     private String missingSkillsText(ApplicationRecord application) {
         if (application.getMissingSkills() == null || application.getMissingSkills().isEmpty()) {
             return "None";
