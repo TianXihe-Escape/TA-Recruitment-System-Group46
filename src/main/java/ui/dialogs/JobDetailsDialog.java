@@ -9,16 +9,33 @@ import java.awt.*;
 
 /**
  * Displays a read-only summary of a job posting.
+ *
+ * The dialog is intentionally simple: it does not allow editing, and it keeps
+ * all job details in one scrollable text block so callers can reuse it from
+ * different dashboards without needing a custom layout for each context.
  */
 public class JobDetailsDialog extends JDialog {
+    /**
+     * Opens the dialog without a TA demand summary.
+     *
+     * This overload is used by screens that only need the job metadata itself.
+     */
     public JobDetailsDialog(Frame owner, JobPosting jobPosting) {
         this(owner, jobPosting, null);
     }
 
+    /**
+     * Opens the dialog and optionally appends a compact TA demand summary.
+     *
+     * The extra summary is useful for list views that already know how many
+     * applicants or accepted TAs are attached to the job.
+     */
     public JobDetailsDialog(Frame owner, JobPosting jobPosting, String taDemandSummary) {
         super(owner, "Job Details", true);
         getContentPane().setBackground(UiTheme.BACKGROUND);
 
+        // A plain text area keeps the dialog easy to scan and avoids building a
+        // heavier form layout for information that the user cannot edit here.
         JTextArea area = new JTextArea();
         UiTheme.styleTextArea(area, 12);
         area.setEditable(false);
@@ -40,13 +57,19 @@ public class JobDetailsDialog extends JDialog {
                         "Deadline: " + jobPosting.getApplicationDeadline() + "\n" +
                         "Status: " + jobPosting.getStatus()
         );
+        // Scrolling is important because some postings can include longer duties
+        // or skill lists, especially when this dialog is opened on smaller screens.
         JScrollPane areaScrollPane = new JScrollPane(area);
         UiTheme.styleScrollPane(areaScrollPane);
+        // The card wrapper keeps the dialog visually consistent with the rest of
+        // the application's themed pages and dashboard components.
         JPanel root = UiTheme.createPagePanel();
         JPanel card = UiTheme.createCard("Job Summary", "Read-only details for the selected vacancy.");
         card.add(areaScrollPane, BorderLayout.CENTER);
         root.add(card, BorderLayout.CENTER);
         add(root, BorderLayout.CENTER);
+        // The dialog size is fixed to a comfortable default that still leaves
+        // enough room for the scroll area when longer job descriptions appear.
         setSize(560, 420);
         setLocationRelativeTo(owner);
     }
