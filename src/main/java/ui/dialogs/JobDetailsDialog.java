@@ -7,6 +7,7 @@ import ui.UiTheme;
 import javax.swing.*;
 import java.awt.*;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
 /**
  * Displays a read-only summary of a job posting.
@@ -32,6 +33,13 @@ public class JobDetailsDialog extends JDialog {
      * applicants or accepted TAs are attached to the job.
      */
     public JobDetailsDialog(Frame owner, JobPosting jobPosting, String taDemandSummary) {
+        this(owner, jobPosting, taDemandSummary, null);
+    }
+
+    /**
+     * Opens the dialog with optional MO management actions below the details.
+     */
+    public JobDetailsDialog(Frame owner, JobPosting jobPosting, String taDemandSummary, BooleanSupplier deleteAction) {
         super(owner, "Job Details", true);
         getContentPane().setBackground(UiTheme.BACKGROUND);
 
@@ -76,6 +84,9 @@ public class JobDetailsDialog extends JDialog {
         JPanel root = UiTheme.createPagePanel();
         JPanel card = UiTheme.createCard("Job Summary", "Read-only details for the selected vacancy, arranged for quicker scanning.");
         card.add(detailsScrollPane, BorderLayout.CENTER);
+        if (deleteAction != null) {
+            card.add(buildManagementButtons(jobPosting, deleteAction), BorderLayout.SOUTH);
+        }
         root.add(card, BorderLayout.CENTER);
         add(root, BorderLayout.CENTER);
         // A wider default gives field labels, module titles, and duties more
@@ -83,6 +94,24 @@ public class JobDetailsDialog extends JDialog {
         setSize(720, 620);
         setMinimumSize(new Dimension(640, 520));
         setLocationRelativeTo(owner);
+    }
+
+    private JPanel buildManagementButtons(JobPosting jobPosting, BooleanSupplier deleteAction) {
+        JButton deleteButton = UiTheme.createDangerButton("Delete Job");
+        JButton closeButton = UiTheme.createSecondaryButton("Close");
+        deleteButton.addActionListener(event -> {
+            String message = "Are you sure you want to delete this job?\n"
+                    + jobPosting.getJobId() + " - " + jobPosting.getModuleCode() + " " + jobPosting.getModuleTitle()
+                    + "\n\nThis will also remove related applications, allocations, and messages.";
+            if (!UiMessage.confirm(this, message, "Confirm Job Deletion")) {
+                return;
+            }
+            if (deleteAction.getAsBoolean()) {
+                dispose();
+            }
+        });
+        closeButton.addActionListener(event -> dispose());
+        return UiTheme.createButtonRow(FlowLayout.RIGHT, deleteButton, closeButton);
     }
 
     private JComponent readOnlyValue(String value) {
