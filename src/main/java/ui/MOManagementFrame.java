@@ -22,6 +22,7 @@ import service.MessageService;
 import service.NotificationService;
 import service.ValidationService;
 import service.WorkloadService;
+import ui.dialogs.MessageDetailsDialog;
 import ui.dialogs.UiMessage;
 import util.Constants;
 
@@ -141,6 +142,7 @@ public class MOManagementFrame extends JFrame {
     private final JButton notificationsButton = UiTheme.createSecondaryButton("View Notifications");
     private final JButton messagesButton = UiTheme.createSecondaryButton("View Messages");
     private JPanel workspaceShell;
+    private JScrollPane workspaceScrollPane;
     private int currentWorkspaceView = VIEW_JOB_EDITOR;
     // Review-state cache used after table refreshes and when opening applicant documents.
     private String loadedApplicantJobId;
@@ -194,7 +196,8 @@ public class MOManagementFrame extends JFrame {
         root.setBackground(UiTheme.BACKGROUND);
         root.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
         root.add(buildSidebar(), BorderLayout.WEST);
-        root.add(UiTheme.wrapPage(buildWorkspacePanel()), BorderLayout.CENTER);
+        workspaceScrollPane = UiTheme.wrapPage(buildWorkspacePanel());
+        root.add(workspaceScrollPane, BorderLayout.CENTER);
         add(root);
 
         // Initial load: show existing jobs first, then reset the editor into the
@@ -323,7 +326,18 @@ public class MOManagementFrame extends JFrame {
         } else {
             workspaceTitleLabel.setText("Review Queue");
             workspaceSubtitleLabel.setText("Inspect postings, load applicants, review match details, and update hiring decisions.");
+            scrollWorkspaceToTop();
         }
+    }
+
+    /**
+     * Resets the outer workspace scroll position so Review Queue always starts at the top.
+     */
+    private void scrollWorkspaceToTop() {
+        if (workspaceScrollPane == null) {
+            return;
+        }
+        SwingUtilities.invokeLater(() -> workspaceScrollPane.getViewport().setViewPosition(new Point(0, 0)));
     }
 
     /**
@@ -1233,6 +1247,9 @@ public class MOManagementFrame extends JFrame {
         );
         JTable table = new PlaceholderTable(model, "No TA/MO messages yet.");
         UiTheme.styleTable(table);
+        table.setRowSelectionAllowed(true);
+        table.setColumnSelectionAllowed(false);
+        table.setCellSelectionEnabled(false);
         UiTheme.setColumnWidths(table, 110, 160, 220, 180, 80, 420);
         Runnable refreshMessages = () -> {
             model.setRowCount(0);
@@ -1252,6 +1269,21 @@ public class MOManagementFrame extends JFrame {
             }
         };
         refreshMessages.run();
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                int row = table.rowAtPoint(event.getPoint());
+                if (row >= 0) {
+                    table.setRowSelectionInterval(row, row);
+                }
+                if (event.getClickCount() == 2) {
+                    MessageRecord selected = selectedMessageFromTable(table, model);
+                    if (selected != null) {
+                        showMessageDetails(selected);
+                    }
+                }
+            }
+        });
 
         JButton replyButton = UiTheme.createPrimaryButton("Reply");
         JButton markReadButton = UiTheme.createSecondaryButton("Mark Read");
@@ -1281,6 +1313,19 @@ public class MOManagementFrame extends JFrame {
         panel.add(UiTheme.createButtonRow(FlowLayout.RIGHT, replyButton, markReadButton, closeButton), BorderLayout.SOUTH);
         dialog.setContentPane(UiTheme.wrapPage(panel));
         dialog.setVisible(true);
+    }
+
+    /**
+     * Opens a structured read-only detail dialog for one message.
+     */
+    private void showMessageDetails(MessageRecord selected) {
+        JobPosting job = findJob(selected.getJobId()).orElse(null);
+        boolean incoming = currentUser.getUserId().equals(selected.getRecipientUserId());
+        String direction = incoming
+                ? "Incoming from " + displayNameForUser(selected.getSenderUserId())
+                : "Outgoing to " + displayNameForUser(selected.getRecipientUserId());
+        String status = incoming && !selected.isRead() ? "New" : "Read";
+        new MessageDetailsDialog(this, selected, job, direction, status).setVisible(true);
     }
 
     /**
@@ -1702,8 +1747,9 @@ public class MOManagementFrame extends JFrame {
         UiTheme.styleComboBox(applicantSortBox);
         UiTheme.styleTable(jobTable);
         UiTheme.styleTable(applicantTable);
-        jobTable.getColumnModel().getColumn(6).setCellRenderer(new DeadlineWarningRenderer());
-        jobTable.getColumnModel().getColumn(7).setCellRenderer(new StatusBadgeRenderer());
+        jobTable.getColumnModel().getColumn(6).setCellRenderer(new TaDemandRenderer());
+        jobTable.getColumnModel().getColumn(7).setCellRenderer(new DeadlineWarningRenderer());
+        jobTable.getColumnModel().getColumn(8).setCellRenderer(new StatusBadgeRenderer());
         applicantTable.getColumnModel().getColumn(2).setCellRenderer(new StatusBadgeRenderer());
         UiTheme.setColumnWidths(jobTable, 100, 280, 140, 110, 260, 180, 100, 140, 100);
         UiTheme.setColumnWidths(applicantTable, 130, 170, 120, 90, 220);
@@ -2184,6 +2230,36 @@ public class MOManagementFrame extends JFrame {
                 component.setBackground(Color.WHITE);
             }
             return component;
+        }
+    }
+
+    private static class TaDemandRenderer extends DefaultTableCellRenderer {
+        private static final Color LIGHT_GREEN = new Color(205, 235, 214);
+        private static final Color LIGHT_RED = new Color(242, 205, 205);
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                                                       boolean hasFocus, int row, int column) {
+            JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            label.setHorizontalAlignment(SwingConstants.CENTER);
+            if (isSelected) {
+                return label;
+            }
+
+            label.setForeground(Color.BLACK);
+            label.setBackground(Color.WHITE);
+            String text = value == null ? "" : value.toString().trim();
+            String[] parts = text.split("/");
+            if (parts.length == 2) {
+                try {
+                    int accepted = Integer.parseInt(parts[0].trim());
+                    int required = Integer.parseInt(parts[1].trim());
+                    label.setBackground(accepted < required ? LIGHT_GREEN : LIGHT_RED);
+                } catch (NumberFormatException ignored) {
+                    label.setBackground(Color.WHITE);
+                }
+            }
+            return label;
         }
     }
 

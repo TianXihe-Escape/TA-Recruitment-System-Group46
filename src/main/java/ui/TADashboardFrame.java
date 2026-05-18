@@ -18,6 +18,7 @@ import service.MatchingService;
 import service.MessageService;
 import service.NotificationService;
 import service.ValidationService;
+import ui.dialogs.ApplicationDetailsDialog;
 import ui.dialogs.JobDetailsDialog;
 import ui.dialogs.UiMessage;
 import util.Constants;
@@ -1021,7 +1022,7 @@ public class TADashboardFrame extends JFrame {
     }
 
     /**
-     * Shows a textual summary of the selected application and linked job.
+     * Opens the structured details dialog for the selected application.
      */
     private void viewSelectedApplication() {
         int row = applicationTable.getSelectedRow();
@@ -1041,26 +1042,7 @@ public class TADashboardFrame extends JFrame {
         }
 
         JobPosting job = findJob(application.getJobId()).orElse(null);
-        // Keep the popup text compact but complete so a TA can understand the application outcome without
-        // switching between the table, job details dialog, and profile panel.
-        String details = "Application ID: " + application.getApplicationId() + "\n" +
-                "Job: " + (job == null ? "[Deleted Job]" : job.getModuleCode() + " - " + job.getModuleTitle()) + "\n" +
-                "Status: " + application.getStatus() + "\n" +
-                "Applied At: " + UiFormat.dateTime(application.getAppliedAt()) + "\n" +
-                "Last Updated: " + UiFormat.dateTime(application.getLastUpdatedAt()) + "\n" +
-                "Decision At: " + UiFormat.dateTime(application.getDecisionAt()) + "\n" +
-                "Match Score: " + application.getMatchScore() + "%\n" +
-                "Missing Skills: " + valueOrDash(String.join(", ", application.getMissingSkills())) + "\n" +
-                "Suggestion: " + buildMissingSkillSuggestion(application) + "\n" +
-                "Reviewer Notes: " + reviewerNotesOrPending(application.getReviewerNotes()) + "\n" +
-                "TA Demand: " + (job == null ? "-" : buildTaDemandText(job)) + "\n" +
-                "Job Type: " + (job == null ? "-" : UiFormat.valueOrDash(job.getJobType())) + "\n" +
-                "Period: " + (job == null ? "-" : UiFormat.period(job)) + "\n" +
-                "Schedule: " + (job == null ? "-" : valueOrDash(job.getSchedule())) + "\n" +
-                "Location: " + (job == null ? "-" : valueOrDash(job.getLocation())) + "\n" +
-                "Workload: " + (job == null ? "-" : UiFormat.workload(job)) + "\n" +
-                "Deadline: " + (job == null ? "-" : UiFormat.date(job.getApplicationDeadline()));
-        UiMessage.info(this, details);
+        new ApplicationDetailsDialog(this, application, job, job == null ? null : buildTaDemandText(job)).setVisible(true);
     }
 
     /**
@@ -1751,10 +1733,14 @@ public class TADashboardFrame extends JFrame {
         UiTheme.styleTable(applicationTable);
         UiTheme.styleTable(notificationTable);
         UiTheme.styleTable(messageTable);
+        jobTable.getColumnModel().getColumn(6).setCellRenderer(new TaDemandRenderer());
+        jobTable.getColumnModel().getColumn(9).setCellRenderer(new FavouriteRenderer());
         // The deadline and status renderers must target the actual deadline/status
         // columns rather than the TA-demand/favourite columns.
         jobTable.getColumnModel().getColumn(7).setCellRenderer(new DeadlineWarningRenderer());
         jobTable.getColumnModel().getColumn(10).setCellRenderer(new StatusBadgeRenderer());
+        favoriteJobTable.getColumnModel().getColumn(6).setCellRenderer(new TaDemandRenderer());
+        favoriteJobTable.getColumnModel().getColumn(9).setCellRenderer(new FavouriteRenderer());
         favoriteJobTable.getColumnModel().getColumn(7).setCellRenderer(new DeadlineWarningRenderer());
         favoriteJobTable.getColumnModel().getColumn(10).setCellRenderer(new StatusBadgeRenderer());
         applicationTable.getColumnModel().getColumn(2).setCellRenderer(new StatusBadgeRenderer());
@@ -1916,6 +1902,68 @@ public class TADashboardFrame extends JFrame {
                 component.setBackground(Color.WHITE);
             }
             return component;
+        }
+    }
+
+    /**
+     * Renderer that highlights whether a job still has remaining TA capacity.
+     */
+    private static class TaDemandRenderer extends DefaultTableCellRenderer {
+        private static final Color LIGHT_GREEN = new Color(205, 235, 214);
+        private static final Color LIGHT_RED = new Color(242, 205, 205);
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                                                       boolean hasFocus, int row, int column) {
+            JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            label.setHorizontalAlignment(SwingConstants.CENTER);
+            if (isSelected) {
+                return label;
+            }
+
+            label.setForeground(Color.BLACK);
+            label.setBackground(Color.WHITE);
+            String text = value == null ? "" : value.toString().trim();
+            String[] parts = text.split("/");
+            if (parts.length == 2) {
+                try {
+                    int accepted = Integer.parseInt(parts[0].trim());
+                    int required = Integer.parseInt(parts[1].trim());
+                    label.setBackground(accepted < required ? LIGHT_GREEN : LIGHT_RED);
+                } catch (NumberFormatException ignored) {
+                    label.setBackground(Color.WHITE);
+                }
+            }
+            return label;
+        }
+    }
+
+    /**
+     * Renderer that softly highlights favourite state without obscuring text.
+     */
+    private static class FavouriteRenderer extends DefaultTableCellRenderer {
+        private static final Color LIGHT_GREEN = new Color(205, 235, 214);
+        private static final Color LIGHT_RED = new Color(242, 205, 205);
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                                                       boolean hasFocus, int row, int column) {
+            JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            label.setHorizontalAlignment(SwingConstants.CENTER);
+            if (isSelected) {
+                return label;
+            }
+
+            String text = value == null ? "" : value.toString().trim();
+            label.setForeground(Color.BLACK);
+            if ("Yes".equalsIgnoreCase(text)) {
+                label.setBackground(LIGHT_GREEN);
+            } else if ("No".equalsIgnoreCase(text)) {
+                label.setBackground(LIGHT_RED);
+            } else {
+                label.setBackground(Color.WHITE);
+            }
+            return label;
         }
     }
 
