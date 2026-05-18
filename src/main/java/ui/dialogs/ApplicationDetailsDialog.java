@@ -29,7 +29,19 @@ public class ApplicationDetailsDialog extends JDialog {
                                     JobPosting job,
                                     String taDemandSummary,
                                     String moduleOrganiserSummary) {
-        this(owner, application, job, taDemandSummary, moduleOrganiserSummary, null);
+        this(owner, application, job, taDemandSummary, moduleOrganiserSummary, null, null);
+    }
+
+    /**
+     * Opens the dialog with caller-provided actions below the read-only details.
+     */
+    public ApplicationDetailsDialog(Frame owner,
+                                    ApplicationRecord application,
+                                    JobPosting job,
+                                    String taDemandSummary,
+                                    String moduleOrganiserSummary,
+                                    JComponent actionPanel) {
+        this(owner, application, job, taDemandSummary, moduleOrganiserSummary, actionPanel, null);
     }
 
     /**
@@ -40,7 +52,7 @@ public class ApplicationDetailsDialog extends JDialog {
                                     JobPosting job,
                                     String taDemandSummary,
                                     BooleanSupplier deleteAction) {
-        this(owner, application, job, taDemandSummary, null, deleteAction);
+        this(owner, application, job, taDemandSummary, null, null, deleteAction);
     }
 
     private ApplicationDetailsDialog(Frame owner,
@@ -48,6 +60,7 @@ public class ApplicationDetailsDialog extends JDialog {
                                      JobPosting job,
                                      String taDemandSummary,
                                      String moduleOrganiserSummary,
+                                     JComponent actionPanel,
                                      BooleanSupplier deleteAction) {
         super(owner, "Application Details", true);
         getContentPane().setBackground(UiTheme.BACKGROUND);
@@ -99,7 +112,9 @@ public class ApplicationDetailsDialog extends JDialog {
         JPanel root = UiTheme.createPagePanel();
         JPanel card = UiTheme.createCard("Application Summary", "Read-only details for the selected application and its linked job.");
         card.add(UiTheme.wrapPage(details), BorderLayout.CENTER);
-        if (deleteAction != null) {
+        if (actionPanel != null) {
+            card.add(actionPanel, BorderLayout.SOUTH);
+        } else if (deleteAction != null) {
             card.add(buildManagementButtons(application, deleteAction), BorderLayout.SOUTH);
         }
         root.add(card, BorderLayout.CENTER);

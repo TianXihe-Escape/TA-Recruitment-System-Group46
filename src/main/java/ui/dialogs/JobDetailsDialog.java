@@ -23,7 +23,7 @@ public class JobDetailsDialog extends JDialog {
      * This overload is used by screens that only need the job metadata itself.
      */
     public JobDetailsDialog(Frame owner, JobPosting jobPosting) {
-        this(owner, jobPosting, null, null, null);
+        this(owner, jobPosting, null, null, (Runnable) null, null);
     }
 
     /**
@@ -33,7 +33,7 @@ public class JobDetailsDialog extends JDialog {
      * applicants or accepted TAs are attached to the job.
      */
     public JobDetailsDialog(Frame owner, JobPosting jobPosting, String taDemandSummary) {
-        this(owner, jobPosting, taDemandSummary, null, null);
+        this(owner, jobPosting, taDemandSummary, null, (Runnable) null, null);
     }
 
     /**
@@ -61,10 +61,31 @@ public class JobDetailsDialog extends JDialog {
         this(owner, jobPosting, taDemandSummary, moduleOrganiserSummary, null, null);
     }
 
+    /**
+     * Opens the dialog with caller-provided actions below the read-only details.
+     */
+    public JobDetailsDialog(Frame owner,
+                            JobPosting jobPosting,
+                            String taDemandSummary,
+                            String moduleOrganiserSummary,
+                            JComponent actionPanel) {
+        this(owner, jobPosting, taDemandSummary, moduleOrganiserSummary, actionPanel, null, null);
+    }
+
     private JobDetailsDialog(Frame owner,
                              JobPosting jobPosting,
                              String taDemandSummary,
                              String moduleOrganiserSummary,
+                             Runnable editAction,
+                             BooleanSupplier deleteAction) {
+        this(owner, jobPosting, taDemandSummary, moduleOrganiserSummary, null, editAction, deleteAction);
+    }
+
+    private JobDetailsDialog(Frame owner,
+                             JobPosting jobPosting,
+                             String taDemandSummary,
+                             String moduleOrganiserSummary,
+                             JComponent actionPanel,
                              Runnable editAction,
                              BooleanSupplier deleteAction) {
         super(owner, "Job Details", true);
@@ -114,7 +135,9 @@ public class JobDetailsDialog extends JDialog {
         JPanel root = UiTheme.createPagePanel();
         JPanel card = UiTheme.createCard("Job Summary", "Read-only details for the selected vacancy, arranged for quicker scanning.");
         card.add(detailsScrollPane, BorderLayout.CENTER);
-        if (editAction != null || deleteAction != null) {
+        if (actionPanel != null) {
+            card.add(actionPanel, BorderLayout.SOUTH);
+        } else if (editAction != null || deleteAction != null) {
             card.add(buildManagementButtons(jobPosting, editAction, deleteAction), BorderLayout.SOUTH);
         }
         root.add(card, BorderLayout.CENTER);

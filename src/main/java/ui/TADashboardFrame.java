@@ -21,6 +21,7 @@ import service.ValidationService;
 import ui.dialogs.ApplicationDetailsDialog;
 import ui.dialogs.JobDetailsDialog;
 import ui.dialogs.MessageDetailsDialog;
+import ui.dialogs.NotificationDetailsDialog;
 import ui.dialogs.UiMessage;
 import util.Constants;
 
@@ -29,6 +30,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumn;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -129,7 +131,7 @@ public class TADashboardFrame extends JFrame {
             new Object[]{"Application ID", "Job ID", "Status", "Match %", "Missing Skills", "Reviewer Notes"}, 0);
     private final JTable applicationTable = new PlaceholderTable(applicationTableModel, "You have not submitted any applications yet.");
     private final DefaultTableModel notificationTableModel = new DefaultTableModel(
-            new Object[]{"Time", "Status", "Message"}, 0);
+            new Object[]{"Notification ID", "Time", "Status", "Message"}, 0);
     private final JTable notificationTable = new PlaceholderTable(notificationTableModel, "No notifications yet.");
     private final DefaultTableModel messageTableModel = new DefaultTableModel(
             new Object[]{"Message ID", "Time", "Job", "Direction", "Status", "Message"}, 0);
@@ -253,6 +255,30 @@ public class TADashboardFrame extends JFrame {
             messageService.markAllRead(currentUser.getUserId());
             refreshMessages();
             updateUnreadBadges();
+        });
+        jobTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                if (event.getClickCount() == 2) {
+                    viewSelectedJob();
+                }
+            }
+        });
+        favoriteJobTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                if (event.getClickCount() == 2) {
+                    viewSelectedJob();
+                }
+            }
+        });
+        applicationTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                if (event.getClickCount() == 2) {
+                    viewSelectedApplication();
+                }
+            }
         });
         notificationTable.addMouseListener(new MouseAdapter() {
             @Override
@@ -1023,7 +1049,38 @@ public class TADashboardFrame extends JFrame {
             return;
         }
         String taDemandSummary = buildTaDemandText(job);
-        new JobDetailsDialog(this, job, taDemandSummary, moduleOrganiserText(job)).setVisible(true);
+        showJobDetailsDialog(job, taDemandSummary);
+    }
+
+    /**
+     * Opens a TA-facing job dialog with the same details layout plus the core
+     * applicant actions embedded below the summary.
+     */
+    private void showJobDetailsDialog(JobPosting job, String taDemandSummary) {
+        new JobDetailsDialog(
+                this,
+                job,
+                taDemandSummary,
+                moduleOrganiserText(job),
+                buildJobDialogActions(job)
+        ).setVisible(true);
+    }
+
+    /**
+     * Builds the action row shown at the bottom of TA job details.
+     */
+    private JPanel buildJobDialogActions(JobPosting job) {
+        JButton favouriteAction = createIconButton("Toggle Favourite", SimpleLineIcon.Type.STAR, false);
+        JButton messageAction = createIconButton("Message MO", SimpleLineIcon.Type.SEND, false);
+        JButton applyAction = createIconButton("Apply", SimpleLineIcon.Type.SEND, true);
+        JButton closeAction = createIconButton("Close", SimpleLineIcon.Type.LOGOUT, false);
+
+        favouriteAction.addActionListener(event -> toggleFavouriteJob(job.getJobId()));
+        messageAction.addActionListener(event -> sendMessageForJob(job));
+        applyAction.addActionListener(event -> applyForJob(job));
+        closeAction.addActionListener(event -> SwingUtilities.getWindowAncestor(closeAction).dispose());
+
+        return UiTheme.createButtonRow(FlowLayout.RIGHT, favouriteAction, messageAction, applyAction, closeAction);
     }
 
     /**
@@ -1046,14 +1103,47 @@ public class TADashboardFrame extends JFrame {
             return;
         }
 
+        showApplicationDetailsDialog(application);
+    }
+
+    /**
+     * Opens a TA-facing application dialog with the core follow-up actions below it.
+     */
+    private void showApplicationDetailsDialog(ApplicationRecord application) {
         JobPosting job = findJob(application.getJobId()).orElse(null);
         new ApplicationDetailsDialog(
                 this,
                 application,
                 job,
                 job == null ? null : buildTaDemandText(job),
-                job == null ? null : moduleOrganiserText(job)
+                job == null ? null : moduleOrganiserText(job),
+                buildApplicationDialogActions(application, job)
         ).setVisible(true);
+    }
+
+    /**
+     * Builds the action row shown at the bottom of TA application details.
+     */
+    private JPanel buildApplicationDialogActions(ApplicationRecord application, JobPosting job) {
+        JButton messageAction = createIconButton("Message MO", SimpleLineIcon.Type.SEND, false);
+        JButton withdrawAction = UiTheme.createDangerButton("Withdraw Application");
+        JButton closeAction = createIconButton("Close", SimpleLineIcon.Type.LOGOUT, false);
+        withdrawAction.setIcon(new SimpleLineIcon(SimpleLineIcon.Type.LOGOUT, Color.WHITE));
+        withdrawAction.setIconTextGap(8);
+
+        messageAction.addActionListener(event -> {
+            JobPosting latestJob = findJob(application.getJobId()).orElse(null);
+            if (latestJob == null) {
+                UiMessage.error(this, "This job is no longer available. Please refresh the workspace.");
+                return;
+            }
+            sendMessageForJob(latestJob, application);
+        });
+        withdrawAction.addActionListener(event -> withdrawApplication(application.getApplicationId()));
+        closeAction.addActionListener(event -> SwingUtilities.getWindowAncestor(closeAction).dispose());
+
+        messageAction.setEnabled(job != null);
+        return UiTheme.createButtonRow(FlowLayout.RIGHT, messageAction, withdrawAction, closeAction);
     }
 
     /**
@@ -1065,6 +1155,19 @@ public class TADashboardFrame extends JFrame {
             UiMessage.error(this, "Please select a job from the Available Jobs table before applying.");
             return;
         }
+        JobPosting job = findJob(jobId).orElse(null);
+        if (job == null) {
+            UiMessage.error(this, "This job is no longer available. Please refresh the table.");
+            refreshJobs();
+            return;
+        }
+        applyForJob(job);
+    }
+
+    /**
+     * Submits an application for a specific job.
+     */
+    private void applyForJob(JobPosting job) {
         List<String> profileIssues = getProfileIssuesForApplication();
         if (!profileIssues.isEmpty()) {
             // The TA must fix profile gaps before applying so downstream matching,
@@ -1077,15 +1180,15 @@ public class TADashboardFrame extends JFrame {
         }
 
         try {
-            JobPosting job = findJob(jobId)
+            JobPosting latestJob = findJob(job.getJobId())
                     .orElseThrow(() -> new IllegalStateException("This job is no longer available. Please refresh the table."));
             // ApplicationService owns duplicate checks, matching calculation, and
             // persistence; the dashboard just coordinates the user feedback.
-            ApplicationRecord record = applicationService.apply(profile, job);
-            notificationService.notifyUser(currentUser.getUserId(), "Application submitted for " + job.getModuleCode() + " " + job.getModuleTitle() + ".");
-            notificationService.notifyUser(job.getPostedBy(), profile.getName() + " submitted an application for " + job.getModuleCode() + " " + job.getModuleTitle() + ".");
+            ApplicationRecord record = applicationService.apply(profile, latestJob);
+            notificationService.notifyUser(currentUser.getUserId(), "Application submitted for " + latestJob.getModuleCode() + " " + latestJob.getModuleTitle() + ".");
+            notificationService.notifyUser(latestJob.getPostedBy(), profile.getName() + " submitted an application for " + latestJob.getModuleCode() + " " + latestJob.getModuleTitle() + ".");
             UiMessage.info(this,
-                    "Application submitted for " + job.getModuleCode() + " - " + job.getModuleTitle()
+                    "Application submitted for " + latestJob.getModuleCode() + " - " + latestJob.getModuleTitle()
                             + ".\nMatch score: " + record.getMatchScore()
                             + "%\nYou can track updates in My Applications.");
             refreshApplications();
@@ -1107,6 +1210,7 @@ public class TADashboardFrame extends JFrame {
                 unreadCount++;
             }
             notificationTableModel.addRow(new Object[]{
+                    notification.getNotificationId(),
                     UiFormat.dateTime(notification.getCreatedAt()),
                     notification.isRead() ? "Read" : "New",
                     notification.getMessage()
@@ -1153,21 +1257,11 @@ public class TADashboardFrame extends JFrame {
      * Opens a simple detail dialog for the currently selected notification row.
      */
     private void showSelectedNotificationMessage() {
-        int row = notificationTable.getSelectedRow();
-        if (row < 0) {
+        NotificationRecord selected = selectedNotificationRecord();
+        if (selected == null) {
             return;
         }
-        String time = String.valueOf(notificationTableModel.getValueAt(row, 0));
-        String status = String.valueOf(notificationTableModel.getValueAt(row, 1));
-        String message = String.valueOf(notificationTableModel.getValueAt(row, 2));
-        JOptionPane.showMessageDialog(
-                this,
-                "Time: " + time + "\n"
-                        + "Status: " + status + "\n\n"
-                        + message,
-                "Notification Details",
-                JOptionPane.INFORMATION_MESSAGE
-        );
+        new NotificationDetailsDialog(this, selected).setVisible(true);
     }
 
     /**
@@ -1184,7 +1278,20 @@ public class TADashboardFrame extends JFrame {
                 ? "Incoming from " + displayNameForUser(selected.getSenderUserId())
                 : "Outgoing to " + displayNameForUser(selected.getRecipientUserId());
         String status = incoming && !selected.isRead() ? "New" : "Read";
-        new MessageDetailsDialog(this, selected, job, direction, status).setVisible(true);
+        new MessageDetailsDialog(this, selected, job, direction, status, buildMessageDialogActions(selected)).setVisible(true);
+    }
+
+    /**
+     * Builds the action row shown at the bottom of TA message details.
+     */
+    private JPanel buildMessageDialogActions(MessageRecord selected) {
+        JButton replyAction = createIconButton("Reply", SimpleLineIcon.Type.SEND, true);
+        JButton closeAction = createIconButton("Close", SimpleLineIcon.Type.LOGOUT, false);
+
+        replyAction.addActionListener(event -> replyToMessage(selected));
+        closeAction.addActionListener(event -> SwingUtilities.getWindowAncestor(closeAction).dispose());
+
+        return UiTheme.createButtonRow(FlowLayout.RIGHT, replyAction, closeAction);
     }
 
     /**
@@ -1204,6 +1311,20 @@ public class TADashboardFrame extends JFrame {
             UiMessage.error(this, "This job is no longer available. Please refresh the workspace.");
             return;
         }
+        sendMessageForJob(job, application);
+    }
+
+    /**
+     * Sends a new TA-to-MO message for a specific job.
+     */
+    private void sendMessageForJob(JobPosting job) {
+        sendMessageForJob(job, null);
+    }
+
+    /**
+     * Sends a new TA-to-MO message for a job and optional application context.
+     */
+    private void sendMessageForJob(JobPosting job, ApplicationRecord application) {
         String message = promptForMessage(
                 "Message MO",
                 "Send a message to the organiser of " + job.getModuleCode() + " - " + job.getModuleTitle() + "."
@@ -1240,6 +1361,13 @@ public class TADashboardFrame extends JFrame {
             UiMessage.error(this, "Please select a message before replying.");
             return;
         }
+        replyToMessage(selected);
+    }
+
+    /**
+     * Replies to a specific message while preserving its original job/application context.
+     */
+    private void replyToMessage(MessageRecord selected) {
         String recipientUserId = currentUser.getUserId().equals(selected.getSenderUserId())
                 ? selected.getRecipientUserId()
                 : selected.getSenderUserId();
@@ -1330,6 +1458,21 @@ public class TADashboardFrame extends JFrame {
     }
 
     /**
+     * Resolves the selected notification table row back to the repository record.
+     */
+    private NotificationRecord selectedNotificationRecord() {
+        int row = notificationTable.getSelectedRow();
+        if (row < 0) {
+            return null;
+        }
+        String notificationId = String.valueOf(notificationTableModel.getValueAt(row, 0));
+        return notificationService.getNotificationsForUser(currentUser.getUserId()).stream()
+                .filter(notification -> notificationId.equals(notification.getNotificationId()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
      * Looks up a user-friendly display name for a user id used in message rows.
      */
     private String displayNameForUser(String userId) {
@@ -1380,6 +1523,13 @@ public class TADashboardFrame extends JFrame {
             UiMessage.error(this, "Please select a job before changing favourites.");
             return;
         }
+        toggleFavouriteJob(jobId);
+    }
+
+    /**
+     * Toggles a specific job in the applicant's favourite-job list.
+     */
+    private void toggleFavouriteJob(String jobId) {
         List<String> favourites = new ArrayList<>(profile.getFavoriteJobIds());
         if (favourites.contains(jobId)) {
             favourites.remove(jobId);
@@ -1403,6 +1553,13 @@ public class TADashboardFrame extends JFrame {
             return;
         }
         String applicationId = String.valueOf(applicationTableModel.getValueAt(row, 0));
+        withdrawApplication(applicationId);
+    }
+
+    /**
+     * Withdraws a specific application after confirmation.
+     */
+    private void withdrawApplication(String applicationId) {
         if (!UiMessage.confirm(this, "Are you sure you want to withdraw this application?", "Confirm Withdrawal")) {
             return;
         }
@@ -1781,8 +1938,20 @@ public class TADashboardFrame extends JFrame {
         UiTheme.setColumnWidths(jobTable, 90, 260, 240, 140, 260, 180, 110, 100, 120, 220, 100, 90, 90);
         UiTheme.setColumnWidths(favoriteJobTable, 90, 260, 240, 140, 260, 180, 110, 100, 120, 220, 100, 90, 90);
         UiTheme.setColumnWidths(applicationTable, 120, 90, 120, 90, 220, 280);
-        UiTheme.setColumnWidths(notificationTable, 160, 80, 560);
+        UiTheme.setColumnWidths(notificationTable, 130, 160, 80, 560);
+        hideNotificationIdColumn();
         UiTheme.setColumnWidths(messageTable, 110, 160, 230, 190, 80, 520);
+    }
+
+    /**
+     * Keeps the notification id in the model for reliable lookup while leaving
+     * the visible table focused on time, status, and message.
+     */
+    private void hideNotificationIdColumn() {
+        if (notificationTable.getColumnModel().getColumnCount() == notificationTableModel.getColumnCount()) {
+            TableColumn idColumn = notificationTable.getColumnModel().getColumn(0);
+            notificationTable.getColumnModel().removeColumn(idColumn);
+        }
     }
 
     /**

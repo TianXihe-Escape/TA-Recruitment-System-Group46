@@ -13,6 +13,18 @@ import java.awt.*;
  */
 public class MessageDetailsDialog extends JDialog {
     public MessageDetailsDialog(Frame owner, MessageRecord message, JobPosting job, String direction, String status) {
+        this(owner, message, job, direction, status, null);
+    }
+
+    /**
+     * Opens the dialog with caller-provided actions below the read-only details.
+     */
+    public MessageDetailsDialog(Frame owner,
+                                MessageRecord message,
+                                JobPosting job,
+                                String direction,
+                                String status,
+                                JComponent actionPanel) {
         super(owner, "Message Details", true);
         getContentPane().setBackground(UiTheme.BACKGROUND);
 
@@ -41,6 +53,9 @@ public class MessageDetailsDialog extends JDialog {
         JPanel root = UiTheme.createPagePanel();
         JPanel card = UiTheme.createCard("Message Summary", "Read-only details for the selected TA/MO message.");
         card.add(UiTheme.wrapPage(details), BorderLayout.CENTER);
+        if (actionPanel != null) {
+            card.add(actionPanel, BorderLayout.SOUTH);
+        }
         root.add(card, BorderLayout.CENTER);
         add(root, BorderLayout.CENTER);
 

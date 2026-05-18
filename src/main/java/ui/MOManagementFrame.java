@@ -1543,7 +1543,7 @@ public class MOManagementFrame extends JFrame {
                 if (event.getClickCount() == 2) {
                     MessageRecord selected = selectedMessageFromTable(table, model);
                     if (selected != null) {
-                        showMessageDetails(selected);
+                        showMessageDetails(selected, refreshMessages);
                     }
                 }
             }
@@ -1582,14 +1582,32 @@ public class MOManagementFrame extends JFrame {
     /**
      * Opens a structured read-only detail dialog for one message.
      */
-    private void showMessageDetails(MessageRecord selected) {
+    private void showMessageDetails(MessageRecord selected, Runnable refreshMessages) {
         JobPosting job = findJob(selected.getJobId()).orElse(null);
         boolean incoming = currentUser.getUserId().equals(selected.getRecipientUserId());
         String direction = incoming
                 ? "Incoming from " + displayNameForUser(selected.getSenderUserId())
                 : "Outgoing to " + displayNameForUser(selected.getRecipientUserId());
         String status = incoming && !selected.isRead() ? "New" : "Read";
-        new MessageDetailsDialog(this, selected, job, direction, status).setVisible(true);
+        new MessageDetailsDialog(this, selected, job, direction, status, buildMessageDetailsActions(selected, refreshMessages)).setVisible(true);
+    }
+
+    /**
+     * Builds the action row shown below MO message details.
+     */
+    private JPanel buildMessageDetailsActions(MessageRecord selected, Runnable refreshMessages) {
+        JButton replyButton = UiTheme.createPrimaryButton("Reply");
+        JButton closeButton = UiTheme.createSecondaryButton("Close");
+        decorateButton(replyButton, SimpleLineIcon.Type.SEND);
+        decorateButton(closeButton, SimpleLineIcon.Type.LOGOUT);
+
+        replyButton.addActionListener(event -> {
+            replyToMessage(selected);
+            refreshMessages.run();
+        });
+        closeButton.addActionListener(event -> SwingUtilities.getWindowAncestor(closeButton).dispose());
+
+        return UiTheme.createButtonRow(FlowLayout.RIGHT, replyButton, closeButton);
     }
 
     /**
@@ -1657,7 +1675,16 @@ public class MOManagementFrame extends JFrame {
         panel.add(helperArea, BorderLayout.NORTH);
         panel.add(new JScrollPane(messageArea), BorderLayout.CENTER);
 
-        int result = JOptionPane.showConfirmDialog(this, panel, title, JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        int result = JOptionPane.showOptionDialog(
+                this,
+                panel,
+                title,
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                new Object[]{"Send", "Cancel"},
+                "Send"
+        );
         if (result != JOptionPane.OK_OPTION) {
             return Optional.empty();
         }
