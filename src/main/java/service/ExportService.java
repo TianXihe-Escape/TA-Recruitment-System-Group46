@@ -53,7 +53,13 @@ public class ExportService {
                     String.valueOf(job.getHours()),
                     job.getCategory() == null ? "" : job.getCategory().getDisplayName(),
                     job.getSemester(),
-                    "applications=" + applicationCount + "; requiredTAs=" + job.getRequiredTaCount()
+                    "applications=" + applicationCount
+                            + "; requiredTAs=" + job.getRequiredTaCount()
+                            + "; jobType=" + job.getJobType()
+                            + "; workloadType=" + job.getWorkloadType()
+                            + "; period=" + job.getStartDate() + " to " + job.getEndDate()
+                            + "; schedule=" + job.getSchedule()
+                            + "; location=" + job.getLocation()
             ));
         }
         for (ApplicationRecord application : applications) {
@@ -76,10 +82,12 @@ public class ExportService {
                     workload.getApplicantName(),
                     String.join("|", workload.getAssignedJobIds()),
                     workload.isOverload() ? "OVERLOAD" : "OK",
-                    String.valueOf(workload.getTotalHours()),
+                    workload.getWeeklyHours() + "h/week",
                     "",
                     "",
-                    String.join("|", workload.getAssignedModules())
+                    "weekly=" + String.join("|", workload.getWeeklyModules())
+                            + "; oneOff=" + workload.getOneOffHours() + "h total "
+                            + String.join("|", workload.getOneOffModules())
             ));
         }
         return builder.toString();

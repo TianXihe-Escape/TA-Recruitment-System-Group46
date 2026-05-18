@@ -8,6 +8,14 @@ import java.util.List;
  * TA vacancy published by a module organiser.
  */
 public class JobPosting {
+    public static final String JOB_TYPE_COURSE_SUPPORT = "COURSE_SUPPORT";
+    public static final String JOB_TYPE_INVIGILATION = "INVIGILATION";
+    public static final String JOB_TYPE_DEMO_SUPPORT = "DEMO_SUPPORT";
+    public static final String JOB_TYPE_WORKSHOP_SUPPORT = "WORKSHOP_SUPPORT";
+    public static final String JOB_TYPE_OTHER = "OTHER";
+    public static final String WORKLOAD_TYPE_WEEKLY = "WEEKLY";
+    public static final String WORKLOAD_TYPE_TOTAL = "TOTAL";
+
     private String jobId;
     private String moduleCode;
     private String moduleTitle;
@@ -15,6 +23,12 @@ public class JobPosting {
     private String semester;
     private String duties;
     private int hours;
+    private String jobType = JOB_TYPE_COURSE_SUPPORT;
+    private String startDate = "";
+    private String endDate = "";
+    private String schedule = "";
+    private String location = "";
+    private String workloadType = WORKLOAD_TYPE_WEEKLY;
     private int requiredTaCount = 1;
     private List<String> requiredSkills = new ArrayList<>();
     private LocalDate applicationDeadline;
@@ -77,6 +91,62 @@ public class JobPosting {
         this.hours = hours;
     }
 
+    public String getJobType() {
+        return jobType;
+    }
+
+    public void setJobType(String jobType) {
+        this.jobType = normalizeJobType(jobType);
+    }
+
+    public String getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(String startDate) {
+        this.startDate = startDate == null ? "" : startDate;
+    }
+
+    public String getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(String endDate) {
+        this.endDate = endDate == null ? "" : endDate;
+    }
+
+    public String getSchedule() {
+        return schedule;
+    }
+
+    public void setSchedule(String schedule) {
+        this.schedule = schedule == null ? "" : schedule;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location == null ? "" : location;
+    }
+
+    public String getWorkloadType() {
+        return workloadType;
+    }
+
+    public void setWorkloadType(String workloadType) {
+        this.workloadType = normalizeWorkloadType(workloadType);
+    }
+
+    public boolean isWeeklyWorkload() {
+        return WORKLOAD_TYPE_WEEKLY.equals(workloadType);
+    }
+
+    public boolean isTotalWorkload() {
+        return WORKLOAD_TYPE_TOTAL.equals(workloadType);
+    }
+
     public int getRequiredTaCount() {
         return requiredTaCount;
     }
@@ -115,5 +185,24 @@ public class JobPosting {
 
     public void setPostedBy(String postedBy) {
         this.postedBy = postedBy;
+    }
+
+    private String normalizeJobType(String value) {
+        if (value == null || value.isBlank()) {
+            return JOB_TYPE_COURSE_SUPPORT;
+        }
+        String normalized = value.trim().toUpperCase();
+        return switch (normalized) {
+            case JOB_TYPE_INVIGILATION, JOB_TYPE_DEMO_SUPPORT, JOB_TYPE_WORKSHOP_SUPPORT, JOB_TYPE_OTHER -> normalized;
+            default -> JOB_TYPE_COURSE_SUPPORT;
+        };
+    }
+
+    private String normalizeWorkloadType(String value) {
+        if (value == null || value.isBlank()) {
+            return WORKLOAD_TYPE_WEEKLY;
+        }
+        String normalized = value.trim().toUpperCase();
+        return WORKLOAD_TYPE_TOTAL.equals(normalized) ? WORKLOAD_TYPE_TOTAL : WORKLOAD_TYPE_WEEKLY;
     }
 }

@@ -1,41 +1,428 @@
 [
   {
     "applicationId" : "apply-01",
-    "applicantId" : "applicant-01",
-    "jobId" : "job-01",
-    "appliedAt" : "2026-05-13T21:36:14.412390300",
-    "lastUpdatedAt" : null,
+    "applicantId" : "applicant-alice",
+    "jobId" : "job-ebu6304",
+    "appliedAt" : "2026-05-11T19:47:07.626877800",
+    "lastUpdatedAt" : "2026-05-12T03:47:07.626877800",
     "decisionAt" : null,
-    "status" : "ACCEPTED",
-    "reviewerNotes" : "Strong fit for lab support.",
+    "status" : "SHORTLISTED",
+    "reviewerNotes" : "Strong match for software engineering labs. Good Java and GitHub background. Recommended for shortlist.",
     "matchScore" : 100,
     "missingSkills" : [ ],
-    "statusHistory" : [ ]
+    "statusHistory" : [
+      {
+        "status" : "SUBMITTED",
+        "changedAt" : "2026-05-11T19:47:07.626877800",
+        "actorUserId" : "user-ta-alice",
+        "note" : "Application submitted."
+      },
+      {
+        "status" : "SHORTLISTED",
+        "changedAt" : "2026-05-12T03:47:07.626877800",
+        "actorUserId" : "user-mo-ling",
+        "note" : "Strong match for software engineering labs. Good Java and GitHub background. Recommended for shortlist."
+      }
+    ]
   },
   {
     "applicationId" : "apply-02",
-    "applicantId" : "applicant-02",
-    "jobId" : "job-02",
-    "appliedAt" : "2026-05-14T21:36:14.412390300",
-    "lastUpdatedAt" : null,
+    "applicantId" : "applicant-ben",
+    "jobId" : "job-ebu6475",
+    "appliedAt" : "2026-05-12T19:47:07.626877800",
+    "lastUpdatedAt" : "2026-05-13T03:47:07.626877800",
     "decisionAt" : null,
-    "status" : "SHORTLISTED",
-    "reviewerNotes" : "Good analytics background.",
+    "status" : "INTERVIEW_INVITED",
+    "reviewerNotes" : "Good embedded systems background and practical debugging skills. Suitable for microprocessor lab support.",
     "matchScore" : 100,
     "missingSkills" : [ ],
-    "statusHistory" : [ ]
+    "statusHistory" : [
+      {
+        "status" : "SUBMITTED",
+        "changedAt" : "2026-05-12T19:47:07.626877800",
+        "actorUserId" : "user-ta-ben",
+        "note" : "Application submitted."
+      },
+      {
+        "status" : "INTERVIEW_INVITED",
+        "changedAt" : "2026-05-13T03:47:07.626877800",
+        "actorUserId" : "user-mo-chao-shu",
+        "note" : "Good embedded systems background and practical debugging skills. Suitable for microprocessor lab support."
+      }
+    ]
   },
   {
     "applicationId" : "apply-03",
-    "applicantId" : "applicant-03",
-    "jobId" : "job-03",
-    "appliedAt" : "2026-05-15T09:36:14.412390300",
-    "lastUpdatedAt" : null,
+    "applicantId" : "applicant-chloe",
+    "jobId" : "job-ebu6366",
+    "appliedAt" : "2026-05-13T19:47:07.626877800",
+    "lastUpdatedAt" : "2026-05-14T03:47:07.626877800",
+    "decisionAt" : null,
+    "status" : "SHORTLISTED",
+    "reviewerNotes" : "Relevant RF and MATLAB skills. Needs to review optical transmission topics before assisting tutorials.",
+    "matchScore" : 80,
+    "missingSkills" : [
+      "Optical Transmission"
+    ],
+    "statusHistory" : [
+      {
+        "status" : "SUBMITTED",
+        "changedAt" : "2026-05-13T19:47:07.626877800",
+        "actorUserId" : "user-ta-chloe",
+        "note" : "Application submitted."
+      },
+      {
+        "status" : "SHORTLISTED",
+        "changedAt" : "2026-05-14T03:47:07.626877800",
+        "actorUserId" : "user-mo-jin-zhang",
+        "note" : "Relevant RF and MATLAB skills. Needs to review optical transmission topics before assisting tutorials."
+      }
+    ]
+  },
+  {
+    "applicationId" : "apply-04",
+    "applicantId" : "applicant-daniel",
+    "jobId" : "job-ebu5606",
+    "appliedAt" : "2026-05-14T19:47:07.626877800",
+    "lastUpdatedAt" : "2026-05-15T03:47:07.626877800",
     "decisionAt" : null,
     "status" : "SUBMITTED",
-    "reviewerNotes" : "",
+    "reviewerNotes" : "Good written communication and product analysis skills. Suitable for supporting report-based workshops.",
     "matchScore" : 100,
     "missingSkills" : [ ],
-    "statusHistory" : [ ]
+    "statusHistory" : [
+      {
+        "status" : "SUBMITTED",
+        "changedAt" : "2026-05-14T19:47:07.626877800",
+        "actorUserId" : "user-ta-daniel",
+        "note" : "Application submitted."
+      },
+      {
+        "status" : "SUBMITTED",
+        "changedAt" : "2026-05-15T03:47:07.626877800",
+        "actorUserId" : "user-mo-nickos",
+        "note" : "Good written communication and product analysis skills. Suitable for supporting report-based workshops."
+      }
+    ]
+  },
+  {
+    "applicationId" : "apply-05",
+    "applicantId" : "applicant-emma",
+    "jobId" : "job-ebu6304",
+    "appliedAt" : "2026-05-15T19:47:07.626877800",
+    "lastUpdatedAt" : "2026-05-16T03:47:07.626877800",
+    "decisionAt" : "2026-05-16T03:47:07.626877800",
+    "status" : "REJECTED",
+    "reviewerNotes" : "Strong analytical background but missing Java, GitHub, Testing and Agile Development experience. Not currently suitable for EBU6304 without preparation.",
+    "matchScore" : 0,
+    "missingSkills" : [
+      "Java",
+      "Software Engineering",
+      "Agile Development",
+      "GitHub",
+      "Testing"
+    ],
+    "statusHistory" : [
+      {
+        "status" : "SUBMITTED",
+        "changedAt" : "2026-05-15T19:47:07.626877800",
+        "actorUserId" : "user-ta-emma",
+        "note" : "Application submitted."
+      },
+      {
+        "status" : "REJECTED",
+        "changedAt" : "2026-05-16T03:47:07.626877800",
+        "actorUserId" : "user-mo-ling",
+        "note" : "Strong analytical background but missing Java, GitHub, Testing and Agile Development experience. Not currently suitable for EBU6304 without preparation."
+      }
+    ]
+  },
+  {
+    "applicationId" : "apply-06",
+    "applicantId" : "applicant-frank",
+    "jobId" : "job-ebu6475",
+    "appliedAt" : "2026-05-15T19:47:07.626877800",
+    "lastUpdatedAt" : "2026-05-16T03:47:07.626877800",
+    "decisionAt" : "2026-05-16T03:47:07.626877800",
+    "status" : "ACCEPTED",
+    "reviewerNotes" : "Flexible technical background and useful C programming experience. Accepted, but workload should be monitored.",
+    "matchScore" : 40,
+    "missingSkills" : [
+      "Microcontrollers",
+      "Embedded Systems",
+      "Digital Systems"
+    ],
+    "statusHistory" : [
+      {
+        "status" : "SUBMITTED",
+        "changedAt" : "2026-05-15T19:47:07.626877800",
+        "actorUserId" : "user-ta-frank",
+        "note" : "Application submitted."
+      },
+      {
+        "status" : "ACCEPTED",
+        "changedAt" : "2026-05-16T03:47:07.626877800",
+        "actorUserId" : "user-mo-chao-shu",
+        "note" : "Flexible technical background and useful C programming experience. Accepted, but workload should be monitored."
+      }
+    ]
+  },
+  {
+    "applicationId" : "apply-07",
+    "applicantId" : "applicant-frank",
+    "jobId" : "job-ebu6366",
+    "appliedAt" : "2026-05-17T01:47:07.626877800",
+    "lastUpdatedAt" : "2026-05-17T09:47:07.626877800",
+    "decisionAt" : "2026-05-17T09:47:07.626877800",
+    "status" : "ACCEPTED",
+    "reviewerNotes" : "Has MATLAB and debugging background, and is accepted for tutorial support. Workload should be monitored because this is an additional TA role.",
+    "matchScore" : 20,
+    "missingSkills" : [
+      "Microwave Engineering",
+      "RF Systems",
+      "Optical Transmission",
+      "Signal Analysis"
+    ],
+    "statusHistory" : [
+      {
+        "status" : "SUBMITTED",
+        "changedAt" : "2026-05-17T01:47:07.626877800",
+        "actorUserId" : "user-ta-frank",
+        "note" : "Application submitted."
+      },
+      {
+        "status" : "ACCEPTED",
+        "changedAt" : "2026-05-17T09:47:07.626877800",
+        "actorUserId" : "user-mo-jin-zhang",
+        "note" : "Has MATLAB and debugging background, and is accepted for tutorial support. Workload should be monitored because this is an additional TA role."
+      }
+    ]
+  },
+  {
+    "applicationId" : "apply-08",
+    "applicantId" : "applicant-grace",
+    "jobId" : "job-ebu5042",
+    "appliedAt" : "2026-05-13T19:47:07.626877800",
+    "lastUpdatedAt" : "2026-05-14T03:47:07.626877800",
+    "decisionAt" : null,
+    "status" : "SHORTLISTED",
+    "reviewerNotes" : "Strong match for Java network programming labs. Good socket programming and debugging background.",
+    "matchScore" : 100,
+    "missingSkills" : [ ],
+    "statusHistory" : [
+      {
+        "status" : "SUBMITTED",
+        "changedAt" : "2026-05-13T19:47:07.626877800",
+        "actorUserId" : "user-ta-grace",
+        "note" : "Application submitted."
+      },
+      {
+        "status" : "SHORTLISTED",
+        "changedAt" : "2026-05-14T03:47:07.626877800",
+        "actorUserId" : "user-mo-paula",
+        "note" : "Strong match for Java network programming labs. Good socket programming and debugging background."
+      }
+    ]
+  },
+  {
+    "applicationId" : "apply-09",
+    "applicantId" : "applicant-henry",
+    "jobId" : "job-cbu5201",
+    "appliedAt" : "2026-05-14T19:47:07.626877800",
+    "lastUpdatedAt" : "2026-05-15T03:47:07.626877800",
+    "decisionAt" : null,
+    "status" : "INTERVIEW_INVITED",
+    "reviewerNotes" : "Strong Python and machine learning background. Suitable for supporting notebooks and model explanation.",
+    "matchScore" : 100,
+    "missingSkills" : [ ],
+    "statusHistory" : [
+      {
+        "status" : "SUBMITTED",
+        "changedAt" : "2026-05-14T19:47:07.626877800",
+        "actorUserId" : "user-ta-henry",
+        "note" : "Application submitted."
+      },
+      {
+        "status" : "INTERVIEW_INVITED",
+        "changedAt" : "2026-05-15T03:47:07.626877800",
+        "actorUserId" : "user-mo-chao-liu",
+        "note" : "Strong Python and machine learning background. Suitable for supporting notebooks and model explanation."
+      }
+    ]
+  },
+  {
+    "applicationId" : "apply-10",
+    "applicantId" : "applicant-ivy",
+    "jobId" : "job-ebu6335",
+    "appliedAt" : "2026-05-14T19:47:07.626877800",
+    "lastUpdatedAt" : "2026-05-15T03:47:07.626877800",
+    "decisionAt" : null,
+    "status" : "SHORTLISTED",
+    "reviewerNotes" : "Strong digital logic and Verilog background. Recommended for FPGA lab support.",
+    "matchScore" : 100,
+    "missingSkills" : [ ],
+    "statusHistory" : [
+      {
+        "status" : "SUBMITTED",
+        "changedAt" : "2026-05-14T19:47:07.626877800",
+        "actorUserId" : "user-ta-ivy",
+        "note" : "Application submitted."
+      },
+      {
+        "status" : "SHORTLISTED",
+        "changedAt" : "2026-05-15T03:47:07.626877800",
+        "actorUserId" : "user-mo-athen",
+        "note" : "Strong digital logic and Verilog background. Recommended for FPGA lab support."
+      }
+    ]
+  },
+  {
+    "applicationId" : "apply-11",
+    "applicantId" : "applicant-jason",
+    "jobId" : "job-ebu5606",
+    "appliedAt" : "2026-05-15T19:47:07.626877800",
+    "lastUpdatedAt" : "2026-05-16T03:47:07.626877800",
+    "decisionAt" : "2026-05-16T03:47:07.626877800",
+    "status" : "ACCEPTED",
+    "reviewerNotes" : "Good communication and presentation skills. Suitable for workshop and report support.",
+    "matchScore" : 40,
+    "missingSkills" : [
+      "Product Development",
+      "Marketing",
+      "Business Analysis"
+    ],
+    "statusHistory" : [
+      {
+        "status" : "SUBMITTED",
+        "changedAt" : "2026-05-15T19:47:07.626877800",
+        "actorUserId" : "user-ta-jason",
+        "note" : "Application submitted."
+      },
+      {
+        "status" : "ACCEPTED",
+        "changedAt" : "2026-05-16T03:47:07.626877800",
+        "actorUserId" : "user-mo-nickos",
+        "note" : "Good communication and presentation skills. Suitable for workshop and report support."
+      }
+    ]
+  },
+  {
+    "applicationId" : "apply-12",
+    "applicantId" : "applicant-jason",
+    "jobId" : "job-ebu6366",
+    "appliedAt" : "2026-05-16T19:47:07.626877800",
+    "lastUpdatedAt" : "2026-05-17T03:47:07.626877800",
+    "decisionAt" : null,
+    "status" : "SUBMITTED",
+    "reviewerNotes" : "General MATLAB experience is useful, but missing specialised microwave and RF systems knowledge.",
+    "matchScore" : 20,
+    "missingSkills" : [
+      "Microwave Engineering",
+      "RF Systems",
+      "Optical Transmission",
+      "Signal Analysis"
+    ],
+    "statusHistory" : [
+      {
+        "status" : "SUBMITTED",
+        "changedAt" : "2026-05-16T19:47:07.626877800",
+        "actorUserId" : "user-ta-jason",
+        "note" : "Application submitted."
+      },
+      {
+        "status" : "SUBMITTED",
+        "changedAt" : "2026-05-17T03:47:07.626877800",
+        "actorUserId" : "user-mo-jin-zhang",
+        "note" : "General MATLAB experience is useful, but missing specialised microwave and RF systems knowledge."
+      }
+    ]
+  },
+  {
+    "applicationId" : "apply-13",
+    "applicantId" : "applicant-emma",
+    "jobId" : "job-cbu5201",
+    "appliedAt" : "2026-05-16T23:47:07.626877800",
+    "lastUpdatedAt" : "2026-05-17T07:47:07.626877800",
+    "decisionAt" : null,
+    "status" : "SHORTLISTED",
+    "reviewerNotes" : "Strong fit for machine learning tutorials. Good Python, mathematics and data analysis background.",
+    "matchScore" : 80,
+    "missingSkills" : [
+      "Jupyter Notebook"
+    ],
+    "statusHistory" : [
+      {
+        "status" : "SUBMITTED",
+        "changedAt" : "2026-05-16T23:47:07.626877800",
+        "actorUserId" : "user-ta-emma",
+        "note" : "Application submitted."
+      },
+      {
+        "status" : "SHORTLISTED",
+        "changedAt" : "2026-05-17T07:47:07.626877800",
+        "actorUserId" : "user-mo-chao-liu",
+        "note" : "Strong fit for machine learning tutorials. Good Python, mathematics and data analysis background."
+      }
+    ]
+  },
+  {
+    "applicationId" : "apply-14",
+    "applicantId" : "applicant-alice",
+    "jobId" : "job-ebu6304-invigilation",
+    "appliedAt" : "2026-05-17T07:47:07.626877800",
+    "lastUpdatedAt" : "2026-05-17T15:47:07.626877800",
+    "decisionAt" : "2026-05-17T15:47:07.626877800",
+    "status" : "ACCEPTED",
+    "reviewerNotes" : "Reliable candidate with strong communication skills. Accepted for the final assessment invigilation event.",
+    "matchScore" : 0,
+    "missingSkills" : [
+      "Responsibility",
+      "Communication",
+      "Time Management",
+      "Exam Procedure Awareness"
+    ],
+    "statusHistory" : [
+      {
+        "status" : "SUBMITTED",
+        "changedAt" : "2026-05-17T07:47:07.626877800",
+        "actorUserId" : "user-ta-alice",
+        "note" : "Application submitted."
+      },
+      {
+        "status" : "ACCEPTED",
+        "changedAt" : "2026-05-17T15:47:07.626877800",
+        "actorUserId" : "user-mo-ling",
+        "note" : "Reliable candidate with strong communication skills. Accepted for the final assessment invigilation event."
+      }
+    ]
+  },
+  {
+    "applicationId" : "apply-15",
+    "applicantId" : "applicant-jason",
+    "jobId" : "job-ebu6304-demo",
+    "appliedAt" : "2026-05-17T09:47:07.626877800",
+    "lastUpdatedAt" : "2026-05-17T17:47:07.626877800",
+    "decisionAt" : "2026-05-17T17:47:07.626877800",
+    "status" : "ACCEPTED",
+    "reviewerNotes" : "Broad technical background and presentation support experience. Accepted for final demo logistics and technical checks.",
+    "matchScore" : 50,
+    "missingSkills" : [
+      "Software Engineering",
+      "Testing"
+    ],
+    "statusHistory" : [
+      {
+        "status" : "SUBMITTED",
+        "changedAt" : "2026-05-17T09:47:07.626877800",
+        "actorUserId" : "user-ta-jason",
+        "note" : "Application submitted."
+      },
+      {
+        "status" : "ACCEPTED",
+        "changedAt" : "2026-05-17T17:47:07.626877800",
+        "actorUserId" : "user-mo-ling",
+        "note" : "Broad technical background and presentation support experience. Accepted for final demo logistics and technical checks."
+      }
+    ]
   }
 ]

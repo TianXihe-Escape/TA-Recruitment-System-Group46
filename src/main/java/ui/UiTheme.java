@@ -5,12 +5,18 @@ import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
+import javax.swing.plaf.basic.BasicComboBoxUI;
+import javax.swing.plaf.basic.BasicComboPopup;
 import javax.swing.plaf.basic.BasicScrollBarUI;
+import javax.swing.plaf.basic.ComboPopup;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableColumn;
 import javax.swing.text.JTextComponent;
 import java.awt.*;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.MouseWheelEvent;
+import java.awt.geom.RoundRectangle2D;
 
 /**
  * Centralized theme and styling system for the TA Recruitment System's Swing user interface.
@@ -43,6 +49,7 @@ import java.awt.event.MouseWheelEvent;
  * @since 2026-04-09
  */
 public final class UiTheme {
+    private static final String COMBO_BOX_EXTERNAL_BORDER = "UiTheme.comboBoxExternalBorder";
 
     /**
      * Primary background color for the application.
@@ -365,7 +372,10 @@ public final class UiTheme {
         fieldConstraints.weightx = 1;  // Expand to fill available width
         fieldConstraints.fill = GridBagConstraints.HORIZONTAL;  // Fill horizontally
         fieldConstraints.insets = new Insets(0, 0, 0, 0);  // No additional insets
-        form.add(component, fieldConstraints);
+        JComponent fieldComponent = component instanceof JComboBox<?>
+                ? createComboBoxField((JComboBox<?>) component)
+                : component;
+        form.add(fieldComponent, fieldConstraints);
     }
 
     public static void styleTextField(JTextComponent component) {
@@ -379,10 +389,114 @@ public final class UiTheme {
     }
 
     public static void styleComboBox(JComboBox<?> comboBox) {
+        comboBox.setUI(new BasicComboBoxUI() {
+            @Override
+            public void paint(Graphics graphics, JComponent component) {
+                Graphics2D g = (Graphics2D) graphics.create();
+                paintComboBoxBackground(component, g);
+                g.dispose();
+
+                super.paint(graphics, component);
+
+                if (!hasExternalComboBoxBorder(component)) {
+                    Graphics2D borderGraphics = (Graphics2D) graphics.create();
+                    paintComboBoxBorder(component, borderGraphics, 0, 0, component.getWidth(), component.getHeight());
+                    borderGraphics.dispose();
+                }
+            }
+
+            @Override
+            protected JButton createArrowButton() {
+                JButton button = new JButton() {
+                    @Override
+                    protected void paintComponent(Graphics graphics) {
+                        Graphics2D g = (Graphics2D) graphics.create();
+                        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                        int centerX = getWidth() / 2;
+                        int centerY = getHeight() / 2 + 1;
+                        Polygon arrow = new Polygon(
+                                new int[]{centerX - 4, centerX + 4, centerX},
+                                new int[]{centerY - 2, centerY - 2, centerY + 3},
+                                3
+                        );
+                        g.setColor(MUTED_TEXT);
+                        g.fillPolygon(arrow);
+                        g.dispose();
+                    }
+                };
+                button.setBorder(new EmptyBorder(0, 0, 0, 0));
+                button.setContentAreaFilled(false);
+                button.setFocusPainted(false);
+                button.setFocusable(false);
+                button.setOpaque(false);
+                button.setPreferredSize(new Dimension(34, 34));
+                return button;
+            }
+
+            @Override
+            public void paintCurrentValueBackground(Graphics graphics, Rectangle bounds, boolean hasFocus) {
+                // The combo UI paints the rounded background once for a clean arrow area.
+            }
+
+            @Override
+            protected ComboPopup createPopup() {
+                return new BasicComboPopup(comboBox) {
+                    @Override
+                    public void show() {
+                        Dimension popupSize = comboBox.getSize();
+                        popupSize.setSize(popupSize.width, getPopupHeightForRowCount(comboBox.getMaximumRowCount()));
+                        Rectangle popupBounds = computePopupBounds(
+                                0,
+                                comboBox.getBounds().height + 3,
+                                popupSize.width,
+                                popupSize.height
+                        );
+                        scroller.setMaximumSize(popupBounds.getSize());
+                        scroller.setPreferredSize(popupBounds.getSize());
+                        scroller.setMinimumSize(popupBounds.getSize());
+                        list.invalidate();
+
+                        int selectedIndex = comboBox.getSelectedIndex();
+                        if (selectedIndex == -1) {
+                            list.clearSelection();
+                        } else {
+                            list.setSelectedIndex(selectedIndex);
+                            list.ensureIndexIsVisible(selectedIndex);
+                        }
+
+                        setLightWeightPopupEnabled(comboBox.isLightWeightPopupEnabled());
+                        show(comboBox, popupBounds.x, popupBounds.y);
+                    }
+                };
+            }
+        });
         comboBox.setFont(BODY_FONT);
         comboBox.setForeground(TEXT);
         comboBox.setBackground(SURFACE_ALT);
-        comboBox.setBorder(inputBorder());
+        comboBox.setOpaque(false);
+        comboBox.setBorder(new CompleteComboBoxBorder());
+        comboBox.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                                                          boolean isSelected, boolean cellHasFocus) {
+                JLabel label = (JLabel) super.getListCellRendererComponent(
+                        list, value, index, isSelected, cellHasFocus);
+                label.setFont(BODY_FONT);
+                label.setBorder(new EmptyBorder(4, 8, 4, 8));
+                label.setForeground(comboBox.isEnabled() ? TEXT : MUTED_TEXT);
+
+                if (index == -1) {
+                    label.setOpaque(false);
+                } else {
+                    label.setOpaque(true);
+                    label.setBackground(isSelected ? PRIMARY_SOFT : SURFACE_ALT);
+                }
+                return label;
+            }
+        });
+        Dimension preferredSize = comboBox.getPreferredSize();
+        comboBox.setPreferredSize(new Dimension(Math.max(preferredSize.width, 120), 42));
+        comboBox.setMinimumSize(new Dimension(80, 42));
         comboBox.setFocusable(true);
     }
 
@@ -544,6 +658,132 @@ public final class UiTheme {
         button.setForeground(Color.WHITE);
         button.setBorder(new EmptyBorder(10, 16, 10, 16));
         return button;
+    }
+
+    private static JComponent createComboBoxField(JComboBox<?> comboBox) {
+        comboBox.putClientProperty(COMBO_BOX_EXTERNAL_BORDER, Boolean.TRUE);
+        comboBox.setBorder(new EmptyBorder(0, 0, 0, 0));
+
+        JPanel field = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics graphics) {
+                Graphics2D g = (Graphics2D) graphics.create();
+                paintComboBoxBackground(comboBox, g, getWidth(), getHeight());
+                g.dispose();
+            }
+
+            @Override
+            public void paint(Graphics graphics) {
+                super.paint(graphics);
+                Graphics2D g = (Graphics2D) graphics.create();
+                paintComboBoxBorder(comboBox, g, 0, 0, getWidth(), getHeight());
+                g.dispose();
+            }
+
+            @Override
+            public Dimension getPreferredSize() {
+                Dimension preferred = super.getPreferredSize();
+                return new Dimension(preferred.width, Math.max(46, preferred.height));
+            }
+
+            @Override
+            public Dimension getMinimumSize() {
+                Dimension minimum = super.getMinimumSize();
+                return new Dimension(Math.max(80, minimum.width), Math.max(46, minimum.height));
+            }
+        };
+        field.setOpaque(false);
+        field.setBorder(new EmptyBorder(1, 0, 2, 0));
+        field.add(comboBox, BorderLayout.CENTER);
+
+        comboBox.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent event) {
+                field.repaint();
+            }
+
+            @Override
+            public void focusLost(FocusEvent event) {
+                field.repaint();
+            }
+        });
+
+        return field;
+    }
+
+    private static void paintComboBoxBackground(Component component, Graphics2D g) {
+        paintComboBoxBackground(component, g, component.getWidth(), component.getHeight());
+    }
+
+    private static void paintComboBoxBackground(Component component, Graphics2D g, int width, int height) {
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(component.isEnabled() ? SURFACE_ALT : new Color(241, 244, 249));
+        g.fill(new RoundRectangle2D.Float(
+                1f,
+                1f,
+                Math.max(0, width - 2f),
+                Math.max(0, height - 2f),
+                8f,
+                8f
+        ));
+    }
+
+    private static void paintComboBoxBorder(Component component, Graphics2D g, int x, int y, int width, int height) {
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        boolean focused = isFocusedWithin(component);
+        Color borderColor = focused ? new Color(124, 158, 255)
+                : (component.isEnabled() ? BORDER : new Color(225, 230, 238));
+        g.setColor(borderColor);
+        g.setStroke(new BasicStroke(1.2f));
+        g.draw(new RoundRectangle2D.Float(
+                x + 1f,
+                y + 1f,
+                Math.max(0, width - 2f),
+                Math.max(0, height - 2f),
+                8f,
+                8f
+        ));
+
+    }
+
+    private static boolean hasExternalComboBoxBorder(Component component) {
+        return component instanceof JComponent
+                && Boolean.TRUE.equals(((JComponent) component).getClientProperty(COMBO_BOX_EXTERNAL_BORDER));
+    }
+
+    private static boolean isFocusedWithin(Component component) {
+        if (component.isFocusOwner()) {
+            return true;
+        }
+
+        Component focusOwner = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+        return focusOwner != null
+                && component instanceof Container
+                && SwingUtilities.isDescendingFrom(focusOwner, component);
+    }
+
+    private static class CompleteComboBoxBorder implements Border {
+        private static final Insets INSETS = new Insets(6, 10, 6, 10);
+
+        @Override
+        public void paintBorder(Component component, Graphics graphics, int x, int y, int width, int height) {
+            if (hasExternalComboBoxBorder(component)) {
+                return;
+            }
+            Graphics2D g = (Graphics2D) graphics.create();
+            paintComboBoxBorder(component, g, x, y, width, height);
+            g.dispose();
+        }
+
+        @Override
+        public Insets getBorderInsets(Component component) {
+            return INSETS;
+        }
+
+        @Override
+        public boolean isBorderOpaque() {
+            return false;
+        }
     }
 
     private static class WrappingFlowPanel extends JPanel {

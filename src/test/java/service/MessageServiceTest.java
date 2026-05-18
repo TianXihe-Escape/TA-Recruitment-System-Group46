@@ -31,12 +31,20 @@ class MessageServiceTest {
         assertEquals(reply.getMessageId(), taMessages.get(0).getMessageId());
         assertEquals("msg-01", first.getMessageId());
         assertFalse(repository.findAll().get(1).isRead());
+        assertTrue(service.hasUnreadMessages("ta1"));
 
         service.markAllRead("ta1");
 
         assertTrue(repository.findAll().stream()
                 .filter(message -> "ta1".equals(message.getRecipientUserId()))
                 .allMatch(MessageRecord::isRead));
+        assertFalse(service.hasUnreadMessages("ta1"));
+        assertTrue(service.hasUnreadMessages("mo1"));
+
+        MessageService reloadedService = new MessageService(
+                new MessageRepository(new JsonDataStore(), tempDir.resolve("messages.json"))
+        );
+        assertFalse(reloadedService.hasUnreadMessages("ta1"));
     }
 
     @Test

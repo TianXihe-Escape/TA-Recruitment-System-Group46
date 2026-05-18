@@ -1,1 +1,82 @@
-[]
+[
+  {
+    "messageId" : "msg-01",
+    "jobId" : "job-ebu6304",
+    "applicationId" : "apply-01",
+    "senderUserId" : "user-mo-ling",
+    "recipientUserId" : "user-ta-alice",
+    "body" : "Please prepare to discuss your Java project and GitHub experience during the interview.",
+    "createdAt" : "2026-05-16T21:47:07.636617300",
+    "read" : true
+  },
+  {
+    "messageId" : "msg-02",
+    "jobId" : "job-ebu6475",
+    "applicationId" : "apply-02",
+    "senderUserId" : "user-mo-chao-shu",
+    "recipientUserId" : "user-ta-ben",
+    "body" : "Please bring examples of your embedded systems lab experience.",
+    "createdAt" : "2026-05-17T00:47:07.636617300",
+    "read" : false
+  },
+  {
+    "messageId" : "msg-03",
+    "jobId" : "job-ebu6366",
+    "applicationId" : "apply-03",
+    "senderUserId" : "user-mo-jin-zhang",
+    "recipientUserId" : "user-ta-chloe",
+    "body" : "Please review microwave transmission line basics before the tutorial support session.",
+    "createdAt" : "2026-05-17T02:47:07.636617300",
+    "read" : false
+  },
+  {
+    "messageId" : "msg-04",
+    "jobId" : "job-ebu5606",
+    "applicationId" : "apply-04",
+    "senderUserId" : "user-mo-nickos",
+    "recipientUserId" : "user-ta-daniel",
+    "body" : "Please prepare examples of product analysis or business report writing.",
+    "createdAt" : "2026-05-17T05:47:07.636617300",
+    "read" : false
+  },
+  {
+    "messageId" : "msg-05",
+    "jobId" : "job-ebu5042",
+    "applicationId" : "apply-08",
+    "senderUserId" : "user-mo-paula",
+    "recipientUserId" : "user-ta-grace",
+    "body" : "Please prepare to discuss your Java socket programming and client-server coursework experience.",
+    "createdAt" : "2026-05-17T09:47:07.636617300",
+    "read" : false
+  },
+  {
+    "messageId" : "msg-06",
+    "jobId" : "job-cbu5201",
+    "applicationId" : "apply-09",
+    "senderUserId" : "user-mo-chao-liu",
+    "recipientUserId" : "user-ta-henry",
+    "body" : "Please prepare examples of Python notebooks or machine learning coursework you have completed.",
+    "createdAt" : "2026-05-17T10:47:07.636617300",
+    "read" : false
+  },
+  {
+    "messageId" : "msg-07",
+    "jobId" : "job-ebu6335",
+    "applicationId" : "apply-10",
+    "senderUserId" : "user-mo-athen",
+    "recipientUserId" : "user-ta-ivy",
+    "body" : "Please prepare to explain your Verilog and FPGA debugging experience.",
+    "createdAt" : "2026-05-17T11:47:07.636617300",
+    "read" : false
+  },
+  {
+    "messageId" : "msg-08",
+    "jobId" : "job-ebu5606",
+    "applicationId" : "apply-11",
+    "senderUserId" : "user-mo-nickos",
+    "recipientUserId" : "user-ta-jason",
+    "body" : "Please prepare examples of report writing or presentation support experience.",
+    "createdAt" : "2026-05-17T12:47:07.636617300",
+    "read" : false
+  }
+]

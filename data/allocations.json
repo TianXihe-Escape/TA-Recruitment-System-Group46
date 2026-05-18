@@ -1,11 +1,47 @@
 [
   {
     "allocationId" : "alloc-01",
-    "applicationId" : "apply-01",
-    "applicantId" : "applicant-01",
-    "jobId" : "job-01",
-    "allocatedByUserId" : "user-mo-01",
-    "allocatedAt" : "2026-05-14T21:36:14.413390400",
+    "applicationId" : "apply-06",
+    "applicantId" : "applicant-frank",
+    "jobId" : "job-ebu6475",
+    "allocatedByUserId" : "user-admin-01",
+    "allocatedAt" : "2026-05-16T19:47:07.626877800",
+    "active" : true
+  },
+  {
+    "allocationId" : "alloc-02",
+    "applicationId" : "apply-07",
+    "applicantId" : "applicant-frank",
+    "jobId" : "job-ebu6366",
+    "allocatedByUserId" : "user-mo-jin-zhang",
+    "allocatedAt" : "2026-05-16T19:47:07.626877800",
+    "active" : true
+  },
+  {
+    "allocationId" : "alloc-03",
+    "applicationId" : "apply-11",
+    "applicantId" : "applicant-jason",
+    "jobId" : "job-ebu5606",
+    "allocatedByUserId" : "user-mo-nickos",
+    "allocatedAt" : "2026-05-16T19:47:07.626877800",
+    "active" : true
+  },
+  {
+    "allocationId" : "alloc-04",
+    "applicationId" : "apply-14",
+    "applicantId" : "applicant-alice",
+    "jobId" : "job-ebu6304-invigilation",
+    "allocatedByUserId" : "user-mo-ling",
+    "allocatedAt" : "2026-05-16T19:47:07.626877800",
+    "active" : true
+  },
+  {
+    "allocationId" : "alloc-05",
+    "applicationId" : "apply-15",
+    "applicantId" : "applicant-jason",
+    "jobId" : "job-ebu6304-demo",
+    "allocatedByUserId" : "user-mo-ling",
+    "allocatedAt" : "2026-05-16T19:47:07.626877800",
     "active" : true
   }
 ]

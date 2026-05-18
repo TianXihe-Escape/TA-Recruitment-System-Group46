@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -54,7 +55,9 @@ public class JsonDataStore {
             }
             return results;
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to read data from " + path, e);
+            throw new IllegalStateException("Could not read JSON data file " + path + ".", e);
+        } catch (RuntimeException e) {
+            throw damagedFileException(path, e);
         }
     }
 
@@ -68,7 +71,7 @@ public class JsonDataStore {
             for (T value : values) {
                 serialized.add(serialize(value));
             }
-            Files.writeString(path, JsonUtil.toPrettyJson(serialized), StandardCharsets.UTF_8);
+            writeStringAtomically(path, JsonUtil.toPrettyJson(serialized));
         } catch (IOException e) {
             throw new IllegalStateException("Failed to write data to " + path, e);
         }
@@ -89,7 +92,9 @@ public class JsonDataStore {
             Map<String, Object> map = (Map<String, Object>) rawMap;
             return convertMap(clazz, map);
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to read config from " + path, e);
+            throw new IllegalStateException("Could not read JSON data file " + path + ".", e);
+        } catch (RuntimeException e) {
+            throw damagedFileException(path, e);
         }
     }
 
@@ -99,7 +104,7 @@ public class JsonDataStore {
     public <T> void writeObject(Path path, T value) {
         ensureParent(path);
         try {
-            Files.writeString(path, JsonUtil.toPrettyJson(serialize(value)), StandardCharsets.UTF_8);
+            writeStringAtomically(path, JsonUtil.toPrettyJson(serialize(value)));
         } catch (IOException e) {
             throw new IllegalStateException("Failed to write config to " + path, e);
         }
@@ -136,6 +141,25 @@ public class JsonDataStore {
         }
     }
 
+    private void writeStringAtomically(Path path, String content) throws IOException {
+        ensureParent(path);
+        Path temp = Files.createTempFile(path.getParent(), path.getFileName().toString(), ".tmp");
+        try {
+            Files.writeString(temp, content, StandardCharsets.UTF_8);
+            Files.move(temp, path, StandardCopyOption.REPLACE_EXISTING);
+        } finally {
+            Files.deleteIfExists(temp);
+        }
+    }
+
+    private IllegalStateException damagedFileException(Path path, RuntimeException cause) {
+        return new IllegalStateException(
+                "The JSON data file appears to be damaged: " + path
+                        + ". Restore sample data from the application or delete the damaged file so it can be recreated.",
+                cause
+        );
+    }
+
     @SuppressWarnings("unchecked")
     /**
      * Converts a parsed JSON object map into one of the supported domain models.
@@ -166,7 +190,12 @@ public class JsonDataStore {
             profile.setExperienceSummary(stringValue(map.get("experienceSummary")));
             profile.setPreferredDuties(stringValue(map.get("preferredDuties")));
             profile.setCvPath(stringValue(map.get("cvPath")));
-            profile.setSupportingDocumentPath(stringValue(map.get("supportingDocumentPath")));
+            List<String> supportingDocumentPaths = stringList(map.get("supportingDocumentPaths"));
+            if (supportingDocumentPaths.isEmpty()) {
+                profile.setSupportingDocumentPath(stringValue(map.get("supportingDocumentPath")));
+            } else {
+                profile.setSupportingDocumentPaths(supportingDocumentPaths);
+            }
             profile.setFavoriteJobIds(stringList(map.get("favoriteJobIds")));
             return (T) profile;
         }
@@ -179,6 +208,12 @@ public class JsonDataStore {
             job.setSemester(stringValue(map.get("semester")));
             job.setDuties(stringValue(map.get("duties")));
             job.setHours(intValue(map.get("hours")));
+            job.setJobType(stringValue(map.get("jobType")));
+            job.setStartDate(stringValue(map.get("startDate")));
+            job.setEndDate(stringValue(map.get("endDate")));
+            job.setSchedule(stringValue(map.get("schedule")));
+            job.setLocation(stringValue(map.get("location")));
+            job.setWorkloadType(stringValue(map.get("workloadType")));
             Object requiredTaCount = map.get("requiredTaCount");
             job.setRequiredTaCount(requiredTaCount == null ? 1 : intValue(requiredTaCount));
             job.setRequiredSkills(stringList(map.get("requiredSkills")));
@@ -282,6 +317,7 @@ public class JsonDataStore {
             map.put("preferredDuties", profile.getPreferredDuties());
             map.put("cvPath", profile.getCvPath());
             map.put("supportingDocumentPath", profile.getSupportingDocumentPath());
+            map.put("supportingDocumentPaths", new ArrayList<>(profile.getSupportingDocumentPaths()));
             map.put("favoriteJobIds", new ArrayList<>(profile.getFavoriteJobIds()));
             return map;
         }
@@ -294,6 +330,12 @@ public class JsonDataStore {
             map.put("semester", job.getSemester());
             map.put("duties", job.getDuties());
             map.put("hours", job.getHours());
+            map.put("jobType", job.getJobType());
+            map.put("startDate", job.getStartDate());
+            map.put("endDate", job.getEndDate());
+            map.put("schedule", job.getSchedule());
+            map.put("location", job.getLocation());
+            map.put("workloadType", job.getWorkloadType());
             map.put("requiredTaCount", job.getRequiredTaCount());
             map.put("requiredSkills", new ArrayList<>(job.getRequiredSkills()));
             map.put("applicationDeadline", job.getApplicationDeadline() == null ? null : job.getApplicationDeadline().toString());

@@ -28,6 +28,11 @@ import util.Constants;
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.text.JTextComponent;
+import javax.swing.text.SimpleAttributeSet;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyledDocument;
+import javax.swing.text.Utilities;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -37,8 +42,11 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * MO dashboard for posting jobs and reviewing applicants.
@@ -48,6 +56,7 @@ public class MOManagementFrame extends JFrame {
     private static final int VIEW_JOB_EDITOR = 0;
     private static final int VIEW_REVIEW_QUEUE = 1;
     private static final String[] VIEW_KEYS = {"job-editor", "review-queue"};
+    private static final Pattern DOCUMENT_LINK_PATTERN = Pattern.compile("(cv[/\\\\][^;\\n]+|supporting-documents[/\\\\][^;\\n]+)");
 
     private final DataService dataService;
     private final JobService jobService;
@@ -69,16 +78,31 @@ public class MOManagementFrame extends JFrame {
     private final JComboBox<String> moduleCodeBox = new JComboBox<>();
     private final JTextField moduleTitleField = new JTextField();
     private final JComboBox<JobCategory> categoryBox = new JComboBox<>(JobCategory.values());
+    private final JComboBox<String> jobTypeBox = new JComboBox<>(new String[]{
+            JobPosting.JOB_TYPE_COURSE_SUPPORT,
+            JobPosting.JOB_TYPE_INVIGILATION,
+            JobPosting.JOB_TYPE_DEMO_SUPPORT,
+            JobPosting.JOB_TYPE_WORKSHOP_SUPPORT,
+            JobPosting.JOB_TYPE_OTHER
+    });
     private final JTextField semesterField = new JTextField();
     private final JTextField hoursField = new JTextField();
+    private final JComboBox<String> workloadTypeBox = new JComboBox<>(new String[]{
+            JobPosting.WORKLOAD_TYPE_WEEKLY,
+            JobPosting.WORKLOAD_TYPE_TOTAL
+    });
+    private final JTextField startDateField = new JTextField();
+    private final JTextField endDateField = new JTextField();
+    private final JTextField scheduleField = new JTextField();
+    private final JTextField locationField = new JTextField();
     private final JTextField requiredTaCountField = new JTextField();
     private final JTextField skillsField = new JTextField();
     private final JTextField deadlineField = new JTextField();
     private final JComboBox<JobStatus> statusBox = new JComboBox<>(JobStatus.values());
     private final JTextArea dutiesArea = new JTextArea(3, 20);
     private final JTextArea reviewArea = new JTextArea(4, 20);
-    private final JTextArea applicantSummaryArea = new JTextArea(4, 20);
-    private final JTextArea matchInfoArea = new JTextArea(6, 20);
+    private final JTextPane applicantSummaryArea = new JTextPane();
+    private final JTextPane matchInfoArea = new JTextPane();
     private final JComboBox<String> applicantStatusFilter = new JComboBox<>(
             new String[]{"All Statuses", "SUBMITTED", "SHORTLISTED", "INTERVIEW_INVITED", "ACCEPTED", "REJECTED", "WITHDRAWN"}
     );
@@ -86,7 +110,7 @@ public class MOManagementFrame extends JFrame {
             new String[]{"Match % (High to Low)", "Match % (Low to High)", "Applicant Name (A-Z)", "Applicant Name (Z-A)", "Status"}
     );
     private final DefaultTableModel jobTableModel = new DefaultTableModel(
-            new Object[]{"Job ID", "Module", "Category", "Semester", "Hours", "TA Demand", "Deadline", "Status"}, 0);
+            new Object[]{"Job ID", "Module", "Job Type", "Workload", "Schedule", "Location", "TA Demand", "Deadline", "Status"}, 0);
     private final PlaceholderTable jobTable = new PlaceholderTable(jobTableModel, "No jobs are assigned to this MO yet.");
     private final DefaultTableModel applicantTableModel = new DefaultTableModel(
             new Object[]{"Application ID", "Applicant", "Status", "Match %", "Missing"}, 0);
@@ -98,10 +122,13 @@ public class MOManagementFrame extends JFrame {
     private final JLabel sidebarRoleLabel = new JLabel();
     private final JLabel workspaceTitleLabel = new JLabel();
     private final JLabel workspaceSubtitleLabel = new JLabel();
+    private final JButton notificationsButton = UiTheme.createSecondaryButton("View Notifications");
+    private final JButton messagesButton = UiTheme.createSecondaryButton("View Messages");
+    private JPanel workspaceShell;
     private int currentWorkspaceView = VIEW_JOB_EDITOR;
     private String loadedApplicantJobId;
     private String selectedApplicantCvPath;
-    private String selectedApplicantSupportingDocumentPath;
+    private List<String> selectedApplicantSupportingDocumentPaths = new ArrayList<>();
 
     public MOManagementFrame(DataService dataService, User currentUser) {
         this.dataService = dataService;
@@ -148,6 +175,7 @@ public class MOManagementFrame extends JFrame {
         clearForm();
         bindFormSync();
         showWorkspace(VIEW_JOB_EDITOR);
+        updateUnreadIndicators();
     }
 
     private JPanel buildSidebar() {
@@ -187,9 +215,9 @@ public class MOManagementFrame extends JFrame {
     }
 
     private JPanel buildWorkspacePanel() {
-        JPanel shell = new JPanel(new BorderLayout(0, 14));
-        shell.setBackground(UiTheme.SURFACE);
-        shell.setBorder(BorderFactory.createCompoundBorder(
+        workspaceShell = new JPanel(new BorderLayout(0, 14));
+        workspaceShell.setBackground(UiTheme.SURFACE);
+        workspaceShell.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UiTheme.BORDER),
                 BorderFactory.createEmptyBorder(18, 18, 18, 18)
         ));
@@ -209,9 +237,9 @@ public class MOManagementFrame extends JFrame {
         workspaceCards.add(buildFormPanel(), VIEW_KEYS[VIEW_JOB_EDITOR]);
         workspaceCards.add(buildTablesPanel(), VIEW_KEYS[VIEW_REVIEW_QUEUE]);
 
-        shell.add(titlePanel, BorderLayout.NORTH);
-        shell.add(workspaceCards, BorderLayout.CENTER);
-        return shell;
+        workspaceShell.add(titlePanel, BorderLayout.NORTH);
+        workspaceShell.add(workspaceCards, BorderLayout.CENTER);
+        return workspaceShell;
     }
 
     private JToggleButton createNavButton(String text, SimpleLineIcon.Type iconType, int viewIndex) {
@@ -260,8 +288,6 @@ public class MOManagementFrame extends JFrame {
         ));
         menu.add(buildAccountHeader());
         menu.addSeparator();
-        menu.add(menuItem("Job Editor", SimpleLineIcon.Type.EDIT, () -> showWorkspace(VIEW_JOB_EDITOR)));
-        menu.add(menuItem("Review Queue", SimpleLineIcon.Type.DOCUMENT, () -> showWorkspace(VIEW_REVIEW_QUEUE)));
         menu.add(menuItem("Change Password", SimpleLineIcon.Type.SAVE, this::showChangePasswordDialog));
         menu.add(menuItem("View Notifications", SimpleLineIcon.Type.BELL, this::showNotifications));
         menu.add(menuItem("View Messages", SimpleLineIcon.Type.SEND, this::showMessages));
@@ -301,7 +327,9 @@ public class MOManagementFrame extends JFrame {
 
     private JMenuItem menuItem(String text, SimpleLineIcon.Type iconType, Runnable action) {
         JMenuItem item = new JMenuItem(text);
-        item.setIcon(new SimpleLineIcon(iconType, UiTheme.MUTED_TEXT));
+        boolean unread = ("View Notifications".equals(text) && notificationService.hasUnreadNotifications(currentUser.getUserId()))
+                || ("View Messages".equals(text) && messageService.hasUnreadMessages(currentUser.getUserId()));
+        item.setIcon(new UnreadBadgeIcon(new SimpleLineIcon(iconType, UiTheme.MUTED_TEXT), unread));
         item.setFont(UiTheme.uiFont(Font.PLAIN, 14));
         item.setForeground(UiTheme.TEXT);
         item.setIconTextGap(10);
@@ -311,8 +339,15 @@ public class MOManagementFrame extends JFrame {
     }
 
     private void decorateButton(AbstractButton button, SimpleLineIcon.Type iconType) {
-        button.setIcon(new SimpleLineIcon(iconType, Color.WHITE));
+        boolean unread = (button == notificationsButton && notificationService.hasUnreadNotifications(currentUser.getUserId()))
+                || (button == messagesButton && messageService.hasUnreadMessages(currentUser.getUserId()));
+        button.setIcon(new UnreadBadgeIcon(new SimpleLineIcon(iconType, Color.WHITE), unread));
         button.setIconTextGap(8);
+    }
+
+    private void updateUnreadIndicators() {
+        decorateButton(notificationsButton, SimpleLineIcon.Type.BELL);
+        decorateButton(messagesButton, SimpleLineIcon.Type.SEND);
     }
 
     private void showChangePasswordDialog() {
@@ -320,10 +355,12 @@ public class MOManagementFrame extends JFrame {
     }
 
     private void refreshWorkspace() {
+        playRefreshEffect();
         refreshJobs();
         if (loadedApplicantJobId != null) {
             loadApplicantsForJob(loadedApplicantJobId);
         }
+        updateUnreadIndicators();
     }
 
     private String displayName() {
@@ -377,16 +414,19 @@ public class MOManagementFrame extends JFrame {
         UiTheme.addFormRow(form, 2, "Module Code", moduleCodeBox);
         UiTheme.addFormRow(form, 4, "Module Title", moduleTitleField);
         UiTheme.addFormRow(form, 6, "Category", categoryBox);
-        UiTheme.addFormRow(form, 8, "Semester", semesterField);
-        UiTheme.addFormRow(form, 10, "Hours", hoursField);
-        UiTheme.addFormRow(form, 12, "TA Needed", requiredTaCountField);
-        UiTheme.addFormRow(form, 14, "Required Skills", skillsField);
-        UiTheme.addFormRow(form, 16, "Deadline (YYYY-MM-DD)", deadlineField);
-        UiTheme.addFormRow(form, 18, "Status", statusBox);
-        UiTheme.addFormRow(form, 20, "Duties", wrapArea(dutiesArea));
-
-        JPanel lower = UiTheme.createCard("Applicant Match Details", "Review fit, missing skills, and applicant notes for the selected submission.");
-        lower.add(wrapArea(matchInfoArea), BorderLayout.CENTER);
+        UiTheme.addFormRow(form, 8, "Job Type", jobTypeBox);
+        UiTheme.addFormRow(form, 10, "Semester", semesterField);
+        UiTheme.addFormRow(form, 12, "Workload Hours", hoursField);
+        UiTheme.addFormRow(form, 14, "Workload Type", workloadTypeBox);
+        UiTheme.addFormRow(form, 16, "Start Date (YYYY-MM-DD)", startDateField);
+        UiTheme.addFormRow(form, 18, "End Date (YYYY-MM-DD)", endDateField);
+        UiTheme.addFormRow(form, 20, "Schedule", scheduleField);
+        UiTheme.addFormRow(form, 22, "Location", locationField);
+        UiTheme.addFormRow(form, 24, "TA Needed", requiredTaCountField);
+        UiTheme.addFormRow(form, 26, "Required Skills", skillsField);
+        UiTheme.addFormRow(form, 28, "Deadline (YYYY-MM-DD)", deadlineField);
+        UiTheme.addFormRow(form, 30, "Status", statusBox);
+        UiTheme.addFormRow(form, 32, "Duties", wrapArea(dutiesArea));
 
         JButton backButton = adminMode
                 ? UiTheme.createDangerButton("Back to Previous Page")
@@ -408,8 +448,7 @@ public class MOManagementFrame extends JFrame {
 
         JPanel body = new JPanel(new BorderLayout(0, 18));
         body.setOpaque(false);
-        body.add(UiTheme.wrapPage(form), BorderLayout.NORTH);
-        body.add(lower, BorderLayout.CENTER);
+        body.add(UiTheme.wrapPage(form), BorderLayout.CENTER);
         body.add(UiTheme.createButtonRow(FlowLayout.RIGHT, backButton, newButton, saveButton), BorderLayout.SOUTH);
         panel.add(body, BorderLayout.CENTER);
         return panel;
@@ -425,9 +464,6 @@ public class MOManagementFrame extends JFrame {
         JButton acceptButton = UiTheme.createPrimaryButton("Accept");
         JButton cancelAcceptanceButton = UiTheme.createSecondaryButton("Cancel Acceptance");
         JButton rejectButton = UiTheme.createDangerButton("Reject");
-        JButton refreshButton = UiTheme.createSecondaryButton("Refresh");
-        JButton notificationsButton = UiTheme.createSecondaryButton("View Notifications");
-        JButton messagesButton = UiTheme.createSecondaryButton("View Messages");
         decorateButton(loadApplicantsButton, SimpleLineIcon.Type.DOCUMENT);
         decorateButton(shortlistButton, SimpleLineIcon.Type.STAR);
         decorateButton(removeShortlistButton, SimpleLineIcon.Type.LOGOUT);
@@ -435,7 +471,6 @@ public class MOManagementFrame extends JFrame {
         decorateButton(acceptButton, SimpleLineIcon.Type.CHECK);
         decorateButton(cancelAcceptanceButton, SimpleLineIcon.Type.REFRESH);
         decorateButton(rejectButton, SimpleLineIcon.Type.TRASH);
-        decorateButton(refreshButton, SimpleLineIcon.Type.REFRESH);
         decorateButton(notificationsButton, SimpleLineIcon.Type.BELL);
         decorateButton(messagesButton, SimpleLineIcon.Type.SEND);
 
@@ -448,16 +483,6 @@ public class MOManagementFrame extends JFrame {
         rejectButton.addActionListener(event -> updateApplicationStatus(ApplicationStatus.REJECTED));
         notificationsButton.addActionListener(event -> showNotifications());
         messagesButton.addActionListener(event -> showMessages());
-        refreshButton.addActionListener(event -> {
-            refreshJobs();
-            applicantTableModel.setRowCount(0);
-            reviewArea.setText("");
-            applicantSummaryArea.setText("");
-            matchInfoArea.setText("");
-            clearSelectedApplicantCv();
-            loadedApplicantJobId = null;
-            updateApplicantEmptyState();
-        });
         applicantStatusFilter.addActionListener(event -> {
             if (!syncingForm && loadedApplicantJobId != null) {
                 loadApplicantsForJob(loadedApplicantJobId);
@@ -469,9 +494,12 @@ public class MOManagementFrame extends JFrame {
             }
         });
 
-        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, UiTheme.wrapTable(jobTable), UiTheme.wrapTable(applicantTable));
-        splitPane.setResizeWeight(0.5);
-        UiTheme.styleSplitPane(splitPane);
+        JSplitPane tableSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, UiTheme.wrapTable(jobTable), UiTheme.wrapTable(applicantTable));
+        tableSplitPane.setResizeWeight(0.65);
+        UiTheme.styleSplitPane(tableSplitPane);
+        JSplitPane reviewSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, tableSplitPane, buildReviewDetailsPanel());
+        reviewSplitPane.setResizeWeight(0.68);
+        UiTheme.styleSplitPane(reviewSplitPane);
         jobTable.getSelectionModel().addListSelectionListener(event -> {
             if (!event.getValueIsAdjusting()) {
                 loadSelectedJobToForm();
@@ -500,15 +528,14 @@ public class MOManagementFrame extends JFrame {
         JPanel topControls = new JPanel();
         topControls.setOpaque(false);
         topControls.setLayout(new BoxLayout(topControls, BoxLayout.Y_AXIS));
-        topControls.add(UiTheme.createButtonRow(FlowLayout.LEFT, loadApplicantsButton, shortlistButton, removeShortlistButton, inviteInterviewButton, acceptButton, cancelAcceptanceButton, rejectButton, notificationsButton, messagesButton, refreshButton));
+        topControls.add(UiTheme.createButtonRow(FlowLayout.LEFT, loadApplicantsButton, shortlistButton, removeShortlistButton, inviteInterviewButton, acceptButton, cancelAcceptanceButton, rejectButton, notificationsButton, messagesButton));
         topControls.add(Box.createVerticalStrut(8));
         topControls.add(filterPanel);
 
         JPanel body = new JPanel(new BorderLayout(0, 18));
         body.setOpaque(false);
         body.add(topControls, BorderLayout.NORTH);
-        body.add(splitPane, BorderLayout.CENTER);
-        body.add(buildReviewBottomPanel(), BorderLayout.SOUTH);
+        body.add(reviewSplitPane, BorderLayout.CENTER);
         panel.add(body, BorderLayout.CENTER);
         return panel;
     }
@@ -519,9 +546,10 @@ public class MOManagementFrame extends JFrame {
             jobTableModel.addRow(new Object[]{
                     job.getJobId(),
                     job.getModuleCode() + " - " + job.getModuleTitle(),
-                    job.getCategory() == null ? "-" : job.getCategory().getDisplayName(),
-                    valueOrDash(job.getSemester()),
-                    job.getHours(),
+                    UiFormat.valueOrDash(job.getJobType()),
+                    UiFormat.workload(job),
+                    valueOrDash(job.getSchedule()),
+                    valueOrDash(job.getLocation()),
                     buildTaDemandText(job),
                     job.getApplicationDeadline(),
                     job.getStatus()
@@ -553,21 +581,28 @@ public class MOManagementFrame extends JFrame {
         jobIdField.setText(NEW_JOB_PLACEHOLDER);
         if (moduleCodeBox.getItemCount() > 0) {
             moduleCodeBox.setSelectedIndex(0);
+            moduleTitleField.setText(resolveModuleTitle(String.valueOf(moduleCodeBox.getSelectedItem())).orElse(""));
         } else {
             moduleCodeBox.setSelectedItem(null);
+            moduleTitleField.setText("");
         }
-        moduleTitleField.setText("");
         categoryBox.setSelectedItem(JobCategory.MODULE_TA);
+        jobTypeBox.setSelectedItem(JobPosting.JOB_TYPE_COURSE_SUPPORT);
         semesterField.setText("");
         hoursField.setText("");
+        workloadTypeBox.setSelectedItem(JobPosting.WORKLOAD_TYPE_WEEKLY);
+        startDateField.setText("");
+        endDateField.setText("");
+        scheduleField.setText("");
+        locationField.setText("");
         requiredTaCountField.setText("1");
         skillsField.setText("");
         deadlineField.setText("");
         dutiesArea.setText("");
         statusBox.setSelectedItem(JobStatus.OPEN);
-        matchInfoArea.setText("");
+        setReviewText(matchInfoArea, "");
         reviewArea.setText("");
-        applicantSummaryArea.setText("");
+        setReviewText(applicantSummaryArea, "");
         clearSelectedApplicantCv();
         applicantTableModel.setRowCount(0);
         loadedApplicantJobId = null;
@@ -605,8 +640,14 @@ public class MOManagementFrame extends JFrame {
             jobPosting.setModuleCode(moduleCode);
             jobPosting.setModuleTitle(moduleTitleField.getText().trim());
             jobPosting.setCategory((JobCategory) categoryBox.getSelectedItem());
+            jobPosting.setJobType(String.valueOf(jobTypeBox.getSelectedItem()));
             jobPosting.setSemester(semesterField.getText().trim());
             jobPosting.setHours(Integer.parseInt(hoursField.getText().trim()));
+            jobPosting.setWorkloadType(String.valueOf(workloadTypeBox.getSelectedItem()));
+            jobPosting.setStartDate(startDateField.getText().trim());
+            jobPosting.setEndDate(endDateField.getText().trim());
+            jobPosting.setSchedule(scheduleField.getText().trim());
+            jobPosting.setLocation(locationField.getText().trim());
             jobPosting.setRequiredTaCount(Integer.parseInt(requiredTaCountField.getText().trim()));
             jobPosting.setRequiredSkills(validationService.parseSkills(skillsField.getText()));
             jobPosting.setApplicationDeadline(LocalDate.parse(deadlineField.getText().trim()));
@@ -623,16 +664,81 @@ public class MOManagementFrame extends JFrame {
                     return;
                 }
             }
-            UiMessage.info(this, "Job saved successfully.");
+            verifyJobWasSaved(jobPosting);
+            int savedJobCount = dataService.getJobRepository().findAll().size();
+            UiMessage.info(this, "Job saved successfully.\n"
+                    + "Job ID: " + jobPosting.getJobId() + "\n"
+                    + "Saved jobs in data file: " + savedJobCount + "\n"
+                    + "Data file: " + Constants.JOBS_FILE
+                    + taVisibilityHint(jobPosting));
             refreshJobs();
             clearForm();
         } catch (NumberFormatException ex) {
-            UiMessage.error(this, "Hours and required TA count must be numbers.");
+            UiMessage.error(this, "Workload hours and required TA count must be numbers.");
         } catch (DateTimeParseException ex) {
             UiMessage.error(this, "Deadline must use YYYY-MM-DD format, for example 2026-04-30.");
         } catch (Exception ex) {
             UiMessage.error(this, ex.getMessage());
         }
+    }
+
+    private void verifyJobWasSaved(JobPosting jobPosting) {
+        String jobId = jobPosting.getJobId();
+        if (jobId == null || jobId.isBlank()) {
+            throw new IllegalStateException("The job was not assigned an ID, so it was not saved.");
+        }
+        JobPosting savedJob = dataService.getJobRepository().findAll().stream()
+                .filter(candidate -> jobId.equals(candidate.getJobId()))
+                .findFirst()
+                .orElse(null);
+        if (savedJob == null) {
+            throw new IllegalStateException("The job could not be found after saving. Expected data file: "
+                    + Constants.JOBS_FILE);
+        }
+        List<String> mismatches = savedJobMismatches(jobPosting, savedJob);
+        if (!mismatches.isEmpty()) {
+            throw new IllegalStateException("The job record was found, but the latest edits were not written to JSON.\n"
+                    + "Data file: " + Constants.JOBS_FILE + "\n"
+                    + "Mismatched fields:\n- " + String.join("\n- ", mismatches));
+        }
+    }
+
+    private List<String> savedJobMismatches(JobPosting expected, JobPosting actual) {
+        List<String> mismatches = new ArrayList<>();
+        addMismatch(mismatches, "moduleCode", expected.getModuleCode(), actual.getModuleCode());
+        addMismatch(mismatches, "moduleTitle", expected.getModuleTitle(), actual.getModuleTitle());
+        addMismatch(mismatches, "category", expected.getCategory(), actual.getCategory());
+        addMismatch(mismatches, "jobType", expected.getJobType(), actual.getJobType());
+        addMismatch(mismatches, "semester", expected.getSemester(), actual.getSemester());
+        addMismatch(mismatches, "hours", expected.getHours(), actual.getHours());
+        addMismatch(mismatches, "workloadType", expected.getWorkloadType(), actual.getWorkloadType());
+        addMismatch(mismatches, "startDate", expected.getStartDate(), actual.getStartDate());
+        addMismatch(mismatches, "endDate", expected.getEndDate(), actual.getEndDate());
+        addMismatch(mismatches, "schedule", expected.getSchedule(), actual.getSchedule());
+        addMismatch(mismatches, "location", expected.getLocation(), actual.getLocation());
+        addMismatch(mismatches, "requiredTaCount", expected.getRequiredTaCount(), actual.getRequiredTaCount());
+        addMismatch(mismatches, "requiredSkills", expected.getRequiredSkills(), actual.getRequiredSkills());
+        addMismatch(mismatches, "applicationDeadline", expected.getApplicationDeadline(), actual.getApplicationDeadline());
+        addMismatch(mismatches, "status", expected.getStatus(), actual.getStatus());
+        addMismatch(mismatches, "duties", expected.getDuties(), actual.getDuties());
+        addMismatch(mismatches, "postedBy", expected.getPostedBy(), actual.getPostedBy());
+        return mismatches;
+    }
+
+    private void addMismatch(List<String> mismatches, String fieldName, Object expected, Object actual) {
+        if (!Objects.equals(expected, actual)) {
+            mismatches.add(fieldName + ": expected [" + expected + "], actual [" + actual + "]");
+        }
+    }
+
+    private String taVisibilityHint(JobPosting jobPosting) {
+        if (jobPosting.getStatus() != JobStatus.OPEN) {
+            return "\n\nNote: TA applicants will not see this job because its status is " + jobPosting.getStatus() + ".";
+        }
+        if (jobPosting.getApplicationDeadline() != null && jobPosting.getApplicationDeadline().isBefore(LocalDate.now())) {
+            return "\n\nNote: TA applicants will not see this job because the application deadline has passed.";
+        }
+        return "\n\nTA applicants can see it after refreshing their Opportunities page.";
     }
 
     private void loadApplicantsForSelectedJob() {
@@ -665,25 +771,25 @@ public class MOManagementFrame extends JFrame {
         ApplicantProfile applicant = findApplicant(application.getApplicantId()).orElse(null);
         JobPosting job = findJob(jobId).orElse(null);
         if (applicant == null || job == null) {
-            matchInfoArea.setText("The selected applicant or job record no longer exists. Refresh the review queue.");
-            applicantSummaryArea.setText("");
+            setReviewText(matchInfoArea, "The selected applicant or job record no longer exists. Refresh the review queue.");
+            setReviewText(applicantSummaryArea, "");
             reviewArea.setText("");
             clearSelectedApplicantCv();
             return;
         }
         SkillMatchResult matchResult = matchingService.calculateMatch(applicant.getSkills(), job.getRequiredSkills());
-        setSelectedApplicantDocuments(applicant.getCvPath(), applicant.getSupportingDocumentPath());
-        matchInfoArea.setText(
+        setSelectedApplicantDocuments(applicant.getCvPath(), applicant.getSupportingDocumentPaths());
+        setReviewText(matchInfoArea,
                 "Applicant: " + applicant.getName() + "\n" +
                         "Skills: " + String.join(", ", applicant.getSkills()) + "\n" +
                         "CV: " + applicant.getCvPath() + "\n" +
-                        "Supporting Document: " + valueOrDash(applicant.getSupportingDocumentPath()) + "\n" +
+                        "Supporting Documents: " + supportingDocumentsText(applicant.getSupportingDocumentPaths()) + "\n" +
                         "Score: " + matchResult.getScorePercentage() + "%\n" +
                         "Matched: " + String.join(", ", matchResult.getMatchedSkills()) + "\n" +
                         "Missing: " + String.join(", ", matchResult.getMissingSkills()) + "\n" +
                         matchResult.getExplanation()
         );
-        applicantSummaryArea.setText(buildApplicantSummary(applicant, application, job));
+        setReviewText(applicantSummaryArea, buildApplicantSummary(applicant, application, job));
         reviewArea.setText(application.getReviewerNotes() == null ? "" : application.getReviewerNotes());
     }
 
@@ -730,6 +836,16 @@ public class MOManagementFrame extends JFrame {
             UiMessage.error(this, "Application details could not be found.");
             return;
         }
+        if (application.getStatus() == ApplicationStatus.INTERVIEW_INVITED) {
+            UiMessage.info(this, "This applicant has already been invited to interview.");
+            return;
+        }
+        if (application.getStatus() == ApplicationStatus.ACCEPTED
+                || application.getStatus() == ApplicationStatus.REJECTED
+                || application.getStatus() == ApplicationStatus.WITHDRAWN) {
+            UiMessage.error(this, "Only submitted or shortlisted applications can be invited to interview.");
+            return;
+        }
         ApplicantProfile applicant = findApplicant(application.getApplicantId()).orElse(null);
         JobPosting job = findJob(application.getJobId()).orElse(null);
         if (applicant == null || job == null) {
@@ -745,10 +861,23 @@ public class MOManagementFrame extends JFrame {
         int jobRow = jobTable.getSelectedRow();
         String selectedJobId = jobRow >= 0 ? String.valueOf(jobTableModel.getValueAt(jobRow, 0)) : application.getJobId();
         try {
+            if (application.getStatus() == ApplicationStatus.SUBMITTED) {
+                boolean shortlistFirst = UiMessage.confirm(
+                        this,
+                        "This applicant is not shortlisted yet.\nShortlist means the MO has selected the applicant for the next review stage.\n\nShortlist this applicant and send the interview invitation now?",
+                        "Shortlist Before Interview"
+                );
+                if (!shortlistFirst) {
+                    return;
+                }
+                applicationService.updateStatus(applicationId, ApplicationStatus.SHORTLISTED, "Shortlisted for interview invitation.", currentUser.getUserId());
+                notifyStatusChange(applicationId, ApplicationStatus.SHORTLISTED);
+            }
             applicationService.updateStatus(applicationId, ApplicationStatus.INTERVIEW_INVITED, invitation.get(), currentUser.getUserId());
             String jobName = job.getModuleCode() + " " + job.getModuleTitle();
             notificationService.notifyUser(applicant.getUserId(), "Interview invitation for " + jobName + ": " + invitation.get());
             notificationService.notifyUser(currentUser.getUserId(), "Application " + applicationId + " invited to interview for " + jobName + ".");
+            updateUnreadIndicators();
             UiMessage.info(this, "Interview invitation sent.");
             if (selectedJobId != null) {
                 loadApplicantsForJob(selectedJobId);
@@ -866,8 +995,8 @@ public class MOManagementFrame extends JFrame {
         }
 
         return UiMessage.confirm(this,
-                applicant.getName() + " would reach " + projectedHours + "h after this acceptance, above the "
-                        + threshold + "h workload threshold. Continue?",
+                applicant.getName() + " would reach " + projectedHours + " h/week after this acceptance, above the "
+                        + threshold + " h/week workload threshold. Continue?",
                 "Workload Warning");
     }
 
@@ -886,6 +1015,7 @@ public class MOManagementFrame extends JFrame {
             notificationService.notifyUser(applicant.getUserId(), "Your application for " + jobName + " is now " + status + ".");
         }
         notificationService.notifyUser(currentUser.getUserId(), "Application " + applicationId + " for " + jobName + " updated to " + status + ".");
+        updateUnreadIndicators();
     }
 
     private void showNotifications() {
@@ -902,10 +1032,12 @@ public class MOManagementFrame extends JFrame {
             builder.append("No notifications yet.");
         }
         notificationService.markAllRead(currentUser.getUserId());
+        updateUnreadIndicators();
         UiMessage.info(this, builder.toString());
     }
 
     private void showMessages() {
+        updateUnreadIndicators();
         JDialog dialog = new JDialog(this, "Messages", true);
         dialog.setSize(900, 520);
         dialog.setMinimumSize(new Dimension(720, 420));
@@ -953,6 +1085,7 @@ public class MOManagementFrame extends JFrame {
         markReadButton.addActionListener(event -> {
             messageService.markAllRead(currentUser.getUserId());
             refreshMessages.run();
+            updateUnreadIndicators();
         });
         closeButton.addActionListener(event -> dialog.dispose());
 
@@ -994,6 +1127,7 @@ public class MOManagementFrame extends JFrame {
             );
             messageService.markRead(selected.getMessageId(), currentUser.getUserId());
             notificationService.notifyUser(recipientUserId, displayName() + " replied to your message.");
+            updateUnreadIndicators();
             UiMessage.info(this, "Reply sent. Reference: " + sent.getMessageId() + ".");
         } catch (Exception ex) {
             UiMessage.error(this, ex.getMessage());
@@ -1035,8 +1169,8 @@ public class MOManagementFrame extends JFrame {
             loadedApplicantJobId = null;
             applicantTableModel.setRowCount(0);
             reviewArea.setText("");
-            applicantSummaryArea.setText("");
-            matchInfoArea.setText("");
+            setReviewText(applicantSummaryArea, "");
+            setReviewText(matchInfoArea, "");
             clearSelectedApplicantCv();
             updateApplicantEmptyState();
             UiMessage.error(this, "This job no longer exists. Please refresh the job list.");
@@ -1050,8 +1184,8 @@ public class MOManagementFrame extends JFrame {
         loadedApplicantJobId = jobId;
         applicantTableModel.setRowCount(0);
         reviewArea.setText("");
-        applicantSummaryArea.setText("");
-        matchInfoArea.setText("");
+        setReviewText(applicantSummaryArea, "");
+        setReviewText(matchInfoArea, "");
         clearSelectedApplicantCv();
         List<ApplicationRecord> applications = applicationService.getApplicationsForJob(jobId).stream()
                 .filter(this::matchesApplicantFilter)
@@ -1085,9 +1219,13 @@ public class MOManagementFrame extends JFrame {
         dispose();
     }
 
-    private JPanel buildReviewBottomPanel() {
-        JPanel panel = new JPanel(new GridLayout(1, 2, 16, 0));
+    private JPanel buildReviewDetailsPanel() {
+        JPanel panel = new JPanel(new GridLayout(3, 1, 0, 12));
         panel.setOpaque(false);
+        panel.setPreferredSize(new Dimension(520, 520));
+
+        JPanel matchCard = UiTheme.createCard("Applicant Match Details", "Click CV or supporting documents lines to open files.");
+        matchCard.add(wrapArea(matchInfoArea), BorderLayout.CENTER);
 
         JPanel summaryCard = UiTheme.createCard("Applicant Summary", "Quick reference for the selected applicant.");
         summaryCard.add(wrapArea(applicantSummaryArea), BorderLayout.CENTER);
@@ -1095,6 +1233,7 @@ public class MOManagementFrame extends JFrame {
         JPanel notesCard = UiTheme.createCard("Reviewer Notes", "Add notes before shortlisting, accepting, rejecting, or cancelling acceptance.");
         notesCard.add(wrapArea(reviewArea), BorderLayout.CENTER);
 
+        panel.add(matchCard);
         panel.add(summaryCard);
         panel.add(notesCard);
         return panel;
@@ -1113,9 +1252,15 @@ public class MOManagementFrame extends JFrame {
                 "Decision At: " + UiFormat.dateTime(application.getDecisionAt()) + "\n" +
                 "Match Score: " + application.getMatchScore() + "%\n" +
                 "Missing Skills: " + valueOrDash(String.join(", ", application.getMissingSkills())) + "\n" +
+                "Reviewer Notes: " + reviewerNotesOrPending(application.getReviewerNotes()) + "\n" +
                 "CV Path: " + valueOrDash(applicant.getCvPath()) + "\n" +
-                "Supporting Document: " + valueOrDash(applicant.getSupportingDocumentPath()) + "\n" +
+                "Supporting Documents: " + supportingDocumentsText(applicant.getSupportingDocumentPaths()) + "\n" +
                 "For Job: " + job.getModuleCode() + " - " + job.getModuleTitle() + "\n\n" +
+                "Job Type: " + UiFormat.valueOrDash(job.getJobType()) + "\n" +
+                "Period: " + UiFormat.period(job) + "\n" +
+                "Schedule: " + valueOrDash(job.getSchedule()) + "\n" +
+                "Location: " + valueOrDash(job.getLocation()) + "\n" +
+                "Workload: " + UiFormat.workload(job) + "\n\n" +
                 "Experience Summary:\n" + valueOrDash(applicant.getExperienceSummary());
     }
 
@@ -1123,21 +1268,45 @@ public class MOManagementFrame extends JFrame {
         return value == null || value.isBlank() ? "-" : value;
     }
 
-    private void setSelectedApplicantDocuments(String cvPath, String supportingDocumentPath) {
+    private String reviewerNotesOrPending(String value) {
+        return value == null || value.isBlank() ? "Not yet reviewed" : value;
+    }
+
+    private String supportingDocumentsText(List<String> documentPaths) {
+        if (documentPaths == null || documentPaths.isEmpty()) {
+            return "-";
+        }
+        return String.join("; ", documentPaths);
+    }
+
+    private void setSelectedApplicantDocuments(String cvPath, List<String> supportingDocumentPaths) {
         selectedApplicantCvPath = cvPath == null ? "" : cvPath.trim();
-        selectedApplicantSupportingDocumentPath = supportingDocumentPath == null ? "" : supportingDocumentPath.trim();
-        boolean hasDocumentPath = !selectedApplicantCvPath.isBlank() || !selectedApplicantSupportingDocumentPath.isBlank();
+        selectedApplicantSupportingDocumentPaths = new ArrayList<>();
+        if (supportingDocumentPaths != null) {
+            for (String supportingDocumentPath : supportingDocumentPaths) {
+                if (supportingDocumentPath != null && !supportingDocumentPath.trim().isBlank()) {
+                    selectedApplicantSupportingDocumentPaths.add(supportingDocumentPath.trim());
+                }
+            }
+        }
+        boolean hasDocumentPath = !selectedApplicantCvPath.isBlank() || !selectedApplicantSupportingDocumentPaths.isEmpty();
         matchInfoArea.setCursor(Cursor.getPredefinedCursor(hasDocumentPath ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
+        applicantSummaryArea.setCursor(Cursor.getPredefinedCursor(hasDocumentPath ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
         matchInfoArea.setToolTipText(hasDocumentPath
-                ? "Click the CV or supporting document line to open the file."
+                ? "Click the CV or supporting documents line to open the file."
+                : "The selected applicant has not uploaded documents.");
+        applicantSummaryArea.setToolTipText(hasDocumentPath
+                ? "Click the CV Path or supporting documents line to open the file."
                 : "The selected applicant has not uploaded documents.");
     }
 
     private void clearSelectedApplicantCv() {
         selectedApplicantCvPath = "";
-        selectedApplicantSupportingDocumentPath = "";
+        selectedApplicantSupportingDocumentPaths = new ArrayList<>();
         matchInfoArea.setCursor(Cursor.getDefaultCursor());
+        applicantSummaryArea.setCursor(Cursor.getDefaultCursor());
         matchInfoArea.setToolTipText("Select an applicant to view CV details.");
+        applicantSummaryArea.setToolTipText("Select an applicant to view CV details.");
     }
 
     private void openSelectedApplicantCv() {
@@ -1145,7 +1314,26 @@ public class MOManagementFrame extends JFrame {
     }
 
     private void openSelectedApplicantSupportingDocument() {
-        openApplicantDocument(selectedApplicantSupportingDocumentPath, "supporting document");
+        if (selectedApplicantSupportingDocumentPaths.isEmpty()) {
+            UiMessage.error(this, "No supporting document is available for the selected applicant.");
+            return;
+        }
+        if (selectedApplicantSupportingDocumentPaths.size() == 1) {
+            openApplicantDocument(selectedApplicantSupportingDocumentPaths.get(0), "supporting document");
+            return;
+        }
+        String selectedPath = (String) JOptionPane.showInputDialog(
+                this,
+                "Choose a supporting document to open:",
+                "Open Supporting Document",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                selectedApplicantSupportingDocumentPaths.toArray(new String[0]),
+                selectedApplicantSupportingDocumentPaths.get(0)
+        );
+        if (selectedPath != null && !selectedPath.isBlank()) {
+            openApplicantDocument(selectedPath, "supporting document");
+        }
     }
 
     private void openApplicantDocument(String documentPath, String label) {
@@ -1172,25 +1360,53 @@ public class MOManagementFrame extends JFrame {
     }
 
     private void openCvFromMatchInfoClick(MouseEvent event) {
+        openApplicantDocumentFromTextClick(event, matchInfoArea);
+    }
+
+    private void openApplicantDocumentFromSummaryClick(MouseEvent event) {
+        openApplicantDocumentFromTextClick(event, applicantSummaryArea);
+    }
+
+    private void openApplicantDocumentFromTextClick(MouseEvent event, JTextComponent sourceArea) {
         if ((selectedApplicantCvPath == null || selectedApplicantCvPath.isBlank())
-                && (selectedApplicantSupportingDocumentPath == null || selectedApplicantSupportingDocumentPath.isBlank())) {
+                && selectedApplicantSupportingDocumentPaths.isEmpty()) {
             return;
         }
 
-        int offset = matchInfoArea.viewToModel2D(event.getPoint());
+        int offset = sourceArea.viewToModel2D(event.getPoint());
         try {
-            int line = matchInfoArea.getLineOfOffset(offset);
-            int lineStart = matchInfoArea.getLineStartOffset(line);
-            int lineEnd = matchInfoArea.getLineEndOffset(line);
-            String clickedLine = matchInfoArea.getText(lineStart, lineEnd - lineStart).trim();
-            if (clickedLine.startsWith("CV:")) {
+            int lineStart = Utilities.getRowStart(sourceArea, offset);
+            int lineEnd = Utilities.getRowEnd(sourceArea, offset);
+            String clickedLine = sourceArea.getText(lineStart, lineEnd - lineStart).trim();
+            if (clickedLine.startsWith("CV:") || clickedLine.startsWith("CV Path:")) {
                 openSelectedApplicantCv();
-            } else if (clickedLine.startsWith("Supporting Document:")) {
+            } else if (clickedLine.startsWith("Supporting Document")
+                    || clickedLine.startsWith("supporting-documents/")
+                    || clickedLine.startsWith("supporting-documents\\")) {
                 openSelectedApplicantSupportingDocument();
             }
         } catch (Exception ex) {
             UiMessage.error(this, "Could not read the selected CV line:\n" + ex.getMessage());
         }
+    }
+
+    private void setReviewText(JTextPane pane, String text) {
+        String safeText = text == null ? "" : text;
+        pane.setText(safeText);
+        StyledDocument document = pane.getStyledDocument();
+        SimpleAttributeSet normal = new SimpleAttributeSet();
+        StyleConstants.setForeground(normal, UiTheme.TEXT);
+        StyleConstants.setUnderline(normal, false);
+        document.setCharacterAttributes(0, safeText.length(), normal, true);
+
+        SimpleAttributeSet link = new SimpleAttributeSet();
+        StyleConstants.setForeground(link, UiTheme.PRIMARY);
+        StyleConstants.setUnderline(link, true);
+        Matcher matcher = DOCUMENT_LINK_PATTERN.matcher(safeText);
+        while (matcher.find()) {
+            document.setCharacterAttributes(matcher.start(), matcher.end() - matcher.start(), link, false);
+        }
+        pane.setCaretPosition(0);
     }
 
     private void styleComponents() {
@@ -1200,19 +1416,29 @@ public class MOManagementFrame extends JFrame {
         UiTheme.styleComboBox(categoryBox);
         UiTheme.styleTextField(semesterField);
         UiTheme.styleTextField(hoursField);
+        UiTheme.styleTextField(startDateField);
+        UiTheme.styleTextField(endDateField);
+        UiTheme.styleTextField(scheduleField);
+        UiTheme.styleTextField(locationField);
         UiTheme.styleTextField(requiredTaCountField);
         UiTheme.styleTextField(skillsField);
         UiTheme.styleTextField(deadlineField);
         UiTheme.styleComboBox(statusBox);
         UiTheme.styleTextArea(dutiesArea, 5);
         UiTheme.styleTextArea(reviewArea, 4);
-        UiTheme.styleTextArea(applicantSummaryArea, 8);
-        UiTheme.styleTextArea(matchInfoArea, 8);
+        styleReviewTextPane(applicantSummaryArea);
+        styleReviewTextPane(matchInfoArea);
         clearSelectedApplicantCv();
         matchInfoArea.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent event) {
                 openCvFromMatchInfoClick(event);
+            }
+        });
+        applicantSummaryArea.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                openApplicantDocumentFromSummaryClick(event);
             }
         });
         UiTheme.styleComboBox(applicantStatusFilter);
@@ -1222,12 +1448,49 @@ public class MOManagementFrame extends JFrame {
         jobTable.getColumnModel().getColumn(6).setCellRenderer(new DeadlineWarningRenderer());
         jobTable.getColumnModel().getColumn(7).setCellRenderer(new StatusBadgeRenderer());
         applicantTable.getColumnModel().getColumn(2).setCellRenderer(new StatusBadgeRenderer());
-        UiTheme.setColumnWidths(jobTable, 100, 280, 120, 110, 70, 110, 140, 100);
+        UiTheme.setColumnWidths(jobTable, 100, 280, 140, 110, 260, 180, 100, 140, 100);
         UiTheme.setColumnWidths(applicantTable, 130, 170, 120, 90, 220);
         applicantSummaryArea.setEditable(false);
+        matchInfoArea.setEditable(false);
     }
 
-    private JScrollPane wrapArea(JTextArea area) {
+    private void styleReviewTextPane(JTextPane pane) {
+        pane.setFont(UiTheme.uiFont(Font.PLAIN, 14));
+        pane.setForeground(UiTheme.TEXT);
+        pane.setBackground(UiTheme.SURFACE_ALT);
+        pane.setCaretColor(UiTheme.TEXT);
+        pane.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        pane.setEditable(false);
+        pane.setOpaque(true);
+        setReviewText(pane, pane.getText());
+    }
+
+    private void playRefreshEffect() {
+        if (workspaceShell == null) {
+            return;
+        }
+        Color original = workspaceShell.getBackground();
+        Color[] frames = {
+                new Color(225, 236, 255),
+                new Color(239, 246, 255),
+                UiTheme.SURFACE
+        };
+        final int[] index = {0};
+        Timer timer = new Timer(80, null);
+        timer.addActionListener(event -> {
+            workspaceShell.setBackground(frames[index[0]]);
+            workspaceShell.repaint();
+            index[0]++;
+            if (index[0] >= frames.length) {
+                workspaceShell.setBackground(original);
+                workspaceShell.repaint();
+                timer.stop();
+            }
+        });
+        timer.start();
+    }
+
+    private JScrollPane wrapArea(JTextComponent area) {
         JScrollPane scrollPane = new JScrollPane(area);
         UiTheme.styleScrollPane(scrollPane);
         return scrollPane;
@@ -1305,32 +1568,30 @@ public class MOManagementFrame extends JFrame {
             return;
         }
 
-        Optional<JobPosting> existingJob = getScopedJobs().stream()
-                .filter(job -> moduleCode.equals(job.getModuleCode()))
-                .findFirst();
+        moduleTitleField.setText(resolveModuleTitle(moduleCode).orElse(""));
+    }
 
-        if (existingJob.isPresent()) {
-            applyJobToForm(existingJob.get());
-            selectJobRow(existingJob.get().getJobId());
-            return;
+    private Optional<String> resolveModuleTitle(String moduleCode) {
+        String normalizedModuleCode = validationService.normalizeModuleCode(moduleCode);
+        if (normalizedModuleCode.isBlank()) {
+            return Optional.empty();
         }
 
-        syncingForm = true;
-        jobTable.clearSelection();
-        applicantTable.clearSelection();
-        jobIdField.setForeground(Color.GRAY);
-        jobIdField.setText(NEW_JOB_PLACEHOLDER);
-        statusBox.setSelectedItem(JobStatus.OPEN);
-        categoryBox.setSelectedItem(JobCategory.MODULE_TA);
-        semesterField.setText("");
-        reviewArea.setText("");
-        applicantSummaryArea.setText("");
-        matchInfoArea.setText("");
-        clearSelectedApplicantCv();
-        applicantTableModel.setRowCount(0);
-        loadedApplicantJobId = null;
-        updateApplicantEmptyState();
-        syncingForm = false;
+        List<JobPosting> matchingJobs = getScopedJobs().stream()
+                .filter(job -> normalizedModuleCode.equals(validationService.normalizeModuleCode(job.getModuleCode())))
+                .filter(job -> job.getModuleTitle() != null && !job.getModuleTitle().isBlank())
+                .collect(Collectors.toList());
+
+        Optional<String> moduleTaTitle = matchingJobs.stream()
+                .filter(job -> job.getCategory() == JobCategory.MODULE_TA)
+                .map(JobPosting::getModuleTitle)
+                .findFirst();
+        if (moduleTaTitle.isPresent()) {
+            return moduleTaTitle;
+        }
+        return matchingJobs.stream()
+                .map(JobPosting::getModuleTitle)
+                .findFirst();
     }
 
     private void applyJobToForm(JobPosting job) {
@@ -1340,15 +1601,21 @@ public class MOManagementFrame extends JFrame {
         moduleCodeBox.setSelectedItem(job.getModuleCode());
         moduleTitleField.setText(job.getModuleTitle());
         categoryBox.setSelectedItem(job.getCategory());
+        jobTypeBox.setSelectedItem(job.getJobType());
         semesterField.setText(job.getSemester());
         hoursField.setText(String.valueOf(job.getHours()));
+        workloadTypeBox.setSelectedItem(job.getWorkloadType());
+        startDateField.setText(job.getStartDate());
+        endDateField.setText(job.getEndDate());
+        scheduleField.setText(job.getSchedule());
+        locationField.setText(job.getLocation());
         requiredTaCountField.setText(String.valueOf(job.getRequiredTaCount()));
         skillsField.setText(String.join(", ", job.getRequiredSkills()));
         deadlineField.setText(String.valueOf(job.getApplicationDeadline()));
         statusBox.setSelectedItem(job.getStatus());
         dutiesArea.setText(job.getDuties());
-        matchInfoArea.setText("");
-        applicantSummaryArea.setText("");
+        setReviewText(matchInfoArea, "");
+        setReviewText(applicantSummaryArea, "");
         reviewArea.setText("");
         clearSelectedApplicantCv();
         applicantTableModel.setRowCount(0);
