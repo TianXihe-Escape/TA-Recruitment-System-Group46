@@ -154,6 +154,63 @@ public class ApplicationService {
         updateStatus(applicationId, status, reviewerNotes, null);
     }
 
+    /**
+     * Saves reviewer notes without changing the application workflow status.
+     * This lets MOs record feedback that TAs can read before a shortlist,
+     * interview, accept, or reject decision is made.
+     */
+    public void saveReviewerNotes(String applicationId, String reviewerNotes) {
+        List<ApplicationRecord> applications = new ArrayList<>(applicationRepository.findAll());
+        ApplicationRecord record = applications.stream()
+                .filter(item -> item.getApplicationId().equals(applicationId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Application not found."));
+
+        record.setReviewerNotes(reviewerNotes);
+        record.setLastUpdatedAt(LocalDateTime.now());
+        applicationRepository.saveAll(applications);
+    }
+
+    /**
+     * Updates workflow status while preserving the current reviewer notes.
+     * Use this for operational events, such as interview invitations, where
+     * the status history needs details but the MO evaluation should not be
+     * replaced by scheduling information.
+     */
+    public void updateStatusPreservingReviewerNotes(String applicationId,
+                                                    ApplicationStatus status,
+                                                    String statusHistoryNote,
+                                                    String actorUserId) {
+        List<ApplicationRecord> applications = new ArrayList<>(applicationRepository.findAll());
+        ApplicationRecord record = applications.stream()
+                .filter(item -> item.getApplicationId().equals(applicationId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Application not found."));
+
+        validateStatusTransition(record.getStatus(), status);
+
+        if (status == ApplicationStatus.ACCEPTED) {
+            validateAcceptanceCapacity(record, applications);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        record.setStatus(status);
+        record.setLastUpdatedAt(now);
+        if (status == ApplicationStatus.ACCEPTED || status == ApplicationStatus.REJECTED) {
+            record.setDecisionAt(now);
+        }
+        record.addStatusHistory(new StatusHistoryEntry(status, now, actorUserId, statusHistoryNote));
+
+        if (status == ApplicationStatus.ACCEPTED) {
+            if (allocationService != null) {
+                allocationService.activateAllocation(record, actorUserId);
+            }
+            syncJobStatus(record.getJobId(), applications);
+        }
+
+        applicationRepository.saveAll(applications);
+    }
+
     public void updateStatus(String applicationId, ApplicationStatus status, String reviewerNotes, String actorUserId) {
         List<ApplicationRecord> applications = new ArrayList<>(applicationRepository.findAll());
         ApplicationRecord record = applications.stream()
@@ -201,10 +258,6 @@ public class ApplicationService {
                 application.setStatus(ApplicationStatus.SHORTLISTED);
                 application.setLastUpdatedAt(LocalDateTime.now());
                 application.setDecisionAt(null);
-                application.setReviewerNotes(appendNote(
-                        application.getReviewerNotes(),
-                        "Acceptance cleared because the job was reopened."
-                ));
                 application.addStatusHistory(new StatusHistoryEntry(
                         ApplicationStatus.SHORTLISTED,
                         application.getLastUpdatedAt(),
@@ -245,10 +298,7 @@ public class ApplicationService {
         record.setStatus(ApplicationStatus.SHORTLISTED);
         record.setLastUpdatedAt(now);
         record.setDecisionAt(null);
-        record.setReviewerNotes(appendNote(
-                reviewerNotes,
-                "Acceptance cancelled and the job was reopened."
-        ));
+        record.setReviewerNotes(reviewerNotes);
         record.addStatusHistory(new StatusHistoryEntry(
                 ApplicationStatus.SHORTLISTED,
                 now,
@@ -291,7 +341,6 @@ public class ApplicationService {
         LocalDateTime now = LocalDateTime.now();
         record.setStatus(ApplicationStatus.WITHDRAWN);
         record.setLastUpdatedAt(now);
-        record.setReviewerNotes(appendNote(record.getReviewerNotes(), "Withdrawn by applicant."));
         record.addStatusHistory(new StatusHistoryEntry(
                 ApplicationStatus.WITHDRAWN,
                 now,
@@ -317,7 +366,7 @@ public class ApplicationService {
         LocalDateTime now = LocalDateTime.now();
         record.setStatus(ApplicationStatus.SUBMITTED);
         record.setLastUpdatedAt(now);
-        record.setReviewerNotes(appendNote(reviewerNotes, "Shortlist status removed."));
+        record.setReviewerNotes(reviewerNotes);
         record.addStatusHistory(new StatusHistoryEntry(
                 ApplicationStatus.SUBMITTED,
                 now,
