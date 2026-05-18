@@ -20,6 +20,7 @@ import service.NotificationService;
 import service.ValidationService;
 import ui.dialogs.ApplicationDetailsDialog;
 import ui.dialogs.JobDetailsDialog;
+import ui.dialogs.MessageDetailsDialog;
 import ui.dialogs.UiMessage;
 import util.Constants;
 
@@ -1160,28 +1161,20 @@ public class TADashboardFrame extends JFrame {
     }
 
     /**
-     * Opens a simple detail dialog for the currently selected message row.
+     * Opens the structured detail dialog for the currently selected message row.
      */
     private void showSelectedConversationMessage() {
-        int row = messageTable.getSelectedRow();
-        if (row < 0) {
+        MessageRecord selected = selectedMessageRecord();
+        if (selected == null) {
             return;
         }
-        String time = String.valueOf(messageTableModel.getValueAt(row, 1));
-        String job = String.valueOf(messageTableModel.getValueAt(row, 2));
-        String direction = String.valueOf(messageTableModel.getValueAt(row, 3));
-        String status = String.valueOf(messageTableModel.getValueAt(row, 4));
-        String message = String.valueOf(messageTableModel.getValueAt(row, 5));
-        JOptionPane.showMessageDialog(
-                this,
-                "Time: " + time + "\n"
-                        + "Job: " + job + "\n"
-                        + "Direction: " + direction + "\n"
-                        + "Status: " + status + "\n\n"
-                        + message,
-                "Message Details",
-                JOptionPane.INFORMATION_MESSAGE
-        );
+        JobPosting job = findJob(selected.getJobId()).orElse(null);
+        boolean incoming = currentUser.getUserId().equals(selected.getRecipientUserId());
+        String direction = incoming
+                ? "Incoming from " + displayNameForUser(selected.getSenderUserId())
+                : "Outgoing to " + displayNameForUser(selected.getRecipientUserId());
+        String status = incoming && !selected.isRead() ? "New" : "Read";
+        new MessageDetailsDialog(this, selected, job, direction, status).setVisible(true);
     }
 
     /**

@@ -8,6 +8,7 @@ import ui.UiTheme;
 import javax.swing.*;
 import java.awt.*;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
 /**
  * Displays a read-only summary of an application together with the linked job context.
@@ -17,6 +18,17 @@ public class ApplicationDetailsDialog extends JDialog {
      * Opens the dialog for one submitted application.
      */
     public ApplicationDetailsDialog(Frame owner, ApplicationRecord application, JobPosting job, String taDemandSummary) {
+        this(owner, application, job, taDemandSummary, null);
+    }
+
+    /**
+     * Opens the dialog with optional admin management actions below the details.
+     */
+    public ApplicationDetailsDialog(Frame owner,
+                                    ApplicationRecord application,
+                                    JobPosting job,
+                                    String taDemandSummary,
+                                    BooleanSupplier deleteAction) {
         super(owner, "Application Details", true);
         getContentPane().setBackground(UiTheme.BACKGROUND);
 
@@ -63,12 +75,33 @@ public class ApplicationDetailsDialog extends JDialog {
         JPanel root = UiTheme.createPagePanel();
         JPanel card = UiTheme.createCard("Application Summary", "Read-only details for the selected application and its linked job.");
         card.add(UiTheme.wrapPage(details), BorderLayout.CENTER);
+        if (deleteAction != null) {
+            card.add(buildManagementButtons(application, deleteAction), BorderLayout.SOUTH);
+        }
         root.add(card, BorderLayout.CENTER);
         add(root, BorderLayout.CENTER);
 
         setSize(760, 680);
         setMinimumSize(new Dimension(660, 560));
         setLocationRelativeTo(owner);
+    }
+
+    private JPanel buildManagementButtons(ApplicationRecord application, BooleanSupplier deleteAction) {
+        JButton deleteButton = UiTheme.createDangerButton("Delete Application");
+        JButton closeButton = UiTheme.createSecondaryButton("Close");
+        deleteButton.addActionListener(event -> {
+            String message = "Are you sure you want to delete this application?\n"
+                    + application.getApplicationId()
+                    + "\n\nThis will also remove related allocations and messages.";
+            if (!UiMessage.confirm(this, message, "Confirm Application Deletion")) {
+                return;
+            }
+            if (deleteAction.getAsBoolean()) {
+                dispose();
+            }
+        });
+        closeButton.addActionListener(event -> dispose());
+        return UiTheme.createButtonRow(FlowLayout.RIGHT, deleteButton, closeButton);
     }
 
     private JComponent readOnlyValue(String value) {

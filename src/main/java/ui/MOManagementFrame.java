@@ -11,6 +11,7 @@ import model.Role;
 import model.SkillMatchResult;
 import model.User;
 import model.WorkloadRecord;
+import service.AccountCleanupService;
 import service.ApplicantService;
 import service.ApplicationService;
 import service.AuthService;
@@ -22,6 +23,7 @@ import service.MessageService;
 import service.NotificationService;
 import service.ValidationService;
 import service.WorkloadService;
+import ui.dialogs.JobDetailsDialog;
 import ui.dialogs.MessageDetailsDialog;
 import ui.dialogs.UiMessage;
 import util.Constants;
@@ -45,6 +47,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -605,6 +608,18 @@ public class MOManagementFrame extends JFrame {
                 loadSelectedJobToForm();
             }
         });
+        jobTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                int row = jobTable.rowAtPoint(event.getPoint());
+                if (row >= 0) {
+                    jobTable.setRowSelectionInterval(row, row);
+                }
+                if (event.getClickCount() == 2) {
+                    showSelectedJobDetailsDialog();
+                }
+            }
+        });
         applicantTable.getSelectionModel().addListSelectionListener(event -> {
             if (!event.getValueIsAdjusting()) {
                 showSelectedApplicantMatch();
@@ -683,6 +698,79 @@ public class MOManagementFrame extends JFrame {
             return;
         }
         applyJobToForm(job);
+    }
+
+    /**
+     * Opens the selected job in the same structured details style used by TA views.
+     */
+    private void showSelectedJobDetailsDialog() {
+        int row = jobTable.getSelectedRow();
+        if (row < 0) {
+            return;
+        }
+        String jobId = String.valueOf(jobTableModel.getValueAt(row, 0));
+        JobPosting job = findJob(jobId).orElse(null);
+        if (job == null) {
+            UiMessage.error(this, "The selected job no longer exists. Refreshing the table now.");
+            refreshJobs();
+            clearForm();
+            return;
+        }
+        new JobDetailsDialog(this, job, buildTaDemandText(job), () -> deleteJobAndRelatedData(job.getJobId())).setVisible(true);
+    }
+
+    /**
+     * Deletes one job and removes JSON records that reference it.
+     */
+    private boolean deleteJobAndRelatedData(String jobId) {
+        try {
+            JobPosting job = findJob(jobId)
+                    .orElseThrow(() -> new IllegalStateException("The selected job no longer exists."));
+            if (!canManageModule(job.getModuleCode())) {
+                throw new IllegalStateException("You do not have permission to delete this job.");
+            }
+
+            Set<String> deletedApplicationIds = applicationService.removeApplicationsForJob(jobId);
+            jobService.deleteJob(jobId);
+            new AccountCleanupService(
+                    dataService.getAllocationRepository(),
+                    dataService.getMessageRepository(),
+                    dataService.getNotificationRepository()
+            ).cleanupDeletedModuleOrganiser(null, Set.of(jobId), deletedApplicationIds);
+            removeDeletedJobFromFavourites(jobId);
+
+            if (jobId.equals(loadedApplicantJobId)) {
+                loadedApplicantJobId = null;
+                applicantTableModel.setRowCount(0);
+                updateApplicantEmptyState();
+            }
+            refreshJobs();
+            clearForm();
+            UiMessage.info(this, "Job deleted successfully.");
+            return true;
+        } catch (Exception ex) {
+            UiMessage.error(this, ex.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Removes the deleted job from applicant favourite lists so profiles do not
+     * keep stale job ids after the posting is gone.
+     */
+    private void removeDeletedJobFromFavourites(String jobId) {
+        List<ApplicantProfile> profiles = new ArrayList<>(dataService.getProfileRepository().findAll());
+        boolean updated = false;
+        for (ApplicantProfile profile : profiles) {
+            List<String> favourites = new ArrayList<>(profile.getFavoriteJobIds());
+            if (favourites.removeIf(jobId::equals)) {
+                profile.setFavoriteJobIds(favourites);
+                updated = true;
+            }
+        }
+        if (updated) {
+            dataService.getProfileRepository().saveAll(profiles);
+        }
     }
 
     /**
