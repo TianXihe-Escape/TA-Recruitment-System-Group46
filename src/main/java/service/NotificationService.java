@@ -32,6 +32,7 @@ public class NotificationService {
         notification.setUserId(userId);
         notification.setMessage(message.trim());
         notification.setCreatedAt(LocalDateTime.now());
+        // New notifications always start unread so badge counters and prompts can react immediately.
         notification.setRead(false);
         notifications.add(notification);
         notificationRepository.saveAll(notifications);
@@ -58,6 +59,7 @@ public class NotificationService {
         List<NotificationRecord> notifications = new ArrayList<>(notificationRepository.findAll());
         boolean updated = false;
         for (NotificationRecord notification : notifications) {
+            // Restrict the bulk read action to the current user's own notification list.
             if (userId != null && userId.equals(notification.getUserId()) && !notification.isRead()) {
                 notification.setRead(true);
                 updated = true;
@@ -74,6 +76,7 @@ public class NotificationService {
                 .mapToInt(this::extractSequence)
                 .max()
                 .orElse(0) + 1;
+        // Fixed-width ids keep the JSON easier to scan during manual coursework demos.
         return String.format("note-%02d", next);
     }
 
