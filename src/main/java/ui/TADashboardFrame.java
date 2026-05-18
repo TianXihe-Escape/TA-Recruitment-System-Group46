@@ -84,6 +84,7 @@ public class TADashboardFrame extends JFrame {
      * Message helper for TA/MO conversation threads.
      */
     private final MessageService messageService;
+    private final MatchingService matchingService;
     /**
      * Validation helper for parsing form input.
      */
@@ -119,10 +120,10 @@ public class TADashboardFrame extends JFrame {
     private boolean syncingJobFilters;
     // Table models back the five card-based TA workspace views.
     private final DefaultTableModel jobTableModel = new DefaultTableModel(
-            new Object[]{"Job ID", "Module", "Job Type", "Schedule", "Location", "Workload", "TA Demand", "Deadline", "Skills", "Favourite", "Status"}, 0);
+            new Object[]{"Job ID", "Module", "MO", "Job Type", "Schedule", "Location", "Workload", "TA Demand", "Deadline", "Skills", "Match Score", "Favourite", "Status"}, 0);
     private final JTable jobTable = new PlaceholderTable(jobTableModel, "No open jobs are available right now.");
     private final DefaultTableModel favoriteJobTableModel = new DefaultTableModel(
-            new Object[]{"Job ID", "Module", "Job Type", "Schedule", "Location", "Workload", "TA Demand", "Deadline", "Skills", "Favourite", "Status"}, 0);
+            new Object[]{"Job ID", "Module", "MO", "Job Type", "Schedule", "Location", "Workload", "TA Demand", "Deadline", "Skills", "Match Score", "Favourite", "Status"}, 0);
     private final JTable favoriteJobTable = new PlaceholderTable(favoriteJobTableModel, "No favourite jobs match the current filters.");
     private final DefaultTableModel applicationTableModel = new DefaultTableModel(
             new Object[]{"Application ID", "Job ID", "Status", "Match %", "Missing Skills", "Reviewer Notes"}, 0);
@@ -179,10 +180,11 @@ public class TADashboardFrame extends JFrame {
         );
         this.applicantService = new ApplicantService(dataService.getProfileRepository(), validationService);
         this.jobService = new JobService(dataService.getJobRepository(), validationService);
+        this.matchingService = new MatchingService();
         this.applicationService = new ApplicationService(
                 dataService.getApplicationRepository(),
                 dataService.getJobRepository(),
-                new MatchingService(),
+                matchingService,
                 new service.AllocationService(dataService.getAllocationRepository())
         );
         this.notificationService = new NotificationService(dataService.getNotificationRepository());
@@ -972,6 +974,7 @@ public class TADashboardFrame extends JFrame {
         return new Object[]{
                 job.getJobId(),
                 job.getModuleCode() + " - " + job.getModuleTitle(),
+                moduleOrganiserText(job),
                 UiFormat.valueOrDash(job.getJobType()),
                 valueOrDash(job.getSchedule()),
                 valueOrDash(job.getLocation()),
@@ -979,6 +982,7 @@ public class TADashboardFrame extends JFrame {
                 buildTaDemandText(job),
                 job.getApplicationDeadline(),
                 String.join(", ", job.getRequiredSkills()),
+                matchScoreText(job),
                 profile != null && profile.isFavoriteJob(job.getJobId()) ? "Yes" : "No",
                 job.getStatus()
         };
@@ -1019,7 +1023,7 @@ public class TADashboardFrame extends JFrame {
             return;
         }
         String taDemandSummary = buildTaDemandText(job);
-        new JobDetailsDialog(this, job, taDemandSummary).setVisible(true);
+        new JobDetailsDialog(this, job, taDemandSummary, moduleOrganiserText(job)).setVisible(true);
     }
 
     /**
@@ -1043,7 +1047,13 @@ public class TADashboardFrame extends JFrame {
         }
 
         JobPosting job = findJob(application.getJobId()).orElse(null);
-        new ApplicationDetailsDialog(this, application, job, job == null ? null : buildTaDemandText(job)).setVisible(true);
+        new ApplicationDetailsDialog(
+                this,
+                application,
+                job,
+                job == null ? null : buildTaDemandText(job),
+                job == null ? null : moduleOrganiserText(job)
+        ).setVisible(true);
     }
 
     /**
@@ -1328,6 +1338,37 @@ public class TADashboardFrame extends JFrame {
                 .findFirst()
                 .map(user -> valueOrDash(user.getName()))
                 .orElse(valueOrDash(userId));
+    }
+
+    /**
+     * Resolves the MO attached to a job for TA-facing job tables and details.
+     */
+    private String moduleOrganiserText(JobPosting job) {
+        if (job == null || job.getPostedBy() == null || job.getPostedBy().isBlank()) {
+            return "-";
+        }
+        return dataService.getUserRepository().findAll().stream()
+                .filter(user -> job.getPostedBy().equals(user.getUserId()))
+                .findFirst()
+                .map(user -> {
+                    String name = valueOrDash(user.getName());
+                    String email = valueOrDash(user.getUsername());
+                    if ("-".equals(name)) {
+                        return email;
+                    }
+                    if ("-".equals(email)) {
+                        return name;
+                    }
+                    return name + " <" + email + ">";
+                })
+                .orElse(valueOrDash(job.getPostedBy()));
+    }
+
+    private String matchScoreText(JobPosting job) {
+        if (profile == null || job == null) {
+            return "-";
+        }
+        return matchingService.calculateMatch(profile.getSkills(), job.getRequiredSkills()).getScorePercentage() + "%";
     }
 
     /**
@@ -1726,19 +1767,19 @@ public class TADashboardFrame extends JFrame {
         UiTheme.styleTable(applicationTable);
         UiTheme.styleTable(notificationTable);
         UiTheme.styleTable(messageTable);
-        jobTable.getColumnModel().getColumn(6).setCellRenderer(new TaDemandRenderer());
-        jobTable.getColumnModel().getColumn(9).setCellRenderer(new FavouriteRenderer());
+        jobTable.getColumnModel().getColumn(7).setCellRenderer(new TaDemandRenderer());
+        jobTable.getColumnModel().getColumn(11).setCellRenderer(new FavouriteRenderer());
         // The deadline and status renderers must target the actual deadline/status
         // columns rather than the TA-demand/favourite columns.
-        jobTable.getColumnModel().getColumn(7).setCellRenderer(new DeadlineWarningRenderer());
-        jobTable.getColumnModel().getColumn(10).setCellRenderer(new StatusBadgeRenderer());
-        favoriteJobTable.getColumnModel().getColumn(6).setCellRenderer(new TaDemandRenderer());
-        favoriteJobTable.getColumnModel().getColumn(9).setCellRenderer(new FavouriteRenderer());
-        favoriteJobTable.getColumnModel().getColumn(7).setCellRenderer(new DeadlineWarningRenderer());
-        favoriteJobTable.getColumnModel().getColumn(10).setCellRenderer(new StatusBadgeRenderer());
+        jobTable.getColumnModel().getColumn(8).setCellRenderer(new DeadlineWarningRenderer());
+        jobTable.getColumnModel().getColumn(12).setCellRenderer(new StatusBadgeRenderer());
+        favoriteJobTable.getColumnModel().getColumn(7).setCellRenderer(new TaDemandRenderer());
+        favoriteJobTable.getColumnModel().getColumn(11).setCellRenderer(new FavouriteRenderer());
+        favoriteJobTable.getColumnModel().getColumn(8).setCellRenderer(new DeadlineWarningRenderer());
+        favoriteJobTable.getColumnModel().getColumn(12).setCellRenderer(new StatusBadgeRenderer());
         applicationTable.getColumnModel().getColumn(2).setCellRenderer(new StatusBadgeRenderer());
-        UiTheme.setColumnWidths(jobTable, 90, 260, 140, 260, 180, 110, 100, 120, 220, 90, 90);
-        UiTheme.setColumnWidths(favoriteJobTable, 90, 260, 140, 260, 180, 110, 100, 120, 220, 90, 90);
+        UiTheme.setColumnWidths(jobTable, 90, 260, 240, 140, 260, 180, 110, 100, 120, 220, 100, 90, 90);
+        UiTheme.setColumnWidths(favoriteJobTable, 90, 260, 240, 140, 260, 180, 110, 100, 120, 220, 100, 90, 90);
         UiTheme.setColumnWidths(applicationTable, 120, 90, 120, 90, 220, 280);
         UiTheme.setColumnWidths(notificationTable, 160, 80, 560);
         UiTheme.setColumnWidths(messageTable, 110, 160, 230, 190, 80, 520);

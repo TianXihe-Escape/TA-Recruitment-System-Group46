@@ -23,7 +23,7 @@ public class JobDetailsDialog extends JDialog {
      * This overload is used by screens that only need the job metadata itself.
      */
     public JobDetailsDialog(Frame owner, JobPosting jobPosting) {
-        this(owner, jobPosting, null);
+        this(owner, jobPosting, null, null, null);
     }
 
     /**
@@ -33,13 +33,40 @@ public class JobDetailsDialog extends JDialog {
      * applicants or accepted TAs are attached to the job.
      */
     public JobDetailsDialog(Frame owner, JobPosting jobPosting, String taDemandSummary) {
-        this(owner, jobPosting, taDemandSummary, null);
+        this(owner, jobPosting, taDemandSummary, null, null);
     }
 
     /**
      * Opens the dialog with optional MO management actions below the details.
      */
     public JobDetailsDialog(Frame owner, JobPosting jobPosting, String taDemandSummary, BooleanSupplier deleteAction) {
+        this(owner, jobPosting, taDemandSummary, null, deleteAction);
+    }
+
+    /**
+     * Opens the dialog with optional edit and delete actions below the details.
+     */
+    public JobDetailsDialog(Frame owner,
+                            JobPosting jobPosting,
+                            String taDemandSummary,
+                            Runnable editAction,
+                            BooleanSupplier deleteAction) {
+        this(owner, jobPosting, taDemandSummary, null, editAction, deleteAction);
+    }
+
+    /**
+     * Opens the dialog with a TA-facing module organiser summary.
+     */
+    public JobDetailsDialog(Frame owner, JobPosting jobPosting, String taDemandSummary, String moduleOrganiserSummary) {
+        this(owner, jobPosting, taDemandSummary, moduleOrganiserSummary, null, null);
+    }
+
+    private JobDetailsDialog(Frame owner,
+                             JobPosting jobPosting,
+                             String taDemandSummary,
+                             String moduleOrganiserSummary,
+                             Runnable editAction,
+                             BooleanSupplier deleteAction) {
         super(owner, "Job Details", true);
         getContentPane().setBackground(UiTheme.BACKGROUND);
 
@@ -49,6 +76,10 @@ public class JobDetailsDialog extends JDialog {
         row += 2;
         UiTheme.addFormRow(details, row, "Module", readOnlyValue(jobPosting.getModuleCode() + " - " + jobPosting.getModuleTitle()));
         row += 2;
+        if (moduleOrganiserSummary != null && !moduleOrganiserSummary.isBlank()) {
+            UiTheme.addFormRow(details, row, "Module Organiser", readOnlyValue(moduleOrganiserSummary));
+            row += 2;
+        }
         UiTheme.addFormRow(details, row, "Category", readOnlyValue(jobPosting.getCategory() == null ? "-" : jobPosting.getCategory().getDisplayName()));
         row += 2;
         UiTheme.addFormRow(details, row, "Job Type", readOnlyValue(UiFormat.valueOrDash(jobPosting.getJobType())));
@@ -80,12 +111,11 @@ public class JobDetailsDialog extends JDialog {
         UiTheme.addFormRow(details, row, "Duties", readOnlyBlock(valueOrDash(jobPosting.getDuties()), 5));
 
         JScrollPane detailsScrollPane = UiTheme.wrapPage(details);
-
         JPanel root = UiTheme.createPagePanel();
         JPanel card = UiTheme.createCard("Job Summary", "Read-only details for the selected vacancy, arranged for quicker scanning.");
         card.add(detailsScrollPane, BorderLayout.CENTER);
-        if (deleteAction != null) {
-            card.add(buildManagementButtons(jobPosting, deleteAction), BorderLayout.SOUTH);
+        if (editAction != null || deleteAction != null) {
+            card.add(buildManagementButtons(jobPosting, editAction, deleteAction), BorderLayout.SOUTH);
         }
         root.add(card, BorderLayout.CENTER);
         add(root, BorderLayout.CENTER);
@@ -96,21 +126,36 @@ public class JobDetailsDialog extends JDialog {
         setLocationRelativeTo(owner);
     }
 
-    private JPanel buildManagementButtons(JobPosting jobPosting, BooleanSupplier deleteAction) {
+    private JPanel buildManagementButtons(JobPosting jobPosting, Runnable editAction, BooleanSupplier deleteAction) {
+        JButton editButton = UiTheme.createPrimaryButton("Edit Job");
         JButton deleteButton = UiTheme.createDangerButton("Delete Job");
         JButton closeButton = UiTheme.createSecondaryButton("Close");
-        deleteButton.addActionListener(event -> {
-            String message = "Are you sure you want to delete this job?\n"
-                    + jobPosting.getJobId() + " - " + jobPosting.getModuleCode() + " " + jobPosting.getModuleTitle()
-                    + "\n\nThis will also remove related applications, allocations, and messages.";
-            if (!UiMessage.confirm(this, message, "Confirm Job Deletion")) {
-                return;
-            }
-            if (deleteAction.getAsBoolean()) {
+        if (editAction != null) {
+            editButton.addActionListener(event -> {
+                editAction.run();
                 dispose();
-            }
-        });
+            });
+        }
+        if (deleteAction != null) {
+            deleteButton.addActionListener(event -> {
+                String message = "Are you sure you want to delete this job?\n"
+                        + jobPosting.getJobId() + " - " + jobPosting.getModuleCode() + " " + jobPosting.getModuleTitle()
+                        + "\n\nThis will also remove related applications, allocations, and messages.";
+                if (!UiMessage.confirm(this, message, "Confirm Job Deletion")) {
+                    return;
+                }
+                if (deleteAction.getAsBoolean()) {
+                    dispose();
+                }
+            });
+        }
         closeButton.addActionListener(event -> dispose());
+        if (editAction != null && deleteAction != null) {
+            return UiTheme.createButtonRow(FlowLayout.RIGHT, editButton, deleteButton, closeButton);
+        }
+        if (editAction != null) {
+            return UiTheme.createButtonRow(FlowLayout.RIGHT, editButton, closeButton);
+        }
         return UiTheme.createButtonRow(FlowLayout.RIGHT, deleteButton, closeButton);
     }
 

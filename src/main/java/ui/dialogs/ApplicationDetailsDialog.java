@@ -18,7 +18,18 @@ public class ApplicationDetailsDialog extends JDialog {
      * Opens the dialog for one submitted application.
      */
     public ApplicationDetailsDialog(Frame owner, ApplicationRecord application, JobPosting job, String taDemandSummary) {
-        this(owner, application, job, taDemandSummary, null);
+        this(owner, application, job, taDemandSummary, null, null);
+    }
+
+    /**
+     * Opens the dialog with a TA-facing module organiser summary.
+     */
+    public ApplicationDetailsDialog(Frame owner,
+                                    ApplicationRecord application,
+                                    JobPosting job,
+                                    String taDemandSummary,
+                                    String moduleOrganiserSummary) {
+        this(owner, application, job, taDemandSummary, moduleOrganiserSummary, null);
     }
 
     /**
@@ -29,6 +40,15 @@ public class ApplicationDetailsDialog extends JDialog {
                                     JobPosting job,
                                     String taDemandSummary,
                                     BooleanSupplier deleteAction) {
+        this(owner, application, job, taDemandSummary, null, deleteAction);
+    }
+
+    private ApplicationDetailsDialog(Frame owner,
+                                     ApplicationRecord application,
+                                     JobPosting job,
+                                     String taDemandSummary,
+                                     String moduleOrganiserSummary,
+                                     BooleanSupplier deleteAction) {
         super(owner, "Application Details", true);
         getContentPane().setBackground(UiTheme.BACKGROUND);
 
@@ -40,6 +60,10 @@ public class ApplicationDetailsDialog extends JDialog {
                 ? "[Deleted Job]"
                 : job.getModuleCode() + " - " + job.getModuleTitle()));
         row += 2;
+        if (moduleOrganiserSummary != null && !moduleOrganiserSummary.isBlank()) {
+            UiTheme.addFormRow(details, row, "Module Organiser", readOnlyValue(moduleOrganiserSummary));
+            row += 2;
+        }
         UiTheme.addFormRow(details, row, "Job ID", readOnlyValue(application.getJobId()));
         row += 2;
         UiTheme.addFormRow(details, row, "Status", readOnlyValue(String.valueOf(application.getStatus())));
