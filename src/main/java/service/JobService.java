@@ -137,6 +137,23 @@ public class JobService {
         verifySaved(jobPosting);
     }
 
+    /**
+     * Removes one job posting from persistent storage.
+     *
+     * @param jobId job id to delete
+     */
+    public void deleteJob(String jobId) {
+        if (jobId == null || jobId.isBlank()) {
+            throw new IllegalArgumentException("Job id is required.");
+        }
+        List<JobPosting> jobs = new ArrayList<>(jobRepository.findAll());
+        boolean removed = jobs.removeIf(job -> jobId.equals(job.getJobId()));
+        if (!removed) {
+            throw new IllegalArgumentException("Job not found.");
+        }
+        jobRepository.saveAll(jobs);
+    }
+
     private void verifySaved(JobPosting expected) {
         JobPosting actual = jobRepository.findById(expected.getJobId())
                 .orElseThrow(() -> new IllegalStateException("Job was not written to the jobs data file."));

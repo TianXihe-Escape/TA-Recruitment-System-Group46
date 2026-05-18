@@ -10,8 +10,19 @@ import java.awt.*;
 
 /**
  * Authenticated password-change dialog for the currently signed-in user.
+ *
+ * Unlike the admin reset utility, this frame requires the user's current
+ * password first. That keeps the workflow aligned with a normal self-service
+ * password update rather than an administrator override.
  */
 public class ChangePasswordFrame extends JFrame {
+    /**
+     * Builds the password-change window for the active signed-in user.
+     *
+     * The frame only collects input and displays feedback. Validation such as
+     * checking the old password, enforcing password rules, and confirming the
+     * new password match is delegated to AuthService.
+     */
     public ChangePasswordFrame(AuthService authService, User currentUser) {
         setTitle("Change Password - " + Constants.APP_TITLE);
         setSize(560, 460);
@@ -20,9 +31,13 @@ public class ChangePasswordFrame extends JFrame {
         setLocationRelativeTo(null);
         UiTheme.styleFrame(this);
 
+        // These fields are local to the dialog because their values are only
+        // needed during one password-change attempt.
         JPasswordField oldPasswordField = new JPasswordField();
         JPasswordField passwordField = new JPasswordField();
         JPasswordField confirmField = new JPasswordField();
+        // Preserve the original masking characters so the checkbox can toggle
+        // between visible and hidden passwords without losing the theme defaults.
         char oldEchoChar = oldPasswordField.getEchoChar();
         char passwordEchoChar = passwordField.getEchoChar();
         char confirmEchoChar = confirmField.getEchoChar();
@@ -39,6 +54,8 @@ public class ChangePasswordFrame extends JFrame {
         UiTheme.styleTextField(confirmField);
         UiTheme.styleCheckBox(showPasswordsBox);
 
+        // The dialog reuses the shared card-and-form layout so account utilities
+        // keep the same spacing and visual rhythm as the rest of the Swing UI.
         JPanel root = UiTheme.createPagePanel();
         JPanel card = UiTheme.createCard("Change Password", "Enter your current password before choosing a new one.");
         JPanel form = UiTheme.createFormGrid();
@@ -47,12 +64,17 @@ public class ChangePasswordFrame extends JFrame {
         UiTheme.addFormRow(form, 4, "Confirm Password", confirmField);
         UiTheme.addFormRow(form, 6, "", showPasswordsBox);
 
+        // Toggling all three fields together makes it easier for users to catch
+        // typing mistakes when entering or confirming a new password.
         showPasswordsBox.addActionListener(event -> {
             boolean show = showPasswordsBox.isSelected();
             oldPasswordField.setEchoChar(show ? (char) 0 : oldEchoChar);
             passwordField.setEchoChar(show ? (char) 0 : passwordEchoChar);
             confirmField.setEchoChar(show ? (char) 0 : confirmEchoChar);
         });
+
+        // AuthService owns the actual password-change rules. The UI simply passes
+        // the current username plus the three password values to that service.
         saveButton.addActionListener(event -> {
             try {
                 String newPassword = new String(passwordField.getPassword());
@@ -62,6 +84,8 @@ public class ChangePasswordFrame extends JFrame {
                         newPassword,
                         new String(confirmField.getPassword())
                 );
+                // Keep the in-memory user object consistent with the persisted
+                // password so any follow-up UI logic sees the latest state.
                 currentUser.setPassword(newPassword);
                 UiMessage.info(this, "Password changed successfully.");
                 dispose();
@@ -69,6 +93,9 @@ public class ChangePasswordFrame extends JFrame {
                 UiMessage.error(this, ex.getMessage());
             }
         });
+
+        // Cancel simply closes the dialog because there is no draft state that
+        // needs to be preserved once the user abandons the password update.
         cancelButton.addActionListener(event -> dispose());
 
         JPanel body = new JPanel(new BorderLayout(0, 18));

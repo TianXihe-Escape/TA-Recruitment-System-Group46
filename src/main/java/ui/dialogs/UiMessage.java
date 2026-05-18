@@ -7,28 +7,43 @@ import java.awt.*;
 
 /**
  * Small wrapper around Swing message dialogs for consistent UI feedback.
+ *
+ * Centralising these helpers keeps everyday prompts, warnings, and error
+ * messages visually aligned with the application's theme instead of letting
+ * each screen open a differently configured JOptionPane.
  */
 public final class UiMessage {
+    // These bounds keep short messages compact while still allowing longer text
+    // to remain readable before scrollbars become necessary.
     private static final int MIN_COLUMNS = 28;
     private static final int MAX_COLUMNS = 52;
     private static final int MIN_ROWS = 3;
     private static final int MAX_ROWS = 3;
 
+    /**
+     * Utility class; callers use the static helper methods only.
+     */
     private UiMessage() {
     }
 
+    /**
+     * Shows a themed information dialog with the default title.
+     */
     public static void info(Component parent, String message) {
         show(parent, message, "Information", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    public static void info(Component parent, String message, String title) {
-        show(parent, message, title, JOptionPane.INFORMATION_MESSAGE);
-    }
-
+    /**
+     * Shows a themed error dialog with the default error title.
+     */
     public static void error(Component parent, String message) {
         show(parent, message, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
+    /**
+     * Shows a yes/no confirmation dialog using the same message layout helpers
+     * as the information and error dialogs.
+     */
     public static boolean confirm(Component parent, String message, String title) {
         // Reuse the same scrollable message layout for confirmations so long warnings behave like info/error dialogs.
         Object[] options = {"Yes", "No"};
@@ -44,10 +59,19 @@ public final class UiMessage {
         ) == JOptionPane.YES_OPTION;
     }
 
+    /**
+     * Shared internal entry point for simple message dialogs.
+     */
     private static void show(Component parent, String message, String title, int type) {
         JOptionPane.showMessageDialog(parent, buildMessagePane(message), title, type);
     }
 
+    /**
+     * Builds the scrollable text component used inside every dialog body.
+     *
+     * A JTextArea is used instead of a plain string so long messages can keep
+     * their original line breaks and remain readable inside a themed scroll pane.
+     */
     private static JScrollPane buildMessagePane(String message) {
         JTextArea area = new JTextArea(message);
         area.setEditable(false);
@@ -69,6 +93,10 @@ public final class UiMessage {
         return scrollPane;
     }
 
+    /**
+     * Chooses a dialog width from the longest visible line in the message while
+     * keeping the final result inside a predictable minimum and maximum range.
+     */
     private static int preferredColumns(String message) {
         int longestLine = 0;
         for (String line : message.split("\\R", -1)) {
@@ -77,6 +105,12 @@ public final class UiMessage {
         return Math.max(MIN_COLUMNS, Math.min(MAX_COLUMNS, longestLine + 2));
     }
 
+    /**
+     * Chooses the text area's visible row count from the message line count.
+     *
+     * The current bounds intentionally keep dialogs visually compact; overflow
+     * is handled by the scroll pane rather than by growing the popup too tall.
+     */
     private static int preferredRows(String message) {
         int lineCount = message.split("\\R", -1).length;
         return Math.max(MIN_ROWS, Math.min(MAX_ROWS, lineCount));

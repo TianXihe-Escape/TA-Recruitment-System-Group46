@@ -11,6 +11,7 @@ import model.Role;
 import model.SkillMatchResult;
 import model.User;
 import model.WorkloadRecord;
+import service.AccountCleanupService;
 import service.ApplicantService;
 import service.ApplicationService;
 import service.AuthService;
@@ -22,6 +23,8 @@ import service.MessageService;
 import service.NotificationService;
 import service.ValidationService;
 import service.WorkloadService;
+import ui.dialogs.JobDetailsDialog;
+import ui.dialogs.MessageDetailsDialog;
 import ui.dialogs.UiMessage;
 import util.Constants;
 
@@ -44,20 +47,32 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * MO dashboard for posting jobs and reviewing applicants.
+ *
+ * This frame is shared by normal Module Organisers and administrators. Normal
+ * MOs only work inside their assigned module scope, while admins can reuse the
+ * same screen as a broader hiring-management console.
  */
 public class MOManagementFrame extends JFrame {
+    // Unsaved jobs have no persistent repository ID yet, so the editor shows a
+    // stable placeholder until JobService generates the real identifier on save.
     private static final String NEW_JOB_PLACEHOLDER = "AUTO-GENERATED ON SAVE";
+    // CardLayout view indexes used by the left sidebar workspace switcher.
     private static final int VIEW_JOB_EDITOR = 0;
     private static final int VIEW_REVIEW_QUEUE = 1;
     private static final String[] VIEW_KEYS = {"job-editor", "review-queue"};
+    // File-like paths rendered into the review panes are underlined and made
+    // clickable by matching them with this pattern.
     private static final Pattern DOCUMENT_LINK_PATTERN = Pattern.compile("(cv[/\\\\][^;\\n]+|supporting-documents[/\\\\][^;\\n]+)");
 
+    // Services are kept at frame scope because most user actions need to load,
+    // validate, persist, or notify across several repositories.
     private final DataService dataService;
     private final JobService jobService;
     private final AuthService authService;
@@ -72,8 +87,11 @@ public class MOManagementFrame extends JFrame {
     private final User currentUser;
     private final List<String> managedModuleCodes;
     private final boolean adminMode;
+    // Prevents combo-box and selection listeners from reloading the form while
+    // values are being filled programmatically.
     private boolean syncingForm;
 
+    // Job-editor fields on the first workspace card.
     private final JTextField jobIdField = new JTextField();
     private final JComboBox<String> moduleCodeBox = new JComboBox<>();
     private final JTextField moduleTitleField = new JTextField();
@@ -101,6 +119,7 @@ public class MOManagementFrame extends JFrame {
     private final JComboBox<JobStatus> statusBox = new JComboBox<>(JobStatus.values());
     private final JTextArea dutiesArea = new JTextArea(3, 20);
     private final JTextArea reviewArea = new JTextArea(4, 20);
+    // Read-only review panes shown beside the applicant queue.
     private final JTextPane applicantSummaryArea = new JTextPane();
     private final JTextPane matchInfoArea = new JTextPane();
     private final JComboBox<String> applicantStatusFilter = new JComboBox<>(
@@ -115,6 +134,7 @@ public class MOManagementFrame extends JFrame {
     private final DefaultTableModel applicantTableModel = new DefaultTableModel(
             new Object[]{"Application ID", "Applicant", "Status", "Match %", "Missing"}, 0);
     private final PlaceholderTable applicantTable = new PlaceholderTable(applicantTableModel, "Select a job and click Load Applicants to review submissions.");
+    // Sidebar and workspace state for the two-card MO/admin console.
     private final JPanel workspaceCards = new JPanel(new CardLayout());
     private final List<JToggleButton> navigationButtons = new ArrayList<>();
     private final AvatarButton avatarButton = new AvatarButton("MO");
@@ -125,11 +145,20 @@ public class MOManagementFrame extends JFrame {
     private final JButton notificationsButton = UiTheme.createSecondaryButton("View Notifications");
     private final JButton messagesButton = UiTheme.createSecondaryButton("View Messages");
     private JPanel workspaceShell;
+    private JScrollPane workspaceScrollPane;
     private int currentWorkspaceView = VIEW_JOB_EDITOR;
+    // Review-state cache used after table refreshes and when opening applicant documents.
     private String loadedApplicantJobId;
     private String selectedApplicantCvPath;
     private List<String> selectedApplicantSupportingDocumentPaths = new ArrayList<>();
 
+    /**
+     * Builds the MO/admin hiring workspace and loads the initial repository data.
+     *
+     * Construction is split into two phases: first the Swing shell and controls
+     * are created, then the tables/forms are populated from repository-backed
+     * state through refreshJobs() and clearForm().
+     */
     public MOManagementFrame(DataService dataService, User currentUser) {
         this.dataService = dataService;
         this.currentUser = currentUser;
@@ -153,6 +182,8 @@ public class MOManagementFrame extends JFrame {
                 new service.AllocationService(dataService.getAllocationRepository())
         );
         this.adminMode = currentUser.getRole() == Role.ADMIN;
+        // Managed modules are resolved once up front so later permission checks
+        // and combo-box population work from the same consistent scope list.
         this.managedModuleCodes = resolveManagedModuleCodes();
 
         setTitle((adminMode ? "Hiring Management" : "MO Management") + " - " + Constants.APP_TITLE);
@@ -168,9 +199,12 @@ public class MOManagementFrame extends JFrame {
         root.setBackground(UiTheme.BACKGROUND);
         root.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
         root.add(buildSidebar(), BorderLayout.WEST);
-        root.add(UiTheme.wrapPage(buildWorkspacePanel()), BorderLayout.CENTER);
+        workspaceScrollPane = UiTheme.wrapPage(buildWorkspacePanel());
+        root.add(workspaceScrollPane, BorderLayout.CENTER);
         add(root);
 
+        // Initial load: show existing jobs first, then reset the editor into the
+        // new-job state so users begin with a clean draft rather than stale fields.
         refreshJobs();
         clearForm();
         bindFormSync();
@@ -178,6 +212,9 @@ public class MOManagementFrame extends JFrame {
         updateUnreadIndicators();
     }
 
+    /**
+     * Builds the left navigation rail with account identity and workspace tabs.
+     */
     private JPanel buildSidebar() {
         JPanel sidebar = new JPanel(new BorderLayout(0, 18));
         sidebar.setPreferredSize(new Dimension(226, 0));
@@ -214,7 +251,12 @@ public class MOManagementFrame extends JFrame {
         return sidebar;
     }
 
+    /**
+     * Builds the outer shell that hosts the title area and CardLayout workspaces.
+     */
     private JPanel buildWorkspacePanel() {
+        // The shell remains stable while only the center workspace card changes,
+        // which keeps navigation fast and avoids rebuilding large Swing trees.
         workspaceShell = new JPanel(new BorderLayout(0, 14));
         workspaceShell.setBackground(UiTheme.SURFACE);
         workspaceShell.setBorder(BorderFactory.createCompoundBorder(
@@ -233,6 +275,8 @@ public class MOManagementFrame extends JFrame {
         titlePanel.add(workspaceTitleLabel);
         titlePanel.add(workspaceSubtitleLabel);
 
+        // Each workspace is created once, then shown/hidden through CardLayout
+        // when the sidebar buttons switch between editor and review queue.
         workspaceCards.setOpaque(false);
         workspaceCards.add(buildFormPanel(), VIEW_KEYS[VIEW_JOB_EDITOR]);
         workspaceCards.add(buildTablesPanel(), VIEW_KEYS[VIEW_REVIEW_QUEUE]);
@@ -242,6 +286,9 @@ public class MOManagementFrame extends JFrame {
         return workspaceShell;
     }
 
+    /**
+     * Creates one sidebar navigation button for the MO/admin workspace switcher.
+     */
     private JToggleButton createNavButton(String text, SimpleLineIcon.Type iconType, int viewIndex) {
         JToggleButton button = new JToggleButton(text);
         button.setIcon(new SimpleLineIcon(iconType, UiTheme.MUTED_TEXT));
@@ -256,11 +303,16 @@ public class MOManagementFrame extends JFrame {
         button.setOpaque(true);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
+        // The button itself only changes the visible card; data loading stays in
+        // the dedicated refresh and selection handlers below.
         button.addActionListener(event -> showWorkspace(viewIndex));
         navigationButtons.add(button);
         return button;
     }
 
+    /**
+     * Switches the visible workspace card and rewrites the header copy to match.
+     */
     private void showWorkspace(int viewIndex) {
         currentWorkspaceView = viewIndex;
         ((CardLayout) workspaceCards.getLayout()).show(workspaceCards, VIEW_KEYS[viewIndex]);
@@ -277,10 +329,26 @@ public class MOManagementFrame extends JFrame {
         } else {
             workspaceTitleLabel.setText("Review Queue");
             workspaceSubtitleLabel.setText("Inspect postings, load applicants, review match details, and update hiring decisions.");
+            scrollWorkspaceToTop();
         }
     }
 
+    /**
+     * Resets the outer workspace scroll position so Review Queue always starts at the top.
+     */
+    private void scrollWorkspaceToTop() {
+        if (workspaceScrollPane == null) {
+            return;
+        }
+        SwingUtilities.invokeLater(() -> workspaceScrollPane.getViewport().setViewPosition(new Point(0, 0)));
+    }
+
+    /**
+     * Opens the account popup anchored to the avatar button.
+     */
     private void showAccountMenu() {
+        // Infrequent account actions live in this popup so the main workspace can
+        // stay focused on job editing and applicant review actions.
         JPopupMenu menu = new JPopupMenu();
         menu.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UiTheme.BORDER),
@@ -297,6 +365,9 @@ public class MOManagementFrame extends JFrame {
         menu.show(avatarButton, 0, avatarButton.getHeight() + 6);
     }
 
+    /**
+     * Builds the identity block shown at the top of the account popup.
+     */
     private JPanel buildAccountHeader() {
         JPanel panel = new JPanel(new BorderLayout(12, 0));
         panel.setBackground(UiTheme.SURFACE);
@@ -325,6 +396,9 @@ public class MOManagementFrame extends JFrame {
         return panel;
     }
 
+    /**
+     * Creates one popup-menu item and adds unread decoration when needed.
+     */
     private JMenuItem menuItem(String text, SimpleLineIcon.Type iconType, Runnable action) {
         JMenuItem item = new JMenuItem(text);
         boolean unread = ("View Notifications".equals(text) && notificationService.hasUnreadNotifications(currentUser.getUserId()))
@@ -338,6 +412,9 @@ public class MOManagementFrame extends JFrame {
         return item;
     }
 
+    /**
+     * Applies the shared white-icon treatment used by action buttons.
+     */
     private void decorateButton(AbstractButton button, SimpleLineIcon.Type iconType) {
         boolean unread = (button == notificationsButton && notificationService.hasUnreadNotifications(currentUser.getUserId()))
                 || (button == messagesButton && messageService.hasUnreadMessages(currentUser.getUserId()));
@@ -345,6 +422,9 @@ public class MOManagementFrame extends JFrame {
         button.setIconTextGap(8);
     }
 
+    /**
+     * Refreshes notification/message badges after inbox state changes.
+     */
     private void updateUnreadIndicators() {
         decorateButton(notificationsButton, SimpleLineIcon.Type.BELL);
         decorateButton(messagesButton, SimpleLineIcon.Type.SEND);
@@ -355,6 +435,8 @@ public class MOManagementFrame extends JFrame {
     }
 
     private void refreshWorkspace() {
+        // Manual refresh reloads the job list first, then restores the currently
+        // loaded applicant queue if the reviewer was already focused on one job.
         playRefreshEffect();
         refreshJobs();
         if (loadedApplicantJobId != null) {
@@ -373,6 +455,9 @@ public class MOManagementFrame extends JFrame {
         return adminMode ? "Admin" : "MO";
     }
 
+    /**
+     * Resolves a user id into the best available display name for labels/messages.
+     */
     private String displayNameForUser(String userId) {
         return dataService.getUserRepository().findAll().stream()
                 .filter(user -> userId != null && userId.equals(user.getUserId()))
@@ -381,6 +466,9 @@ public class MOManagementFrame extends JFrame {
                 .orElse(valueOrDash(userId));
     }
 
+    /**
+     * Derives up to two initials for avatar rendering from a display name string.
+     */
     private String initialsFor(String value) {
         if (value == null || value.isBlank()) {
             return adminMode ? "AD" : "MO";
@@ -402,10 +490,15 @@ public class MOManagementFrame extends JFrame {
         return trimmed.length() <= 2 ? trimmed : trimmed.substring(0, 2);
     }
 
+    /**
+     * Builds the job editor card used for creating and updating postings.
+     */
     private JPanel buildFormPanel() {
         JPanel panel = UiTheme.createCard(null, null);
 
         JPanel form = UiTheme.createFormGrid();
+        // Job IDs are generated and controlled by JobService, so users can see
+        // them but cannot edit them directly.
         jobIdField.setEditable(false);
         jobIdField.setForeground(Color.GRAY);
         matchInfoArea.setEditable(false);
@@ -437,6 +530,8 @@ public class MOManagementFrame extends JFrame {
         decorateButton(newButton, SimpleLineIcon.Type.EDIT);
         decorateButton(saveButton, SimpleLineIcon.Type.SAVE);
 
+        // When an MO has no managed modules yet, the editor remains visible but
+        // cannot create invalid jobs outside the user's permission scope.
         boolean hasManagedModules = !managedModuleCodes.isEmpty();
         newButton.setEnabled(hasManagedModules);
         saveButton.setEnabled(hasManagedModules);
@@ -454,6 +549,10 @@ public class MOManagementFrame extends JFrame {
         return panel;
     }
 
+    /**
+     * Builds the review workspace containing job list, applicant queue, and
+     * side panels for notes, details, and communication actions.
+     */
     private JPanel buildTablesPanel() {
         JPanel panel = UiTheme.createCard(null, null);
 
@@ -474,6 +573,8 @@ public class MOManagementFrame extends JFrame {
         decorateButton(notificationsButton, SimpleLineIcon.Type.BELL);
         decorateButton(messagesButton, SimpleLineIcon.Type.SEND);
 
+        // These actions all operate on the current selection, so the selected
+        // job/applicant rows effectively define the review context.
         loadApplicantsButton.addActionListener(event -> loadApplicantsForSelectedJob());
         shortlistButton.addActionListener(event -> updateApplicationStatus(ApplicationStatus.SHORTLISTED));
         removeShortlistButton.addActionListener(event -> removeShortlist());
@@ -494,6 +595,8 @@ public class MOManagementFrame extends JFrame {
             }
         });
 
+        // The top table lists jobs and the bottom table lists applications for
+        // the currently loaded job; the right panel shows details for one row.
         JSplitPane tableSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, UiTheme.wrapTable(jobTable), UiTheme.wrapTable(applicantTable));
         tableSplitPane.setResizeWeight(0.65);
         UiTheme.styleSplitPane(tableSplitPane);
@@ -503,6 +606,18 @@ public class MOManagementFrame extends JFrame {
         jobTable.getSelectionModel().addListSelectionListener(event -> {
             if (!event.getValueIsAdjusting()) {
                 loadSelectedJobToForm();
+            }
+        });
+        jobTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                int row = jobTable.rowAtPoint(event.getPoint());
+                if (row >= 0) {
+                    jobTable.setRowSelectionInterval(row, row);
+                }
+                if (event.getClickCount() == 2) {
+                    showSelectedJobDetailsDialog();
+                }
             }
         });
         applicantTable.getSelectionModel().addListSelectionListener(event -> {
@@ -548,6 +663,8 @@ public class MOManagementFrame extends JFrame {
     private void refreshJobs() {
         jobTableModel.setRowCount(0);
         for (JobPosting job : getScopedJobs()) {
+            // The table only stores compact display values; callers look jobs up
+            // again by ID whenever they need the full persisted object.
             jobTableModel.addRow(new Object[]{
                     job.getJobId(),
                     job.getModuleCode() + " - " + job.getModuleTitle(),
@@ -584,12 +701,87 @@ public class MOManagementFrame extends JFrame {
     }
 
     /**
+     * Opens the selected job in the same structured details style used by TA views.
+     */
+    private void showSelectedJobDetailsDialog() {
+        int row = jobTable.getSelectedRow();
+        if (row < 0) {
+            return;
+        }
+        String jobId = String.valueOf(jobTableModel.getValueAt(row, 0));
+        JobPosting job = findJob(jobId).orElse(null);
+        if (job == null) {
+            UiMessage.error(this, "The selected job no longer exists. Refreshing the table now.");
+            refreshJobs();
+            clearForm();
+            return;
+        }
+        new JobDetailsDialog(this, job, buildTaDemandText(job), () -> deleteJobAndRelatedData(job.getJobId())).setVisible(true);
+    }
+
+    /**
+     * Deletes one job and removes JSON records that reference it.
+     */
+    private boolean deleteJobAndRelatedData(String jobId) {
+        try {
+            JobPosting job = findJob(jobId)
+                    .orElseThrow(() -> new IllegalStateException("The selected job no longer exists."));
+            if (!canManageModule(job.getModuleCode())) {
+                throw new IllegalStateException("You do not have permission to delete this job.");
+            }
+
+            Set<String> deletedApplicationIds = applicationService.removeApplicationsForJob(jobId);
+            jobService.deleteJob(jobId);
+            new AccountCleanupService(
+                    dataService.getAllocationRepository(),
+                    dataService.getMessageRepository(),
+                    dataService.getNotificationRepository()
+            ).cleanupDeletedModuleOrganiser(null, Set.of(jobId), deletedApplicationIds);
+            removeDeletedJobFromFavourites(jobId);
+
+            if (jobId.equals(loadedApplicantJobId)) {
+                loadedApplicantJobId = null;
+                applicantTableModel.setRowCount(0);
+                updateApplicantEmptyState();
+            }
+            refreshJobs();
+            clearForm();
+            UiMessage.info(this, "Job deleted successfully.");
+            return true;
+        } catch (Exception ex) {
+            UiMessage.error(this, ex.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Removes the deleted job from applicant favourite lists so profiles do not
+     * keep stale job ids after the posting is gone.
+     */
+    private void removeDeletedJobFromFavourites(String jobId) {
+        List<ApplicantProfile> profiles = new ArrayList<>(dataService.getProfileRepository().findAll());
+        boolean updated = false;
+        for (ApplicantProfile profile : profiles) {
+            List<String> favourites = new ArrayList<>(profile.getFavoriteJobIds());
+            if (favourites.removeIf(jobId::equals)) {
+                profile.setFavoriteJobIds(favourites);
+                updated = true;
+            }
+        }
+        if (updated) {
+            dataService.getProfileRepository().saveAll(profiles);
+        }
+    }
+
+    /**
      * Resets the job editor and applicant review pane to the new-job state.
      * The method also clears derived review state so the next action cannot
      * accidentally reuse applicant notes or document pointers from the prior job.
      */
     private void clearForm() {
         syncingForm = true;
+        // Selection clears can fire listeners, so syncingForm stays enabled until
+        // the editor and review panes have been fully reset.
         jobTable.clearSelection();
         applicantTable.clearSelection();
         jobIdField.setForeground(Color.GRAY);
@@ -640,6 +832,8 @@ public class MOManagementFrame extends JFrame {
                 return;
             }
             String jobId = jobIdField.getText().trim();
+            // A placeholder means the form is creating a new posting; otherwise
+            // the existing job is reloaded for permission and status-transition checks.
             JobPosting existingJob = NEW_JOB_PLACEHOLDER.equals(jobId) || jobId.isBlank()
                     ? null
                     : jobService.getJobById(jobId);
@@ -655,6 +849,8 @@ public class MOManagementFrame extends JFrame {
                 throw new IllegalArgumentException(String.join("\n", skillErrors));
             }
 
+            // Build a fresh domain object from the form so JobService validation
+            // receives one complete draft rather than piecemeal field updates.
             JobPosting jobPosting = new JobPosting();
             jobPosting.setJobId(NEW_JOB_PLACEHOLDER.equals(jobId) ? "" : jobId);
             jobPosting.setModuleCode(moduleCode);
@@ -684,6 +880,8 @@ public class MOManagementFrame extends JFrame {
                     return;
                 }
             }
+            // Re-read the saved copy after persistence so the UI can detect any
+            // unexpected JSON round-trip problem before telling the user it worked.
             verifyJobWasSaved(jobPosting);
             int savedJobCount = dataService.getJobRepository().findAll().size();
             UiMessage.info(this, "Job saved successfully.\n"
@@ -804,6 +1002,8 @@ public class MOManagementFrame extends JFrame {
         }
         String applicationId = String.valueOf(applicantTableModel.getValueAt(applicationRow, 0));
         String jobId = String.valueOf(jobTableModel.getValueAt(jobRow, 0));
+        // Application rows only hold display data, so the full review record is
+        // resolved again from ApplicationService before building the side panels.
         ApplicationRecord application = applicationService.getApplicationsForJob(jobId).stream()
                 .filter(item -> item.getApplicationId().equals(applicationId))
                 .findFirst()
@@ -821,6 +1021,8 @@ public class MOManagementFrame extends JFrame {
             clearSelectedApplicantCv();
             return;
         }
+        // Matching is recalculated live so the review pane reflects the latest
+        // job requirements even if they changed after the application was submitted.
         SkillMatchResult matchResult = matchingService.calculateMatch(applicant.getSkills(), job.getRequiredSkills());
         setSelectedApplicantDocuments(applicant.getCvPath(), applicant.getSupportingDocumentPaths());
         setReviewText(matchInfoArea,
@@ -854,6 +1056,8 @@ public class MOManagementFrame extends JFrame {
         String applicationId = String.valueOf(applicantTableModel.getValueAt(row, 0));
         int jobRow = jobTable.getSelectedRow();
         String selectedJobId = jobRow >= 0 ? String.valueOf(jobTableModel.getValueAt(jobRow, 0)) : null;
+        // Accepting a TA is the only review action that can immediately create a
+        // workload-threshold problem, so it gets an extra confirmation path.
         if (status == ApplicationStatus.ACCEPTED && !confirmWorkloadBeforeAccept(applicationId)) {
             return;
         }
@@ -966,6 +1170,8 @@ public class MOManagementFrame extends JFrame {
             return Optional.empty();
         }
 
+        // Time and location/link are mandatory because the reviewer note becomes
+        // the applicant-facing invitation payload for this workflow.
         String time = timeField.getText().trim();
         String location = locationField.getText().trim();
         if (time.isBlank() || location.isBlank()) {
@@ -1050,6 +1256,8 @@ public class MOManagementFrame extends JFrame {
         }
 
         int threshold = dataService.getConfig().getWorkloadThreshold();
+        // Projected workload is computed from the same repository snapshot that
+        // would back the acceptance, which keeps the warning grounded in current data.
         List<WorkloadRecord> workloads = workloadService.buildWorkloadRecords(
                 dataService.getProfileRepository().findAll(),
                 dataService.getJobRepository().findAll(),
@@ -1127,10 +1335,15 @@ public class MOManagementFrame extends JFrame {
         );
         JTable table = new PlaceholderTable(model, "No TA/MO messages yet.");
         UiTheme.styleTable(table);
+        table.setRowSelectionAllowed(true);
+        table.setColumnSelectionAllowed(false);
+        table.setCellSelectionEnabled(false);
         UiTheme.setColumnWidths(table, 110, 160, 220, 180, 80, 420);
         Runnable refreshMessages = () -> {
             model.setRowCount(0);
             for (MessageRecord message : messageService.getConversationForUser(currentUser.getUserId())) {
+                // Each row flattens job context, direction, and body into a single
+                // grid so the modal can stay lightweight instead of becoming a full chat UI.
                 JobPosting job = findJob(message.getJobId()).orElse(null);
                 boolean incoming = currentUser.getUserId().equals(message.getRecipientUserId());
                 model.addRow(new Object[]{
@@ -1144,6 +1357,21 @@ public class MOManagementFrame extends JFrame {
             }
         };
         refreshMessages.run();
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                int row = table.rowAtPoint(event.getPoint());
+                if (row >= 0) {
+                    table.setRowSelectionInterval(row, row);
+                }
+                if (event.getClickCount() == 2) {
+                    MessageRecord selected = selectedMessageFromTable(table, model);
+                    if (selected != null) {
+                        showMessageDetails(selected);
+                    }
+                }
+            }
+        });
 
         JButton replyButton = UiTheme.createPrimaryButton("Reply");
         JButton markReadButton = UiTheme.createSecondaryButton("Mark Read");
@@ -1173,6 +1401,19 @@ public class MOManagementFrame extends JFrame {
         panel.add(UiTheme.createButtonRow(FlowLayout.RIGHT, replyButton, markReadButton, closeButton), BorderLayout.SOUTH);
         dialog.setContentPane(UiTheme.wrapPage(panel));
         dialog.setVisible(true);
+    }
+
+    /**
+     * Opens a structured read-only detail dialog for one message.
+     */
+    private void showMessageDetails(MessageRecord selected) {
+        JobPosting job = findJob(selected.getJobId()).orElse(null);
+        boolean incoming = currentUser.getUserId().equals(selected.getRecipientUserId());
+        String direction = incoming
+                ? "Incoming from " + displayNameForUser(selected.getSenderUserId())
+                : "Outgoing to " + displayNameForUser(selected.getRecipientUserId());
+        String status = incoming && !selected.isRead() ? "New" : "Read";
+        new MessageDetailsDialog(this, selected, job, direction, status).setVisible(true);
     }
 
     /**
@@ -1594,8 +1835,9 @@ public class MOManagementFrame extends JFrame {
         UiTheme.styleComboBox(applicantSortBox);
         UiTheme.styleTable(jobTable);
         UiTheme.styleTable(applicantTable);
-        jobTable.getColumnModel().getColumn(6).setCellRenderer(new DeadlineWarningRenderer());
-        jobTable.getColumnModel().getColumn(7).setCellRenderer(new StatusBadgeRenderer());
+        jobTable.getColumnModel().getColumn(6).setCellRenderer(new TaDemandRenderer());
+        jobTable.getColumnModel().getColumn(7).setCellRenderer(new DeadlineWarningRenderer());
+        jobTable.getColumnModel().getColumn(8).setCellRenderer(new StatusBadgeRenderer());
         applicantTable.getColumnModel().getColumn(2).setCellRenderer(new StatusBadgeRenderer());
         UiTheme.setColumnWidths(jobTable, 100, 280, 140, 110, 260, 180, 100, 140, 100);
         UiTheme.setColumnWidths(applicantTable, 130, 170, 120, 90, 220);
@@ -2076,6 +2318,36 @@ public class MOManagementFrame extends JFrame {
                 component.setBackground(Color.WHITE);
             }
             return component;
+        }
+    }
+
+    private static class TaDemandRenderer extends DefaultTableCellRenderer {
+        private static final Color LIGHT_GREEN = new Color(205, 235, 214);
+        private static final Color LIGHT_RED = new Color(242, 205, 205);
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                                                       boolean hasFocus, int row, int column) {
+            JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            label.setHorizontalAlignment(SwingConstants.CENTER);
+            if (isSelected) {
+                return label;
+            }
+
+            label.setForeground(Color.BLACK);
+            label.setBackground(Color.WHITE);
+            String text = value == null ? "" : value.toString().trim();
+            String[] parts = text.split("/");
+            if (parts.length == 2) {
+                try {
+                    int accepted = Integer.parseInt(parts[0].trim());
+                    int required = Integer.parseInt(parts[1].trim());
+                    label.setBackground(accepted < required ? LIGHT_GREEN : LIGHT_RED);
+                } catch (NumberFormatException ignored) {
+                    label.setBackground(Color.WHITE);
+                }
+            }
+            return label;
         }
     }
 
