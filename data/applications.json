@@ -7,7 +7,7 @@
     "lastUpdatedAt" : "2026-05-18T12:32:09.513250",
     "decisionAt" : null,
     "status" : "SHORTLISTED",
-    "reviewerNotes" : "Strong match for software engineering labs. Good Java and GitHub background. Recommended for shortlist.\nShortlist status removed.",
+    "reviewerNotes" : "Strong match for software engineering labs. Good Java and GitHub background. Recommended for shortlist.",
     "matchScore" : 100,
     "missingSkills" : [ ],
     "statusHistory" : [
@@ -33,7 +33,7 @@
         "status" : "SHORTLISTED",
         "changedAt" : "2026-05-18T12:32:09.513250",
         "actorUserId" : "user-mo-ling",
-        "note" : "Strong match for software engineering labs. Good Java and GitHub background. Recommended for shortlist.\nShortlist status removed."
+        "note" : "Strong match for software engineering labs. Good Java and GitHub background. Recommended for shortlist."
       }
     ]
   },
@@ -416,7 +416,7 @@
     "lastUpdatedAt" : "2026-05-18T12:31:45.440903300",
     "decisionAt" : "2026-05-18T12:31:45.440903300",
     "status" : "ACCEPTED",
-    "reviewerNotes" : "Broad technical background and presentation support experience. Accepted for final demo logistics and technical checks.\nAcceptance cancelled and the job was reopened.",
+    "reviewerNotes" : "Broad technical background and presentation support experience. Accepted for final demo logistics and technical checks.",
     "matchScore" : 50,
     "missingSkills" : [
       "Software Engineering",
@@ -445,7 +445,7 @@
         "status" : "ACCEPTED",
         "changedAt" : "2026-05-18T12:31:45.440903300",
         "actorUserId" : "user-mo-ling",
-        "note" : "Broad technical background and presentation support experience. Accepted for final demo logistics and technical checks.\nAcceptance cancelled and the job was reopened."
+        "note" : "Broad technical background and presentation support experience. Accepted for final demo logistics and technical checks."
       }
     ]
   },

@@ -1118,6 +1118,7 @@ public class MOManagementFrame extends JFrame {
         int jobRow = jobTable.getSelectedRow();
         String selectedJobId = jobRow >= 0 ? String.valueOf(jobTableModel.getValueAt(jobRow, 0)) : application.getJobId();
         try {
+            applicationService.saveReviewerNotes(applicationId, reviewArea.getText().trim());
             if (application.getStatus() == ApplicationStatus.SUBMITTED) {
                 boolean shortlistFirst = UiMessage.confirm(
                         this,
@@ -1127,13 +1128,27 @@ public class MOManagementFrame extends JFrame {
                 if (!shortlistFirst) {
                     return;
                 }
-                applicationService.updateStatus(applicationId, ApplicationStatus.SHORTLISTED, "Shortlisted for interview invitation.", currentUser.getUserId());
+                applicationService.updateStatusPreservingReviewerNotes(
+                        applicationId,
+                        ApplicationStatus.SHORTLISTED,
+                        "Shortlisted for interview invitation.",
+                        currentUser.getUserId());
                 notifyStatusChange(applicationId, ApplicationStatus.SHORTLISTED);
             }
-            applicationService.updateStatus(applicationId, ApplicationStatus.INTERVIEW_INVITED, invitation.get(), currentUser.getUserId());
+            applicationService.updateStatusPreservingReviewerNotes(
+                    applicationId,
+                    ApplicationStatus.INTERVIEW_INVITED,
+                    invitation.get(),
+                    currentUser.getUserId());
             String jobName = job.getModuleCode() + " " + job.getModuleTitle();
             notificationService.notifyUser(applicant.getUserId(), "Interview invitation for " + jobName + ": " + invitation.get());
             notificationService.notifyUser(currentUser.getUserId(), "Application " + applicationId + " invited to interview for " + jobName + ".");
+            messageService.sendMessage(
+                    job.getJobId(),
+                    applicationId,
+                    currentUser.getUserId(),
+                    applicant.getUserId(),
+                    "Interview invitation for " + jobName + ": " + invitation.get());
             updateUnreadIndicators();
             UiMessage.info(this, "Interview invitation sent.");
             if (selectedJobId != null) {
@@ -1145,8 +1160,8 @@ public class MOManagementFrame extends JFrame {
     }
 
     /**
-     * Collects structured interview details and converts them into the reviewer
-     * note text stored alongside the application status update.
+     * Collects structured interview details and converts them into the
+     * applicant-facing invitation text sent through notifications and messages.
      */
     private Optional<String> promptForInterviewInvitation(ApplicantProfile applicant, JobPosting job) {
         JTextField timeField = new JTextField();
@@ -1170,8 +1185,8 @@ public class MOManagementFrame extends JFrame {
             return Optional.empty();
         }
 
-        // Time and location/link are mandatory because the reviewer note becomes
-        // the applicant-facing invitation payload for this workflow.
+        // Time and location/link are mandatory because this text becomes the
+        // applicant-facing invitation payload for this workflow.
         String time = timeField.getText().trim();
         String location = locationField.getText().trim();
         if (time.isBlank() || location.isBlank()) {
@@ -1553,6 +1568,19 @@ public class MOManagementFrame extends JFrame {
     }
 
     /**
+     * Restores table selection for a known application id after review refreshes.
+     */
+    private void selectApplicantRow(String applicationId) {
+        for (int i = 0; i < applicantTableModel.getRowCount(); i++) {
+            if (applicationId.equals(String.valueOf(applicantTableModel.getValueAt(i, 0)))) {
+                applicantTable.setRowSelectionInterval(i, i);
+                return;
+            }
+        }
+        applicantTable.clearSelection();
+    }
+
+    /**
      * Returns to the login window and closes the MO workspace.
      */
     private void returnToLogin() {
@@ -1576,12 +1604,41 @@ public class MOManagementFrame extends JFrame {
         summaryCard.add(wrapArea(applicantSummaryArea), BorderLayout.CENTER);
 
         JPanel notesCard = UiTheme.createCard("Reviewer Notes", "Add notes before shortlisting, accepting, rejecting, or cancelling acceptance.");
-        notesCard.add(wrapArea(reviewArea), BorderLayout.CENTER);
+        JButton saveNotesButton = UiTheme.createSecondaryButton("Save Reviewer Notes");
+        decorateButton(saveNotesButton, SimpleLineIcon.Type.SAVE);
+        saveNotesButton.addActionListener(event -> saveReviewerNotes());
+
+        JPanel notesBody = new JPanel(new BorderLayout(0, 10));
+        notesBody.setOpaque(false);
+        notesBody.add(wrapArea(reviewArea), BorderLayout.CENTER);
+        notesBody.add(UiTheme.createButtonRow(FlowLayout.RIGHT, saveNotesButton), BorderLayout.SOUTH);
+        notesCard.add(notesBody, BorderLayout.CENTER);
 
         panel.add(matchCard);
         panel.add(summaryCard);
         panel.add(notesCard);
         return panel;
+    }
+
+    private void saveReviewerNotes() {
+        int row = applicantTable.getSelectedRow();
+        if (row < 0) {
+            UiMessage.error(this, "Please select an applicant before saving reviewer notes.");
+            return;
+        }
+
+        String applicationId = String.valueOf(applicantTableModel.getValueAt(row, 0));
+        String selectedJobId = loadedApplicantJobId;
+        try {
+            applicationService.saveReviewerNotes(applicationId, reviewArea.getText().trim());
+            UiMessage.info(this, "Reviewer notes saved. The TA can now see them in My Applications.");
+            if (selectedJobId != null) {
+                loadApplicantsForJob(selectedJobId);
+                selectApplicantRow(applicationId);
+            }
+        } catch (Exception ex) {
+            UiMessage.error(this, ex.getMessage());
+        }
     }
 
     /**
