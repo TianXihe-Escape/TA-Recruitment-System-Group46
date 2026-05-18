@@ -11,6 +11,7 @@
 - Admin workload overview with overload highlighting
 - Explainable skill matching with score, matched skills, and missing skills
 - Rule-based rebalance suggestions for open jobs
+- SHA-256 password hashing with legacy demo-data migration
 - Unit tests for validation, matching, workload, application workflow, and JSON storage
 - Project documentation for design, traceability, tests, demo, and team split
 
@@ -18,14 +19,14 @@
 - Better UI polish and form layout refinement
 - Richer search and filtering for jobs and applicants
 - Export/report helpers
-- Stronger security such as hashed passwords
+- Stronger production security such as salted adaptive password hashing and audit logging
 - More advanced matching rules and richer missing-skill explanations
 
 ## Known Limitations
-- Passwords are stored in plain text for coursework simplicity
-- CV upload stores a file path only, not the file itself
+- Passwords are stored as SHA-256 hashes for the coursework demo. A production system should use salted adaptive hashing such as bcrypt or Argon2.
+- CV and supporting document uploads are copied into local managed folders under the project workspace.
 - There is no concurrency control for simultaneous edits because persistence is local JSON
-- Automated verification could not be executed with Maven in this environment because `mvn` is not installed locally
+- Automated verification is run with Maven using `mvn test`.
 
 ## Suggested Demo Flow
 1. Start application and show the login screen

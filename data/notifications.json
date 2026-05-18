@@ -116,7 +116,7 @@
     "userId" : "user-ta-alice",
     "message" : "Your application for EBU6304 Software Engineering - 2025/26 is now SUBMITTED.",
     "createdAt" : "2026-05-18T12:32:06.318469600",
-    "read" : false
+    "read" : true
   },
   {
     "notificationId" : "note-18",
@@ -130,7 +130,7 @@
     "userId" : "user-ta-alice",
     "message" : "Your application for EBU6304 Software Engineering - 2025/26 is now SHORTLISTED.",
     "createdAt" : "2026-05-18T12:32:09.525614200",
-    "read" : false
+    "read" : true
   },
   {
     "notificationId" : "note-20",
