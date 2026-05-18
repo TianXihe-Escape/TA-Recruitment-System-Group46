@@ -27,6 +27,8 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -117,6 +119,7 @@ public class AdminDashboardFrame extends JFrame {
     private final JPanel workspaceCards = new JPanel(new CardLayout());
     private final List<JToggleButton> navigationButtons = new ArrayList<>();
     private final AvatarButton avatarButton = new AvatarButton("AD");
+    private final JButton notificationsButton = UiTheme.createSecondaryButton("View Notifications");
     private final JLabel sidebarNameLabel = new JLabel();
     private final JLabel sidebarRoleLabel = new JLabel("System Administrator");
     private final JLabel workspaceTitleLabel = new JLabel();
@@ -159,6 +162,12 @@ public class AdminDashboardFrame extends JFrame {
         styleComponents();
         workloadTable.setDefaultRenderer(Object.class, new WorkloadRenderer());
         avatarButton.addActionListener(event -> showAccountMenu());
+        addWindowFocusListener(new WindowAdapter() {
+            @Override
+            public void windowGainedFocus(WindowEvent event) {
+                updateUnreadIndicators();
+            }
+        });
 
         JPanel root = new JPanel(new BorderLayout(18, 0));
         root.setBackground(UiTheme.BACKGROUND);
@@ -347,7 +356,9 @@ public class AdminDashboardFrame extends JFrame {
      */
     private JMenuItem menuItem(String text, SimpleLineIcon.Type iconType, Runnable action) {
         JMenuItem item = new JMenuItem(text);
-        item.setIcon(new SimpleLineIcon(iconType, UiTheme.MUTED_TEXT));
+        boolean unread = "View Notifications".equals(text)
+                && notificationService.hasUnreadNotifications(currentUser.getUserId());
+        item.setIcon(new UnreadBadgeIcon(new SimpleLineIcon(iconType, UiTheme.MUTED_TEXT), unread));
         item.setFont(UiTheme.uiFont(Font.PLAIN, 14));
         item.setForeground(UiTheme.TEXT);
         item.setIconTextGap(10);
@@ -360,8 +371,18 @@ public class AdminDashboardFrame extends JFrame {
      * Applies the shared white-icon treatment used by admin action buttons.
      */
     private void decorateButton(AbstractButton button, SimpleLineIcon.Type iconType) {
-        button.setIcon(new SimpleLineIcon(iconType, Color.WHITE));
+        boolean unread = button == notificationsButton
+                && notificationService.hasUnreadNotifications(currentUser.getUserId());
+        button.setIcon(new UnreadBadgeIcon(new SimpleLineIcon(iconType, Color.WHITE), unread));
         button.setIconTextGap(8);
+    }
+
+    /**
+     * Repaints unread notification badges wherever the admin notification entry
+     * point is visible.
+     */
+    private void updateUnreadIndicators() {
+        decorateButton(notificationsButton, SimpleLineIcon.Type.BELL);
     }
 
     /**
@@ -424,7 +445,6 @@ public class AdminDashboardFrame extends JFrame {
         JButton hiringButton = UiTheme.createSecondaryButton("Open Hiring Management");
         JButton suggestButton = UiTheme.createPrimaryButton("Rebalance Suggestion");
         JButton exportButton = UiTheme.createSecondaryButton("Export CSV");
-        JButton notificationsButton = UiTheme.createSecondaryButton("View Notifications");
         decorateButton(hiringButton, SimpleLineIcon.Type.EDIT);
         decorateButton(suggestButton, SimpleLineIcon.Type.STAR);
         decorateButton(exportButton, SimpleLineIcon.Type.SAVE);
@@ -624,6 +644,7 @@ public class AdminDashboardFrame extends JFrame {
         refreshTaDirectory(profiles, applications);
         refreshMoDirectory(users);
         refreshApplicationReviewOverview(users, profiles, jobs, applications);
+        updateUnreadIndicators();
 
         for (JobPosting job : jobs) {
             long applicationCount = applications.stream()
@@ -983,6 +1004,7 @@ public class AdminDashboardFrame extends JFrame {
             List<WorkloadRecord> workloads = workloadService.buildWorkloadRecords(profiles, jobs, applications, threshold);
             Path output = exportService.exportRecruitmentReport(profiles, jobs, applications, workloads);
             notificationService.notifyUser(currentUser.getUserId(), "Recruitment CSV report exported to " + output + ".");
+            updateUnreadIndicators();
             UiMessage.info(this, "CSV report exported:\n" + output);
         } catch (Exception ex) {
             UiMessage.error(this, ex.getMessage());
@@ -1007,6 +1029,7 @@ public class AdminDashboardFrame extends JFrame {
             builder.append("No notifications yet.");
         }
         notificationService.markAllRead(currentUser.getUserId());
+        updateUnreadIndicators();
         UiMessage.info(this, builder.toString());
     }
 
@@ -1041,6 +1064,7 @@ public class AdminDashboardFrame extends JFrame {
             clearMoAccountForm();
             notificationService.notifyUser(currentUser.getUserId(), "MO account created for " + user.getUsername() + ".");
             notificationService.notifyUser(user.getUserId(), "Your MO account has been created for modules: " + String.join(", ", user.getManagedModuleCodes()) + ".");
+            updateUnreadIndicators();
             UiMessage.info(this, "MO account created for " + user.getUsername() + ".");
         } catch (Exception ex) {
             UiMessage.error(this, ex.getMessage());
