@@ -39,6 +39,8 @@ public class MessageService {
         List<MessageRecord> messages = new ArrayList<>(messageRepository.findAll());
         MessageRecord message = new MessageRecord();
         message.setMessageId(nextMessageId(messages));
+        // Job/application links are optional so the same message model can support
+        // both job-level questions and application-specific follow-ups.
         message.setJobId(blankToNull(jobId));
         message.setApplicationId(blankToNull(applicationId));
         message.setSenderUserId(senderUserId);
@@ -77,6 +79,7 @@ public class MessageService {
         List<MessageRecord> messages = new ArrayList<>(messageRepository.findAll());
         boolean updated = false;
         for (MessageRecord message : messages) {
+            // Only the recipient should be able to clear the unread state for a message.
             if (userId != null && userId.equals(message.getRecipientUserId()) && !message.isRead()) {
                 message.setRead(true);
                 updated = true;
@@ -127,6 +130,7 @@ public class MessageService {
         LocalDateTime leftTime = left.getCreatedAt();
         LocalDateTime rightTime = right.getCreatedAt();
         if (leftTime == null && rightTime == null) {
+            // Fall back to generated ids so older/legacy records still sort deterministically.
             return Integer.compare(extractSequence(right.getMessageId()), extractSequence(left.getMessageId()));
         }
         if (leftTime == null) {
@@ -143,6 +147,7 @@ public class MessageService {
     }
 
     private String blankToNull(String value) {
+        // Persist blanks as null so repository filters do not need to handle both cases.
         return value == null || value.isBlank() ? null : value.trim();
     }
 }

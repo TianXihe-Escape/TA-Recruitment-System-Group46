@@ -145,6 +145,7 @@ public class JsonDataStore {
         ensureParent(path);
         Path temp = Files.createTempFile(path.getParent(), path.getFileName().toString(), ".tmp");
         try {
+            // Write-then-move avoids leaving a half-written JSON file behind if saving is interrupted.
             Files.writeString(temp, content, StandardCharsets.UTF_8);
             Files.move(temp, path, StandardCopyOption.REPLACE_EXISTING);
         } finally {
@@ -192,6 +193,7 @@ public class JsonDataStore {
             profile.setCvPath(stringValue(map.get("cvPath")));
             List<String> supportingDocumentPaths = stringList(map.get("supportingDocumentPaths"));
             if (supportingDocumentPaths.isEmpty()) {
+                // Older saved data used a single path field, so keep backward compatibility here.
                 profile.setSupportingDocumentPath(stringValue(map.get("supportingDocumentPath")));
             } else {
                 profile.setSupportingDocumentPaths(supportingDocumentPaths);
@@ -238,6 +240,7 @@ public class JsonDataStore {
             record.setReviewerNotes(stringValue(map.get("reviewerNotes")));
             record.setMatchScore(intValue(map.get("matchScore")));
             record.setMissingSkills(stringList(map.get("missingSkills")));
+            // History may be absent in legacy files, so treat it as optional during reads.
             record.setStatusHistory(statusHistoryList(map.get("statusHistory")));
             return (T) record;
         }
@@ -437,6 +440,7 @@ public class JsonDataStore {
         if (!(value instanceof List<?> items)) {
             return results;
         }
+        // Skip malformed entries instead of failing the whole application record load.
         for (Object item : items) {
             if (!(item instanceof Map<?, ?> rawMap)) {
                 continue;
@@ -484,6 +488,7 @@ public class JsonDataStore {
         if (value == null || String.valueOf(value).isBlank()) {
             return defaultValue;
         }
+        // Defaults let newer code read older JSON files that did not yet store the enum field.
         return Enum.valueOf(enumClass, String.valueOf(value));
     }
 }

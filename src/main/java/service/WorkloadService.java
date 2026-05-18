@@ -175,6 +175,7 @@ public class WorkloadService {
         }
         List<String> conflicts = findScheduleConflicts(acceptedJobs);
         if (!conflicts.isEmpty()) {
+            // Keep both the summary flag and the human-readable messages for different admin views.
             record.setScheduleConflict(true);
             warnings.addAll(conflicts);
         }
@@ -193,6 +194,7 @@ public class WorkloadService {
                 if (!sameDate(left, right)) {
                     continue;
                 }
+                // This lightweight check only understands same-day time ranges like "09:00 - 11:00".
                 Optional<TimeRange> leftRange = parseTimeRange(left.getSchedule());
                 Optional<TimeRange> rightRange = parseTimeRange(right.getSchedule());
                 if (leftRange.isPresent() && rightRange.isPresent() && leftRange.get().overlaps(rightRange.get())) {
@@ -220,6 +222,7 @@ public class WorkloadService {
         try {
             return Optional.of(new TimeRange(LocalTime.parse(matcher.group(1)), LocalTime.parse(matcher.group(2))));
         } catch (RuntimeException ex) {
+            // Free-text schedules should degrade gracefully rather than break the workload screen.
             return Optional.empty();
         }
     }

@@ -23,7 +23,7 @@ import java.util.Optional;
  * - Input validation and normalization
  * - Automatic creation of applicant profiles for TA users
  * - Duplicate username prevention
- * - Secure password handling (basic implementation)
+ * - Secure password handling with SHA-256 hashes and legacy demo-data migration
  *
  * The service follows security best practices by:
  * - Normalizing and validating all user inputs
@@ -31,8 +31,8 @@ import java.util.Optional;
  * - Using role-based authentication
  * - Providing clear error messages for failed operations
  *
- * Note: This implementation uses simple password comparison. In a production system,
- * passwords should be hashed using a secure algorithm like bcrypt or Argon2.
+ * Note: This coursework implementation stores SHA-256 password hashes. A production
+ * system should use salted adaptive hashing such as bcrypt or Argon2.
  *
  * @author TA Recruitment System Development Team
  * @version 1.0.0
@@ -87,7 +87,7 @@ public class AuthService {
      * with a descriptive error message.
      *
      * @param username The user's username (typically an email address).
-     * @param password The user's password in plain text.
+     * @param password The raw password entered by the user for verification.
      * @param role     The expected role of the user (TA, MO, or ADMIN).
      * @return The authenticated User object if login is successful.
      * @throws IllegalArgumentException if validation fails or credentials are incorrect.
@@ -111,10 +111,13 @@ public class AuthService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Wrong username, password, or role."));
 
+        // Keep the user-facing error generic so login failures do not reveal which field was wrong.
         if (!PasswordUtil.matches(password, user.getPassword())) {
             throw new IllegalArgumentException("Wrong username, password, or role.");
         }
 
+        // Demo or legacy records may still store plain text passwords; upgrade them after
+        // a successful login so the migration is transparent to the user.
         if (!PasswordUtil.isHash(user.getPassword())) {
             user.setPassword(PasswordUtil.hash(password));
             userRepository.saveAll(users);
@@ -171,6 +174,7 @@ public class AuthService {
         if (user == null) {
             errors.add("No account exists for this email address.");
         } else if (!PasswordUtil.matches(oldPassword, user.getPassword())) {
+            // Validate the existing password before allowing the replacement to be persisted.
             errors.add("Old password is incorrect.");
         }
         if (!errors.isEmpty()) {
@@ -285,6 +289,8 @@ public class AuthService {
             ApplicantProfile profile = new ApplicantProfile(IdGenerator.nextApplicantId(profiles), user.getUserId());
             profile.setName(normalizedName);
             profile.setEmail(normalizedUsername);
+            // Seed the profile with the same canonical name/email so the TA can log in
+            // and immediately see a consistent starting profile.
             // Add and save the profile
             profiles.add(profile);
             profileRepository.saveAll(profiles);

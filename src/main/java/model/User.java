@@ -30,7 +30,7 @@ public class User {
     /**
      * Unique identifier for the user.
      * This is typically a system-generated ID that remains constant throughout the user's lifecycle.
-     * Used for database operations and as a primary key in data storage.
+     * Used as the primary key in the local JSON data store.
      */
     private String userId;
 
@@ -49,9 +49,8 @@ public class User {
     private String username;
 
     /**
-     * The password for user authentication.
-     * This field stores the hashed password (in a real system, it should be properly encrypted).
-     * For security reasons, plain text passwords should never be stored.
+     * The password hash used for user authentication.
+     * Plain text passwords should never be stored in this field.
      */
     private String password;
 
@@ -197,19 +196,18 @@ public class User {
     }
 
     /**
-     * Gets the password for authentication.
-     * Note: In a production system, passwords should be hashed and not retrievable in plain text.
+     * Gets the stored password hash for authentication.
      *
-     * @return The password as a String.
+     * @return The stored password hash as a String.
      */
     public String getPassword() {
         return password;
     }
 
     /**
-     * Sets the password for authentication.
+     * Sets the stored password hash for authentication.
      *
-     * @param password The new password to set.
+     * @param password The new stored password hash to set.
      */
     public void setPassword(String password) {
         this.password = password;

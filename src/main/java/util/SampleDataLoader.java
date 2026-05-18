@@ -55,6 +55,7 @@ public class SampleDataLoader {
         List<ApplicationRecord> existingApplications = applicationRepository.findAll();
         List<AllocationRecord> existingAllocations = allocationRepository.findAll();
 
+        // Rebuild the canonical demo set, but merge with current data so local rehearsal edits survive reloads.
         List<User> users = mergeUsersPreservingExistingEdits(buildUsers(), existingUsers);
         userRepository.saveAll(users);
 
@@ -95,6 +96,7 @@ public class SampleDataLoader {
         }
         for (User existingUser : existingUsers) {
             if (existingUser.getUserId() != null && !existingUser.getUserId().isBlank()) {
+                // Existing records win so sample-data reload does not overwrite user changes.
                 mergedUsers.put(existingUser.getUserId(), existingUser);
             }
         }
@@ -189,6 +191,7 @@ public class SampleDataLoader {
         for (NotificationRecord fresh : freshNotifications) {
             existingNotifications.stream()
                     .filter(existing -> sameNotification(fresh, existing))
+                    // Preserve read state so reloading sample data does not make old alerts look new again.
                     .findFirst()
                     .ifPresent(existing -> fresh.setRead(existing.isRead()));
         }
@@ -206,6 +209,7 @@ public class SampleDataLoader {
         for (MessageRecord fresh : freshMessages) {
             existingMessages.stream()
                     .filter(existing -> sameMessage(fresh, existing))
+                    // Keep conversation read/unread status stable across demo reloads.
                     .findFirst()
                     .ifPresent(existing -> fresh.setRead(existing.isRead()));
         }
@@ -607,6 +611,7 @@ public class SampleDataLoader {
                 .filter(item -> jobId.equals(item.getJobId()))
                 .findFirst()
                 .orElseThrow();
+        // Use the live matcher so demo match scores stay aligned with current application logic.
         SkillMatchResult match = matchingService.calculateMatch(profile.getSkills(), job.getRequiredSkills());
 
         ApplicationRecord application = new ApplicationRecord();
