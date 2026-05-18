@@ -223,6 +223,22 @@ public class TADashboardFrame extends JFrame {
             refreshMessages();
             updateUnreadBadges();
         });
+        notificationTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                if (event.getClickCount() == 2) {
+                    showSelectedNotificationMessage();
+                }
+            }
+        });
+        messageTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                if (event.getClickCount() == 2) {
+                    showSelectedConversationMessage();
+                }
+            }
+        });
     }
 
     private JPanel buildSidebar() {
@@ -979,6 +995,40 @@ public class TADashboardFrame extends JFrame {
                 ? "All incoming messages are read."
                 : "Unread incoming messages: " + unreadCount + ". Click Mark Messages Read to clear the badge.");
         updateUnreadBadges();
+    }
+
+    private void showSelectedNotificationMessage() {
+        int row = notificationTable.getSelectedRow();
+        if (row < 0) {
+            return;
+        }
+        String time = String.valueOf(notificationTableModel.getValueAt(row, 0));
+        String status = String.valueOf(notificationTableModel.getValueAt(row, 1));
+        String message = String.valueOf(notificationTableModel.getValueAt(row, 2));
+        UiMessage.info(this,
+                "Time: " + time + "\n"
+                        + "Status: " + status + "\n\n"
+                        + message,
+                "Notification Details");
+    }
+
+    private void showSelectedConversationMessage() {
+        int row = messageTable.getSelectedRow();
+        if (row < 0) {
+            return;
+        }
+        String time = String.valueOf(messageTableModel.getValueAt(row, 1));
+        String job = String.valueOf(messageTableModel.getValueAt(row, 2));
+        String direction = String.valueOf(messageTableModel.getValueAt(row, 3));
+        String status = String.valueOf(messageTableModel.getValueAt(row, 4));
+        String message = String.valueOf(messageTableModel.getValueAt(row, 5));
+        UiMessage.info(this,
+                "Time: " + time + "\n"
+                        + "Job: " + job + "\n"
+                        + "Direction: " + direction + "\n"
+                        + "Status: " + status + "\n\n"
+                        + message,
+                "Message Details");
     }
 
     private void sendMessageForCurrentSelection() {
