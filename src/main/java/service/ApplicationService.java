@@ -161,6 +161,8 @@ public class ApplicationService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Application not found."));
 
+        // Keep all review actions behind the same transition guard so UI entry points
+        // cannot accidentally skip required workflow stages.
         validateStatusTransition(record.getStatus(), status);
 
         if (status == ApplicationStatus.ACCEPTED) {
@@ -378,6 +380,7 @@ public class ApplicationService {
         }
         boolean duplicate = applicationRepository.findByApplicantId(applicantProfile.getApplicantId()).stream()
                 .anyMatch(existing -> existing.getJobId().equals(jobPosting.getJobId())
+                        // Rejected and withdrawn records can be reused as a clean resubmission.
                         && existing.getStatus() != ApplicationStatus.REJECTED
                         && existing.getStatus() != ApplicationStatus.WITHDRAWN);
         if (duplicate) {
@@ -457,6 +460,7 @@ public class ApplicationService {
         JobPosting job = jobRepository.findById(record.getJobId())
                 .orElseThrow(() -> new IllegalArgumentException("Job not found."));
 
+        // Count already-accepted records before approving the next one to stop over-allocation.
         long acceptedCount = applications.stream()
                 .filter(application -> record.getJobId().equals(application.getJobId()))
                 .filter(application -> application.getStatus() == ApplicationStatus.ACCEPTED)
@@ -472,6 +476,7 @@ public class ApplicationService {
             throw new IllegalStateException("Invalid application status transition.");
         }
 
+        // The workflow is intentionally strict so records preserve a readable review history.
         Set<ApplicationStatus> allowedNextStatuses = switch (currentStatus) {
             case SUBMITTED -> EnumSet.of(
                     ApplicationStatus.SHORTLISTED,
