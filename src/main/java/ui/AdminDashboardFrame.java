@@ -31,6 +31,7 @@ import java.util.Set;
  * and system-level account management.
  */
 public class AdminDashboardFrame extends JFrame {
+    // These values control the fixed layout heights for the scroll-heavy sections.
     /**
      * Preferred height for directory scroll areas.
      */
@@ -68,10 +69,12 @@ public class AdminDashboardFrame extends JFrame {
      * Auth service used by admins to create MO accounts.
      */
     private final AuthService authService;
+    // High-level summary labels shown in the metric cards.
     private final JLabel openJobsValue = createMetricValueLabel();
     private final JLabel closedJobsValue = createMetricValueLabel();
     private final JLabel applicationCountValue = createMetricValueLabel();
     private final JLabel acceptedCountValue = createMetricValueLabel();
+    // Table and text components back the admin's read-only monitoring views.
     private final DefaultTableModel workloadTableModel = new DefaultTableModel(
             new Object[]{"TA", "Modules", "Total Hours", "Overload"}, 0);
     private final JTable workloadTable = new PlaceholderTable(workloadTableModel, "No workload records are available yet.");
@@ -84,6 +87,7 @@ public class AdminDashboardFrame extends JFrame {
     private final JPasswordField moPasswordField = new JPasswordField();
     private final JPasswordField moConfirmField = new JPasswordField();
     private final JTextField moModulesField = new JTextField();
+    // The page-level scroll pane lets the dashboard reopen at the top after refresh.
     private JScrollPane pageScrollPane;
 
     /**
@@ -108,6 +112,8 @@ public class AdminDashboardFrame extends JFrame {
         this.workloadService = new WorkloadService();
         this.matchingService = new MatchingService();
 
+        // The frame shell is created once, while the actual admin metrics and
+        // directories are rebuilt by refreshData from repository state.
         setTitle("Admin Dashboard - " + Constants.APP_TITLE);
         setSize(1380, 860);
         setMinimumSize(new Dimension(980, 680));
@@ -147,6 +153,8 @@ public class AdminDashboardFrame extends JFrame {
         backButton.addActionListener(event -> returnToLogin());
         refreshButton.addActionListener(event -> refreshData());
         hiringButton.addActionListener(event -> openHiringManagement());
+        // Sample-data actions remain here because they are part of the admin-only
+        // maintenance workflow rather than the recruitment-management screen.
         loadSampleButton.addActionListener(event -> {
             dataService.loadSampleData();
             refreshData();
@@ -160,6 +168,8 @@ public class AdminDashboardFrame extends JFrame {
             refreshData();
             UiMessage.info(this, "Demo data reset.");
         });
+        // Suggestions are displayed in the lower text area, so the trigger lives
+        // in the top section but writes into the recruitment-support section below.
         suggestButton.addActionListener(event -> generateSuggestions());
 
         JPanel centerPanel = new JPanel(new BorderLayout(0, 12));
@@ -192,6 +202,8 @@ public class AdminDashboardFrame extends JFrame {
      * Builds the middle overview area containing directories and workload.
      */
     private JSplitPane buildOverviewPanel() {
+        // A disabled split pane is used here as a layout shell so the page keeps
+        // the same visual structure as other split sections without being user-resizable.
         JPanel panel = new JPanel(new BorderLayout(0, 12));
         panel.setOpaque(false);
         panel.add(buildPeoplePanel(), BorderLayout.CENTER);
@@ -212,6 +224,8 @@ public class AdminDashboardFrame extends JFrame {
      * Builds the TA and MO directory split view.
      */
     private JSplitPane buildPeoplePanel() {
+        // The two directories are parallel admin-maintenance surfaces, so they
+        // share the same width and visual weight inside the split pane.
         JPanel taCard = UiTheme.createCard("TA Directory", "Scrollable TA profiles with core contact and skills information.");
         taCard.add(wrapDirectory(taDirectoryPanel), BorderLayout.CENTER);
 
@@ -230,6 +244,8 @@ public class AdminDashboardFrame extends JFrame {
      */
     private JPanel buildWorkloadPanel() {
         JPanel workloadCard = UiTheme.createCard("TA Workload", "Scrollable workload summary for accepted assignments.");
+        // The table stays in a fixed-height card so long TA lists do not push the
+        // rest of the dashboard below the fold more than necessary.
         JScrollPane tableScrollPane = UiTheme.wrapTable(workloadTable);
         tableScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
         tableScrollPane.setPreferredSize(new Dimension(0, WORKLOAD_PANEL_HEIGHT));
@@ -241,6 +257,8 @@ public class AdminDashboardFrame extends JFrame {
      * Builds the lower half with job summaries, suggestions, and MO provisioning.
      */
     private JSplitPane buildBottomPanel() {
+        // The lower area combines read-only recruitment status with the MO
+        // creation form so admins can review demand and add organisers together.
         JPanel jobsCard = UiTheme.createCard("Jobs and Assignments", "High-level list of current postings, hours, and statuses.");
         jobsCard.add(wrapArea(jobSummaryArea), BorderLayout.CENTER);
 
@@ -265,6 +283,8 @@ public class AdminDashboardFrame extends JFrame {
      * Reloads all repository-backed data and refreshes every admin widget.
      */
     private void refreshData() {
+        // Clear the display models first so every refresh fully rebuilds the UI
+        // from repository state instead of incrementally patching old rows.
         workloadTableModel.setRowCount(0);
         List<User> users = dataService.getUserRepository().findAll();
         List<ApplicantProfile> profiles = dataService.getProfileRepository().findAll();
@@ -272,6 +292,8 @@ public class AdminDashboardFrame extends JFrame {
         List<ApplicationRecord> applications = dataService.getApplicationRepository().findAll();
         int threshold = dataService.getConfig().getWorkloadThreshold();
 
+        // Workload rows are derived from accepted assignments rather than stored
+        // directly, which keeps overload warnings aligned with current data.
         List<WorkloadRecord> workloads = workloadService.buildWorkloadRecords(profiles, jobs, applications, threshold);
         for (WorkloadRecord record : workloads) {
             workloadTableModel.addRow(new Object[]{
@@ -291,6 +313,8 @@ public class AdminDashboardFrame extends JFrame {
         closedJobsValue.setText(String.valueOf(closedJobs));
         applicationCountValue.setText(String.valueOf(applications.size()));
         acceptedCountValue.setText(String.valueOf(acceptedApplications));
+        // Directory panels are rebuilt from scratch so deletions and cross-screen
+        // edits cannot leave stale cards behind.
         refreshTaDirectory(profiles, applications);
         refreshMoDirectory(users);
 
@@ -312,6 +336,8 @@ public class AdminDashboardFrame extends JFrame {
                     .append(" | accepted ").append(acceptedCount).append("/").append(job.getRequiredTaCount())
                     .append("\n");
         }
+        // The lower summary is intentionally plain text so it can double as a
+        // quick audit surface during demos and admin walkthroughs.
         jobSummaryArea.setText(builder.toString());
         suggestionArea.setText("Click 'Rebalance Suggestion' to recommend lower-load TAs for open jobs.");
     }
@@ -321,6 +347,8 @@ public class AdminDashboardFrame extends JFrame {
      * lower text fields that Swing may choose during initial focus setup.
      */
     private void scrollPageToTop() {
+        // Swing focus changes can move the viewport after the frame opens, so
+        // the top-scroll correction is scheduled twice on the event queue.
         SwingUtilities.invokeLater(() -> {
             setPageScrollPositionToTop();
             SwingUtilities.invokeLater(this::setPageScrollPositionToTop);
@@ -344,6 +372,8 @@ public class AdminDashboardFrame extends JFrame {
         taDirectoryPanel.removeAll();
         List<JComponent> cards = new ArrayList<>();
         for (ApplicantProfile profile : profiles) {
+            // Application count is shown here as a lightweight audit hint so an
+            // admin can spot inactive or highly active TAs without opening other views.
             long submissionCount = applications.stream()
                     .filter(application -> profile.getApplicantId().equals(application.getApplicantId()))
                     .count();
@@ -371,6 +401,8 @@ public class AdminDashboardFrame extends JFrame {
         moDirectoryPanel.removeAll();
         List<JComponent> cards = new ArrayList<>();
         for (User user : users) {
+            // The admin account itself is excluded from the MO directory because
+            // this panel is only for organiser accounts that can be managed here.
             if (user.getRole() != model.Role.MO) {
                 continue;
             }
@@ -409,6 +441,8 @@ public class AdminDashboardFrame extends JFrame {
         UiTheme.addFormRow(form, 6, "Confirm Password", moConfirmField);
         UiTheme.addFormRow(form, 8, "Modules", moModulesField);
 
+        // The form accepts a comma-separated module list because it mirrors the
+        // way managed module codes are stored elsewhere in the application.
         JTextArea note = new JTextArea("Use commas to separate module codes, for example: COMP1001, DATA2002.");
         note.setEditable(false);
         note.setOpaque(false);
@@ -445,6 +479,8 @@ public class AdminDashboardFrame extends JFrame {
         StringBuilder builder = new StringBuilder("Rebalance Suggestions\n\n");
         for (JobPosting job : jobs) {
             if (job.getStatus() == JobStatus.OPEN) {
+                // Suggestions come from WorkloadService so the UI only controls
+                // presentation order and grouping, not recommendation logic.
                 builder.append(job.getModuleCode()).append(" ").append(job.getModuleTitle()).append("\n");
                 for (String suggestion : workloadService.suggestApplicantsForJob(job, profiles, workloads, matchingService)) {
                     builder.append("- ").append(suggestion).append("\n");
@@ -475,6 +511,8 @@ public class AdminDashboardFrame extends JFrame {
      */
     private void createMoAccount() {
         try {
+            // AuthService owns validation and account creation so this frame only
+            // translates UI fields into service inputs and then refreshes the view.
             User user = authService.registerMo(
                     moEmailField.getText(),
                     moNameField.getText(),
@@ -529,6 +567,8 @@ public class AdminDashboardFrame extends JFrame {
         JScrollPane scrollPane = new JScrollPane(panel);
         scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
         scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        // The larger unit increment makes long directory lists feel less sluggish
+        // when scrolling with the mouse wheel or trackpad.
         scrollPane.getVerticalScrollBar().setUnitIncrement(24);
         scrollPane.setPreferredSize(new Dimension(0, DIRECTORY_PANEL_HEIGHT));
         scrollPane.setMinimumSize(new Dimension(220, DIRECTORY_PANEL_HEIGHT));
@@ -550,6 +590,8 @@ public class AdminDashboardFrame extends JFrame {
      */
     private JPanel createMetricCard(String title, String subtitle, JLabel valueLabel) {
         JPanel card = UiTheme.createCard(title, subtitle);
+        // The card body is intentionally minimal because the emphasis is on the
+        // large derived number, not on extra labels or inline actions.
         JPanel content = new JPanel(new BorderLayout());
         content.setOpaque(false);
         valueLabel.setHorizontalAlignment(SwingConstants.LEFT);
@@ -643,6 +685,8 @@ public class AdminDashboardFrame extends JFrame {
             // jobs whose accepted headcount drops below the required demand.
             applicationService.removeApplicationsForApplicant(profile.getApplicantId());
 
+            // Profile and user repositories are rewritten after dependency cleanup
+            // so downstream services do not have to deal with half-deleted entities.
             List<ApplicantProfile> profiles = new ArrayList<>(dataService.getProfileRepository().findAll());
             profiles.removeIf(existingProfile -> profile.getApplicantId().equals(existingProfile.getApplicantId()));
             dataService.getProfileRepository().saveAll(profiles);
@@ -673,6 +717,8 @@ public class AdminDashboardFrame extends JFrame {
         try {
             List<JobPosting> jobs = new ArrayList<>(dataService.getJobRepository().findAll());
             Set<String> deletedJobIds = new HashSet<>();
+            // Capture deleted job ids while removing rows so downstream cleanup can
+            // also clear related applications and other dependent records.
             jobs.removeIf(job -> {
                 boolean shouldDelete = moUser.getUserId().equals(job.getPostedBy());
                 if (shouldDelete) {
