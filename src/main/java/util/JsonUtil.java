@@ -7,21 +7,49 @@ import java.util.Map;
 
 /**
  * Minimal JSON parser and pretty printer using only JDK classes.
+ *
+ * This utility avoids any third-party JSON dependency by supporting just the
+ * subset of JSON behavior the project needs for reading and writing its local
+ * data files. The tradeoff is that parsing and formatting rules are implemented
+ * manually rather than delegated to a dedicated JSON library.
  */
 public final class JsonUtil {
+    /**
+     * Utility class; callers use the static parse/format helpers only.
+     */
     private JsonUtil() {
     }
 
+    /**
+     * Parses one JSON document into plain JDK collections and scalar values.
+     *
+     * Returned values follow a simple shape:
+     * - objects become {@code Map<String, Object>}
+     * - arrays become {@code List<Object>}
+     * - strings, booleans, null, and numbers stay as scalar values
+     */
     public static Object parse(String json) {
         return new Parser(json).parse();
     }
 
+    /**
+     * Converts a parsed value tree back into indented JSON text.
+     *
+     * The output is deterministic and human-readable so saved repository files
+     * remain easy to inspect and diff in version control.
+     */
     public static String toPrettyJson(Object value) {
         StringBuilder builder = new StringBuilder();
         writeValue(builder, value, 0);
         return builder.toString();
     }
 
+    /**
+     * Dispatches one value to the matching JSON writer branch.
+     *
+     * The method accepts only the project-supported JSON-compatible types and
+     * rejects any unexpected Java object with an explicit exception.
+     */
     private static void writeValue(StringBuilder builder, Object value, int indent) {
         if (value == null) {
             builder.append("null");
@@ -46,6 +74,12 @@ public final class JsonUtil {
         throw new IllegalArgumentException("Unsupported JSON value: " + value.getClass().getName());
     }
 
+    /**
+     * Writes a JSON array using multi-line pretty formatting.
+     *
+     * Empty arrays are kept compact, while non-empty arrays place each value on
+     * its own indented line for easier reading in saved data files.
+     */
     private static void writeList(StringBuilder builder, List<?> values, int indent) {
         if (values.isEmpty()) {
             builder.append("[ ]");
@@ -64,6 +98,12 @@ public final class JsonUtil {
         builder.append(']');
     }
 
+    /**
+     * Writes a JSON object while preserving iteration order from the supplied map.
+     *
+     * LinkedHashMap is used by the parser so keys round-trip in a stable order,
+     * which helps reduce noisy diffs in generated JSON files.
+     */
     private static void writeMap(StringBuilder builder, Map<?, ?> values, int indent) {
         if (values.isEmpty()) {
             builder.append("{ }");
@@ -85,10 +125,19 @@ public final class JsonUtil {
         builder.append('}');
     }
 
+    /**
+     * Appends a fixed number of leading spaces for pretty-print indentation.
+     */
     private static void indent(StringBuilder builder, int indent) {
         builder.append(" ".repeat(Math.max(0, indent)));
     }
 
+    /**
+     * Escapes control characters and special JSON string characters.
+     *
+     * This ensures written strings can be parsed back safely even when they
+     * contain quotes, backslashes, tabs, or non-printable control characters.
+     */
     private static String escape(String value) {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < value.length(); i++) {
@@ -113,14 +162,29 @@ public final class JsonUtil {
         return builder.toString();
     }
 
+    /**
+     * Small recursive-descent parser for the subset of JSON used by this project.
+     *
+     * The parser walks the input text with a mutable index and delegates each
+     * syntactic structure to a specialized parse method.
+     */
     private static final class Parser {
+        /**
+         * Raw JSON text being parsed.
+         */
         private final String json;
+        /**
+         * Current cursor position inside the JSON text.
+         */
         private int index;
 
         private Parser(String json) {
             this.json = json == null ? "" : json;
         }
 
+        /**
+         * Parses the full document and rejects trailing non-whitespace content.
+         */
         private Object parse() {
             skipWhitespace();
             Object value = parseValue();
@@ -131,6 +195,12 @@ public final class JsonUtil {
             return value;
         }
 
+        /**
+         * Parses the next JSON value based on the current leading character.
+         *
+         * This is the main dispatch point for object, array, string, literal,
+         * and numeric parsing.
+         */
         private Object parseValue() {
             skipWhitespace();
             if (index >= json.length()) {
@@ -153,6 +223,12 @@ public final class JsonUtil {
             };
         }
 
+        /**
+         * Parses one JSON object into a LinkedHashMap.
+         *
+         * LinkedHashMap is chosen so key order is preserved in the same order as
+         * it appeared in the source JSON text.
+         */
         private Map<String, Object> parseObject() {
             expect('{');
             skipWhitespace();
@@ -178,6 +254,9 @@ public final class JsonUtil {
             }
         }
 
+        /**
+         * Parses one JSON array into a mutable ArrayList.
+         */
         private List<Object> parseArray() {
             expect('[');
             skipWhitespace();
@@ -198,6 +277,9 @@ public final class JsonUtil {
             }
         }
 
+        /**
+         * Parses a quoted JSON string, including supported escape sequences.
+         */
         private String parseString() {
             expect('"');
             StringBuilder builder = new StringBuilder();
@@ -235,6 +317,12 @@ public final class JsonUtil {
             throw new IllegalArgumentException("Unterminated JSON string.");
         }
 
+        /**
+         * Parses an integer or decimal number.
+         *
+         * Whole numbers are returned as {@code Long} and decimal numbers as
+         * {@code Double}, which is sufficient for the repository data used here.
+         */
         private Object parseNumber() {
             int start = index;
             if (peek('-')) {
@@ -256,6 +344,9 @@ public final class JsonUtil {
             return Long.parseLong(number);
         }
 
+        /**
+         * Parses one exact literal token such as true, false, or null.
+         */
         private Object parseLiteral(String literal, Object value) {
             if (!json.startsWith(literal, index)) {
                 throw new IllegalArgumentException("Unexpected token at index " + index);
@@ -264,10 +355,16 @@ public final class JsonUtil {
             return value;
         }
 
+        /**
+         * Checks whether the current character matches the expected one.
+         */
         private boolean peek(char expected) {
             return index < json.length() && json.charAt(index) == expected;
         }
 
+        /**
+         * Consumes one required structural character or throws a parse error.
+         */
         private void expect(char expected) {
             if (!peek(expected)) {
                 throw new IllegalArgumentException("Expected '" + expected + "' at index " + index);
@@ -275,6 +372,9 @@ public final class JsonUtil {
             index++;
         }
 
+        /**
+         * Advances past any JSON-insignificant whitespace.
+         */
         private void skipWhitespace() {
             while (index < json.length() && Character.isWhitespace(json.charAt(index))) {
                 index++;
