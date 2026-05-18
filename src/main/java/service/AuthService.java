@@ -111,10 +111,13 @@ public class AuthService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Wrong username, password, or role."));
 
+        // Keep the user-facing error generic so login failures do not reveal which field was wrong.
         if (!PasswordUtil.matches(password, user.getPassword())) {
             throw new IllegalArgumentException("Wrong username, password, or role.");
         }
 
+        // Demo or legacy records may still store plain text passwords; upgrade them after
+        // a successful login so the migration is transparent to the user.
         if (!PasswordUtil.isHash(user.getPassword())) {
             user.setPassword(PasswordUtil.hash(password));
             userRepository.saveAll(users);
@@ -171,6 +174,7 @@ public class AuthService {
         if (user == null) {
             errors.add("No account exists for this email address.");
         } else if (!PasswordUtil.matches(oldPassword, user.getPassword())) {
+            // Validate the existing password before allowing the replacement to be persisted.
             errors.add("Old password is incorrect.");
         }
         if (!errors.isEmpty()) {
@@ -285,6 +289,8 @@ public class AuthService {
             ApplicantProfile profile = new ApplicantProfile(IdGenerator.nextApplicantId(profiles), user.getUserId());
             profile.setName(normalizedName);
             profile.setEmail(normalizedUsername);
+            // Seed the profile with the same canonical name/email so the TA can log in
+            // and immediately see a consistent starting profile.
             // Add and save the profile
             profiles.add(profile);
             profileRepository.saveAll(profiles);

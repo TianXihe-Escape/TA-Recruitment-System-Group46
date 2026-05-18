@@ -60,6 +60,7 @@ public class JobService {
     public List<JobPosting> getOpenJobs() {
         return getAllJobs().stream()
                 .filter(job -> job.getStatus() == JobStatus.OPEN)
+                // Keep expired records in storage, but hide them from applicant browsing.
                 .filter(job -> job.getApplicationDeadline() == null
                         || !job.getApplicationDeadline().isBefore(LocalDate.now()))
                 .collect(Collectors.toList());
@@ -139,6 +140,7 @@ public class JobService {
     private void verifySaved(JobPosting expected) {
         JobPosting actual = jobRepository.findById(expected.getJobId())
                 .orElseThrow(() -> new IllegalStateException("Job was not written to the jobs data file."));
+        // Re-read the just-saved record so the UI can fail fast if persistence left stale values behind.
         List<String> mismatches = savedJobMismatches(expected, actual);
         if (!mismatches.isEmpty()) {
             throw new IllegalStateException("Job save verification failed. The jobs data file still contains stale values:\n- "
@@ -176,6 +178,7 @@ public class JobService {
     }
 
     private boolean matchesKeyword(JobPosting job, String keyword) {
+        // Search across the same mix of fields the user can visually inspect in the UI.
         String haystack = String.join(" ",
                 valueOrEmpty(job.getModuleCode()),
                 valueOrEmpty(job.getModuleTitle()),
