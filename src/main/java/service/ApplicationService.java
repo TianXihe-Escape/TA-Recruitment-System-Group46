@@ -161,6 +161,8 @@ public class ApplicationService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Application not found."));
 
+        // Keep all review actions behind the same transition guard so UI entry points
+        // cannot accidentally skip required workflow stages.
         validateStatusTransition(record.getStatus(), status);
 
         if (status == ApplicationStatus.ACCEPTED) {
@@ -360,6 +362,46 @@ public class ApplicationService {
     }
 
     /**
+     * Removes every application linked to a deleted job and returns their ids so
+     * callers can clean secondary records that reference those applications.
+     */
+    public Set<String> removeApplicationsForJob(String jobId) {
+        List<ApplicationRecord> applications = new ArrayList<>(applicationRepository.findAll());
+        LinkedHashSet<String> deletedApplicationIds = new LinkedHashSet<>();
+        for (ApplicationRecord record : applications) {
+            if (jobId != null && jobId.equals(record.getJobId())) {
+                deletedApplicationIds.add(record.getApplicationId());
+            }
+        }
+        if (deletedApplicationIds.isEmpty()) {
+            return deletedApplicationIds;
+        }
+        applications.removeIf(record -> jobId.equals(record.getJobId()));
+        applicationRepository.saveAll(applications);
+        return deletedApplicationIds;
+    }
+
+    /**
+     * Removes one application record and resynchronizes the linked job status.
+     */
+    public ApplicationRecord deleteApplication(String applicationId) {
+        if (applicationId == null || applicationId.isBlank()) {
+            throw new IllegalArgumentException("Application id is required.");
+        }
+        List<ApplicationRecord> applications = new ArrayList<>(applicationRepository.findAll());
+        ApplicationRecord deletedApplication = applications.stream()
+                .filter(record -> applicationId.equals(record.getApplicationId()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Application not found."));
+        applications.removeIf(record -> applicationId.equals(record.getApplicationId()));
+        applicationRepository.saveAll(applications);
+        if (deletedApplication.getJobId() != null && !deletedApplication.getJobId().isBlank()) {
+            syncJobStatus(deletedApplication.getJobId(), applications);
+        }
+        return deletedApplication;
+    }
+
+    /**
      * Verifies whether an application can be submitted under the current rules.
      */
     private void validateApplication(ApplicantProfile applicantProfile, JobPosting jobPosting) {
@@ -378,6 +420,7 @@ public class ApplicationService {
         }
         boolean duplicate = applicationRepository.findByApplicantId(applicantProfile.getApplicantId()).stream()
                 .anyMatch(existing -> existing.getJobId().equals(jobPosting.getJobId())
+                        // Rejected and withdrawn records can be reused as a clean resubmission.
                         && existing.getStatus() != ApplicationStatus.REJECTED
                         && existing.getStatus() != ApplicationStatus.WITHDRAWN);
         if (duplicate) {
@@ -457,6 +500,7 @@ public class ApplicationService {
         JobPosting job = jobRepository.findById(record.getJobId())
                 .orElseThrow(() -> new IllegalArgumentException("Job not found."));
 
+        // Count already-accepted records before approving the next one to stop over-allocation.
         long acceptedCount = applications.stream()
                 .filter(application -> record.getJobId().equals(application.getJobId()))
                 .filter(application -> application.getStatus() == ApplicationStatus.ACCEPTED)
@@ -472,6 +516,7 @@ public class ApplicationService {
             throw new IllegalStateException("Invalid application status transition.");
         }
 
+        // The workflow is intentionally strict so records preserve a readable review history.
         Set<ApplicationStatus> allowedNextStatuses = switch (currentStatus) {
             case SUBMITTED -> EnumSet.of(
                     ApplicationStatus.SHORTLISTED,

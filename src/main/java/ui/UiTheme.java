@@ -49,6 +49,8 @@ import java.awt.geom.RoundRectangle2D;
  * @since 2026-04-09
  */
 public final class UiTheme {
+    // Client-property key used to tell a combo box that its outer rounded border
+    // is being painted by a wrapper component rather than by the combo itself.
     private static final String COMBO_BOX_EXTERNAL_BORDER = "UiTheme.comboBoxExternalBorder";
 
     /**
@@ -234,6 +236,12 @@ public final class UiTheme {
         frame.getContentPane().setBackground(BACKGROUND);
     }
 
+    /**
+     * Creates a theme-consistent font instance from the resolved font family.
+     *
+     * All typography in this class ultimately flows through this helper so the
+     * application can switch font family centrally without editing every widget.
+     */
     public static Font uiFont(int style, int size) {
         return new Font(FONT_FAMILY, style, size);
     }
@@ -379,6 +387,8 @@ public final class UiTheme {
     }
 
     public static void styleTextField(JTextComponent component) {
+        // Text components share one input treatment so fields from different
+        // screens still look like part of the same design system.
         component.setFont(BODY_FONT);
         component.setForeground(TEXT);
         component.setBackground(SURFACE_ALT);
@@ -389,6 +399,8 @@ public final class UiTheme {
     }
 
     public static void styleComboBox(JComboBox<?> comboBox) {
+        // Combo boxes need more custom painting than plain text fields because
+        // Swing's default arrow button and popup styling do not match this theme.
         comboBox.setUI(new BasicComboBoxUI() {
             @Override
             public void paint(Graphics graphics, JComponent component) {
@@ -407,6 +419,8 @@ public final class UiTheme {
 
             @Override
             protected JButton createArrowButton() {
+                // The arrow is drawn manually so its shape and spacing stay
+                // consistent with the rest of the iconography in the app.
                 JButton button = new JButton() {
                     @Override
                     protected void paintComponent(Graphics graphics) {
@@ -443,6 +457,8 @@ public final class UiTheme {
                 return new BasicComboPopup(comboBox) {
                     @Override
                     public void show() {
+                        // The popup width is kept aligned to the combo box while
+                        // the height expands only to the configured row count.
                         Dimension popupSize = comboBox.getSize();
                         popupSize.setSize(popupSize.width, getPopupHeightForRowCount(comboBox.getMaximumRowCount()));
                         Rectangle popupBounds = computePopupBounds(
@@ -486,6 +502,9 @@ public final class UiTheme {
                 label.setForeground(comboBox.isEnabled() ? TEXT : MUTED_TEXT);
 
                 if (index == -1) {
+                    // The selected item shown inside the closed combo box should
+                    // blend into the custom-painted background instead of drawing
+                    // another opaque rectangle of its own.
                     label.setOpaque(false);
                 } else {
                     label.setOpaque(true);
@@ -507,6 +526,12 @@ public final class UiTheme {
         checkBox.setFocusPainted(false);
     }
 
+    /**
+     * Applies the shared multi-line text-area appearance.
+     *
+     * Text areas are frequently used both for editable notes and read-only
+     * summaries, so wrapping and interior padding are standardized here.
+     */
     public static void styleTextArea(JTextArea area, int rows) {
         area.setFont(BODY_FONT);
         area.setForeground(TEXT);
@@ -527,6 +552,12 @@ public final class UiTheme {
         return createActionButton(text);
     }
 
+    /**
+     * Creates the themed destructive-action button variant.
+     *
+     * Danger buttons reuse the same base sizing and typography as other buttons
+     * but switch to the error color to make destructive actions stand out clearly.
+     */
     public static JButton createDangerButton(String text) {
         JButton button = baseButton(text);
         button.setBackground(DANGER);
@@ -536,6 +567,8 @@ public final class UiTheme {
     }
 
     public static JPanel createButtonRow(int align, JButton... buttons) {
+        // The wrapping panel allows long button rows to flow onto multiple lines
+        // on narrower windows instead of forcing horizontal clipping.
         JPanel panel = new WrappingFlowPanel(new FlowLayout(align, 10, 10));
         panel.setOpaque(false);
         for (JButton button : buttons) {
@@ -545,6 +578,8 @@ public final class UiTheme {
     }
 
     public static void styleTable(JTable table) {
+        // Tables are configured as read-only, row-selectable data views by
+        // default because most screens use them for navigation and review.
         table.setFont(BODY_FONT);
         table.setForeground(TEXT);
         table.setBackground(SURFACE);
@@ -576,6 +611,12 @@ public final class UiTheme {
         return scrollPane;
     }
 
+    /**
+     * Applies the standard page/table scroll pane styling.
+     *
+     * This version uses visible borders and surface backgrounds for embedded
+     * content areas such as tables, cards, and long summaries.
+     */
     public static void styleScrollPane(JScrollPane scrollPane) {
         scrollPane.setBorder(new LineBorder(BORDER, 1, true));
         scrollPane.getViewport().setBackground(SURFACE);
@@ -585,6 +626,12 @@ public final class UiTheme {
         styleScrollBar(scrollPane.getVerticalScrollBar());
     }
 
+    /**
+     * Applies the lighter-weight scroll pane styling used inside dialogs.
+     *
+     * Dialogs often already have surrounding card chrome, so this variant avoids
+     * adding another heavy border around the scrollable content.
+     */
     public static void styleDialogScrollPane(JScrollPane scrollPane) {
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setOpaque(false);
@@ -601,12 +648,18 @@ public final class UiTheme {
         splitPane.setDividerSize(10);
     }
 
+    /**
+     * Applies the base look used by tabbed panes across the application.
+     */
     public static void styleTabs(JTabbedPane tabs) {
         tabs.setFont(BODY_FONT);
         tabs.setBackground(SURFACE);
         tabs.setForeground(TEXT);
     }
 
+    /**
+     * Creates a small pill-like status badge.
+     */
     public static JLabel createBadge(String text, Color background, Color foreground) {
         JLabel label = new JLabel(text);
         label.setOpaque(true);
@@ -618,6 +671,8 @@ public final class UiTheme {
     }
 
     public static JScrollPane wrapPage(JComponent component) {
+        // Full-page containers use the background color rather than white surface
+        // so nested cards stand out as the primary elevated content blocks.
         JScrollPane scrollPane = new JScrollPane(component);
         scrollPane.setBorder(null);
         scrollPane.getViewport().setBackground(BACKGROUND);
@@ -629,11 +684,21 @@ public final class UiTheme {
         return scrollPane;
     }
 
+    /**
+     * Reapplies the theme recursively after a JFileChooser has built its own
+     * internal component tree using platform defaults.
+     */
     public static void styleFileChooser(JFileChooser chooser) {
         SwingUtilities.updateComponentTreeUI(chooser);
         styleComponentTree(chooser);
     }
 
+    /**
+     * Applies preferred widths to the leading table columns that exist.
+     *
+     * Width values beyond the current column count are ignored so callers can
+     * share presets across slightly different table variants safely.
+     */
     public static void setColumnWidths(JTable table, int... widths) {
         for (int i = 0; i < widths.length && i < table.getColumnModel().getColumnCount(); i++) {
             TableColumn column = table.getColumnModel().getColumn(i);
@@ -643,6 +708,8 @@ public final class UiTheme {
     }
 
     private static JButton baseButton(String text) {
+        // The base button establishes shared interaction styling before color
+        // variants such as primary or danger are applied.
         JButton button = new JButton(text);
         button.setFont(BUTTON_FONT);
         button.setFocusPainted(false);
@@ -661,6 +728,8 @@ public final class UiTheme {
     }
 
     private static JComponent createComboBoxField(JComboBox<?> comboBox) {
+        // Combo boxes are wrapped so the rounded border can surround both the
+        // text area and the custom arrow region as one continuous shape.
         comboBox.putClientProperty(COMBO_BOX_EXTERNAL_BORDER, Boolean.TRUE);
         comboBox.setBorder(new EmptyBorder(0, 0, 0, 0));
 
@@ -730,6 +799,8 @@ public final class UiTheme {
 
     private static void paintComboBoxBorder(Component component, Graphics2D g, int x, int y, int width, int height) {
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        // Focus state slightly brightens the border so keyboard navigation
+        // remains visible even though the inputs use a soft surface background.
         boolean focused = isFocusedWithin(component);
         Color borderColor = focused ? new Color(124, 158, 255)
                 : (component.isEnabled() ? BORDER : new Color(225, 230, 238));
@@ -751,6 +822,12 @@ public final class UiTheme {
                 && Boolean.TRUE.equals(((JComponent) component).getClientProperty(COMBO_BOX_EXTERNAL_BORDER));
     }
 
+    /**
+     * Checks whether the component itself or any child currently owns focus.
+     *
+     * This is used mainly for wrapped combo boxes whose visible border is painted
+     * by a parent container rather than by the actual focusable child widget.
+     */
     private static boolean isFocusedWithin(Component component) {
         if (component.isFocusOwner()) {
             return true;
@@ -786,6 +863,12 @@ public final class UiTheme {
         }
     }
 
+    /**
+     * Flow-layout panel that recomputes its preferred height when buttons wrap.
+     *
+     * Standard FlowLayout reports a single-row preferred height even after the
+     * container narrows, so this helper keeps action rows from being clipped.
+     */
     private static class WrappingFlowPanel extends JPanel {
         WrappingFlowPanel(FlowLayout layout) {
             super(layout);
@@ -835,6 +918,12 @@ public final class UiTheme {
         }
     }
 
+    /**
+     * Picks the first available preferred font family from a CJK-friendly list.
+     *
+     * This improves the chance that both English and Chinese text render cleanly
+     * across Windows and other platforms without manual font installation.
+     */
     private static String resolveFontFamily() {
         String[] preferredFonts = {
                 "Microsoft YaHei UI",

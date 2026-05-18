@@ -110,6 +110,7 @@ public class ValidationService {
         List<String> tokens = splitSkillTokens(rawSkills);
         String normalizedFieldLabel = normalizeText(fieldLabel).isBlank() ? "Skills" : normalizeText(fieldLabel);
 
+        // Validate parsed tokens rather than raw text so punctuation and spacing are normalized first.
         if (required && tokens.isEmpty()) {
             errors.add("At least one " + normalizedFieldLabel.toLowerCase(Locale.ROOT) + " item is required.");
             return errors;
@@ -253,6 +254,7 @@ public class ValidationService {
     }
 
     private boolean isOneOffActivity(JobPosting jobPosting) {
+        // One-off jobs should stop accepting applications before the activity itself begins.
         return JobPosting.WORKLOAD_TYPE_TOTAL.equals(jobPosting.getWorkloadType())
                 || jobPosting.getCategory() == JobCategory.INVIGILATION
                 || jobPosting.getCategory() == JobCategory.OTHER_ACTIVITY
@@ -274,6 +276,7 @@ public class ValidationService {
             return new ArrayList<>();
         }
         Map<String, String> normalizedSkills = new LinkedHashMap<>();
+        // Deduplicate case-insensitively while preserving the first readable spelling entered.
         splitSkillTokens(commaSeparatedSkills).stream()
                 .forEach(value -> normalizedSkills.putIfAbsent(value.toLowerCase(Locale.ROOT), value));
         return normalizedSkills.values().stream()
