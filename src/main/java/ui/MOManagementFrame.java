@@ -540,6 +540,11 @@ public class MOManagementFrame extends JFrame {
         return panel;
     }
 
+    /**
+     * Rebuilds the job table from the current MO-visible job scope.
+     * The table is always derived from fresh repository data so edits made in
+     * other screens are reflected before the MO reviews applicants.
+     */
     private void refreshJobs() {
         jobTableModel.setRowCount(0);
         for (JobPosting job : getScopedJobs()) {
@@ -557,6 +562,11 @@ public class MOManagementFrame extends JFrame {
         }
     }
 
+    /**
+     * Loads the currently selected job row back into the edit form.
+     * This keeps review and editing in one screen while still tolerating jobs
+     * that may have been deleted or changed underneath the table selection.
+     */
     private void loadSelectedJobToForm() {
         int row = jobTable.getSelectedRow();
         if (row < 0) {
@@ -573,6 +583,11 @@ public class MOManagementFrame extends JFrame {
         applyJobToForm(job);
     }
 
+    /**
+     * Resets the job editor and applicant review pane to the new-job state.
+     * The method also clears derived review state so the next action cannot
+     * accidentally reuse applicant notes or document pointers from the prior job.
+     */
     private void clearForm() {
         syncingForm = true;
         jobTable.clearSelection();
@@ -611,6 +626,11 @@ public class MOManagementFrame extends JFrame {
         syncingForm = false;
     }
 
+    /**
+     * Collects form input, validates the draft, and persists the job posting.
+     * Opening and closing flows are handled separately because they can affect
+     * applicant visibility and accepted-TA capacity in different ways.
+     */
     private void saveJob() {
         try {
             if (managedModuleCodes.isEmpty()) {
@@ -682,6 +702,10 @@ public class MOManagementFrame extends JFrame {
         }
     }
 
+    /**
+     * Re-reads the saved job from storage and checks that the persisted values
+     * still match the in-memory draft shown to the user.
+     */
     private void verifyJobWasSaved(JobPosting jobPosting) {
         String jobId = jobPosting.getJobId();
         if (jobId == null || jobId.isBlank()) {
@@ -703,6 +727,10 @@ public class MOManagementFrame extends JFrame {
         }
     }
 
+    /**
+     * Compares the just-saved job with the reloaded copy and reports every field
+     * that failed to round-trip through JSON persistence.
+     */
     private List<String> savedJobMismatches(JobPosting expected, JobPosting actual) {
         List<String> mismatches = new ArrayList<>();
         addMismatch(mismatches, "moduleCode", expected.getModuleCode(), actual.getModuleCode());
@@ -725,12 +753,20 @@ public class MOManagementFrame extends JFrame {
         return mismatches;
     }
 
+    /**
+     * Appends a mismatch entry only when the saved value differs from the draft.
+     */
     private void addMismatch(List<String> mismatches, String fieldName, Object expected, Object actual) {
         if (!Objects.equals(expected, actual)) {
             mismatches.add(fieldName + ": expected [" + expected + "], actual [" + actual + "]");
         }
     }
 
+    /**
+     * Explains whether the saved job will appear on the TA opportunities page.
+     * This feedback reduces confusion when an MO saves a valid job but chooses a
+     * closed status or past deadline that intentionally hides it from applicants.
+     */
     private String taVisibilityHint(JobPosting jobPosting) {
         if (jobPosting.getStatus() != JobStatus.OPEN) {
             return "\n\nNote: TA applicants will not see this job because its status is " + jobPosting.getStatus() + ".";
@@ -741,6 +777,9 @@ public class MOManagementFrame extends JFrame {
         return "\n\nTA applicants can see it after refreshing their Opportunities page.";
     }
 
+    /**
+     * Opens the applicant review queue for whichever job row is selected.
+     */
     private void loadApplicantsForSelectedJob() {
         int row = jobTable.getSelectedRow();
         if (row < 0) {
@@ -751,6 +790,11 @@ public class MOManagementFrame extends JFrame {
         loadApplicantsForJob(jobId);
     }
 
+    /**
+     * Populates the right-hand review cards for the selected application.
+     * Match details, applicant summary, reviewer notes, and document links are
+     * all rebuilt together so the side panel always stays internally consistent.
+     */
     private void showSelectedApplicantMatch() {
         int applicationRow = applicantTable.getSelectedRow();
         int jobRow = jobTable.getSelectedRow();
@@ -793,6 +837,10 @@ public class MOManagementFrame extends JFrame {
         reviewArea.setText(application.getReviewerNotes() == null ? "" : application.getReviewerNotes());
     }
 
+    /**
+     * Applies a review decision to the selected application and refreshes the
+     * surrounding job/applicant views so counts and statuses stay aligned.
+     */
     private void updateApplicationStatus(ApplicationStatus status) {
         int row = applicantTable.getSelectedRow();
         if (row < 0) {
@@ -823,6 +871,11 @@ public class MOManagementFrame extends JFrame {
         }
     }
 
+    /**
+     * Guides the MO through sending an interview invitation to the selected TA.
+     * The workflow enforces valid source states and can auto-shortlist first when
+     * the invitation starts from a plain submitted application.
+     */
     private void inviteSelectedApplicantToInterview() {
         int row = applicantTable.getSelectedRow();
         if (row < 0) {
@@ -887,6 +940,10 @@ public class MOManagementFrame extends JFrame {
         }
     }
 
+    /**
+     * Collects structured interview details and converts them into the reviewer
+     * note text stored alongside the application status update.
+     */
     private Optional<String> promptForInterviewInvitation(ApplicantProfile applicant, JobPosting job) {
         JTextField timeField = new JTextField();
         JTextField locationField = new JTextField();
@@ -924,6 +981,9 @@ public class MOManagementFrame extends JFrame {
         return Optional.of(note);
     }
 
+    /**
+     * Moves a shortlisted application back to the submitted state.
+     */
     private void removeShortlist() {
         int row = applicantTable.getSelectedRow();
         if (row < 0) {
@@ -945,6 +1005,9 @@ public class MOManagementFrame extends JFrame {
         }
     }
 
+    /**
+     * Cancels an accepted application so the job can reopen its remaining slot.
+     */
     private void cancelAcceptedApplication() {
         int row = applicantTable.getSelectedRow();
         if (row < 0) {
@@ -971,6 +1034,10 @@ public class MOManagementFrame extends JFrame {
         }
     }
 
+    /**
+     * Warns before acceptance when the projected weekly workload exceeds the
+     * configured threshold, while still allowing an MO override when justified.
+     */
     private boolean confirmWorkloadBeforeAccept(String applicationId) {
         ApplicationRecord application = dataService.getApplicationRepository().findById(applicationId).orElse(null);
         if (application == null) {
@@ -1000,6 +1067,9 @@ public class MOManagementFrame extends JFrame {
                 "Workload Warning");
     }
 
+    /**
+     * Sends the standard review-status notifications to the applicant and the MO.
+     */
     private void notifyStatusChange(String applicationId, ApplicationStatus status) {
         ApplicationRecord application = dataService.getApplicationRepository().findById(applicationId).orElse(null);
         if (application == null) {
@@ -1018,6 +1088,10 @@ public class MOManagementFrame extends JFrame {
         updateUnreadIndicators();
     }
 
+    /**
+     * Shows the MO notification inbox in a simple modal summary and marks all
+     * displayed notifications as read after opening.
+     */
     private void showNotifications() {
         StringBuilder builder = new StringBuilder();
         for (model.NotificationRecord notification : notificationService.getNotificationsForUser(currentUser.getUserId())) {
@@ -1036,6 +1110,11 @@ public class MOManagementFrame extends JFrame {
         UiMessage.info(this, builder.toString());
     }
 
+    /**
+     * Opens the lightweight conversation center used for TA/MO follow-up messages.
+     * This dialog intentionally reuses the same message service as the TA screen
+     * so both sides see a consistent conversation history.
+     */
     private void showMessages() {
         updateUnreadIndicators();
         JDialog dialog = new JDialog(this, "Messages", true);
@@ -1096,6 +1175,9 @@ public class MOManagementFrame extends JFrame {
         dialog.setVisible(true);
     }
 
+    /**
+     * Resolves the currently selected message row back to its domain record.
+     */
     private MessageRecord selectedMessageFromTable(JTable table, DefaultTableModel model) {
         int row = table.getSelectedRow();
         if (row < 0) {
@@ -1108,6 +1190,10 @@ public class MOManagementFrame extends JFrame {
                 .orElse(null);
     }
 
+    /**
+     * Sends a reply while preserving the original job/application context so the
+     * resulting thread can still be understood from either dashboard.
+     */
     private void replyToMessage(MessageRecord selected) {
         String recipientUserId = currentUser.getUserId().equals(selected.getSenderUserId())
                 ? selected.getRecipientUserId()
@@ -1134,6 +1220,9 @@ public class MOManagementFrame extends JFrame {
         }
     }
 
+    /**
+     * Collects a free-text TA/MO message body and rejects empty submissions.
+     */
     private Optional<String> promptForMessage(String title, String helperText) {
         JTextArea messageArea = new JTextArea(6, 42);
         UiTheme.styleTextArea(messageArea, 6);
@@ -1163,6 +1252,11 @@ public class MOManagementFrame extends JFrame {
         return Optional.of(message);
     }
 
+    /**
+     * Rebuilds the applicant table for one job using the current sort and filter.
+     * Review side-panels are cleared first so stale details are never shown for a
+     * different job after the queue changes.
+     */
     private void loadApplicantsForJob(String jobId) {
         JobPosting job = findJob(jobId).orElse(null);
         if (job == null) {
@@ -1204,6 +1298,9 @@ public class MOManagementFrame extends JFrame {
         updateApplicantEmptyState();
     }
 
+    /**
+     * Restores table selection for a known job id after refresh operations.
+     */
     private void selectJobRow(String jobId) {
         for (int i = 0; i < jobTableModel.getRowCount(); i++) {
             if (jobId.equals(String.valueOf(jobTableModel.getValueAt(i, 0)))) {
@@ -1214,11 +1311,18 @@ public class MOManagementFrame extends JFrame {
         jobTable.clearSelection();
     }
 
+    /**
+     * Returns to the login window and closes the MO workspace.
+     */
     private void returnToLogin() {
         new LoginFrame(dataService).setVisible(true);
         dispose();
     }
 
+    /**
+     * Builds the three stacked cards used during applicant review:
+     * match details, applicant summary, and reviewer notes.
+     */
     private JPanel buildReviewDetailsPanel() {
         JPanel panel = new JPanel(new GridLayout(3, 1, 0, 12));
         panel.setOpaque(false);
@@ -1239,6 +1343,11 @@ public class MOManagementFrame extends JFrame {
         return panel;
     }
 
+    /**
+     * Creates the consolidated applicant summary shown in the review side panel.
+     * The text mixes applicant, application, and job information so an MO can
+     * make a decision without scanning multiple widgets.
+     */
     private String buildApplicantSummary(ApplicantProfile applicant, ApplicationRecord application, JobPosting job) {
         return "Name: " + valueOrDash(applicant.getName()) + "\n" +
                 "Email: " + valueOrDash(applicant.getEmail()) + "\n" +
@@ -1264,14 +1373,23 @@ public class MOManagementFrame extends JFrame {
                 "Experience Summary:\n" + valueOrDash(applicant.getExperienceSummary());
     }
 
+    /**
+     * Replaces blank values with a dash for more legible review text.
+     */
     private String valueOrDash(String value) {
         return value == null || value.isBlank() ? "-" : value;
     }
 
+    /**
+     * Provides a stable placeholder when no reviewer notes have been entered yet.
+     */
     private String reviewerNotesOrPending(String value) {
         return value == null || value.isBlank() ? "Not yet reviewed" : value;
     }
 
+    /**
+     * Formats supporting-document paths for compact display in text panels.
+     */
     private String supportingDocumentsText(List<String> documentPaths) {
         if (documentPaths == null || documentPaths.isEmpty()) {
             return "-";
@@ -1279,6 +1397,10 @@ public class MOManagementFrame extends JFrame {
         return String.join("; ", documentPaths);
     }
 
+    /**
+     * Caches the selected applicant's uploaded documents and updates cursor hints
+     * so the review panes behave like clickable file references when possible.
+     */
     private void setSelectedApplicantDocuments(String cvPath, List<String> supportingDocumentPaths) {
         selectedApplicantCvPath = cvPath == null ? "" : cvPath.trim();
         selectedApplicantSupportingDocumentPaths = new ArrayList<>();
@@ -1300,6 +1422,9 @@ public class MOManagementFrame extends JFrame {
                 : "The selected applicant has not uploaded documents.");
     }
 
+    /**
+     * Clears cached document links and restores the passive review-pane cursors.
+     */
     private void clearSelectedApplicantCv() {
         selectedApplicantCvPath = "";
         selectedApplicantSupportingDocumentPaths = new ArrayList<>();
@@ -1309,10 +1434,17 @@ public class MOManagementFrame extends JFrame {
         applicantSummaryArea.setToolTipText("Select an applicant to view CV details.");
     }
 
+    /**
+     * Opens the cached CV path for the currently selected applicant.
+     */
     private void openSelectedApplicantCv() {
         openApplicantDocument(selectedApplicantCvPath, "CV file");
     }
 
+    /**
+     * Opens one supporting document for the selected applicant, prompting first
+     * when multiple uploads are available.
+     */
     private void openSelectedApplicantSupportingDocument() {
         if (selectedApplicantSupportingDocumentPaths.isEmpty()) {
             UiMessage.error(this, "No supporting document is available for the selected applicant.");
@@ -1336,6 +1468,9 @@ public class MOManagementFrame extends JFrame {
         }
     }
 
+    /**
+     * Resolves a stored applicant document path and asks the desktop OS to open it.
+     */
     private void openApplicantDocument(String documentPath, String label) {
         if (documentPath == null || documentPath.isBlank()) {
             UiMessage.error(this, "No " + label + " is available for the selected applicant.");
@@ -1359,14 +1494,25 @@ public class MOManagementFrame extends JFrame {
         }
     }
 
+    /**
+     * Routes clicks from the match-details pane to the shared document opener.
+     */
     private void openCvFromMatchInfoClick(MouseEvent event) {
         openApplicantDocumentFromTextClick(event, matchInfoArea);
     }
 
+    /**
+     * Routes clicks from the applicant-summary pane to the shared document opener.
+     */
     private void openApplicantDocumentFromSummaryClick(MouseEvent event) {
         openApplicantDocumentFromTextClick(event, applicantSummaryArea);
     }
 
+    /**
+     * Detects which rendered line was clicked and opens the related document link.
+     * This gives the MO hyperlink-like behavior without embedding HTML widgets in
+     * the review cards.
+     */
     private void openApplicantDocumentFromTextClick(MouseEvent event, JTextComponent sourceArea) {
         if ((selectedApplicantCvPath == null || selectedApplicantCvPath.isBlank())
                 && selectedApplicantSupportingDocumentPaths.isEmpty()) {
@@ -1390,6 +1536,9 @@ public class MOManagementFrame extends JFrame {
         }
     }
 
+    /**
+     * Replaces pane content and reapplies link styling to file paths inside it.
+     */
     private void setReviewText(JTextPane pane, String text) {
         String safeText = text == null ? "" : text;
         pane.setText(safeText);
@@ -1454,6 +1603,9 @@ public class MOManagementFrame extends JFrame {
         matchInfoArea.setEditable(false);
     }
 
+    /**
+     * Applies the shared appearance used by the read-only review text panes.
+     */
     private void styleReviewTextPane(JTextPane pane) {
         pane.setFont(UiTheme.uiFont(Font.PLAIN, 14));
         pane.setForeground(UiTheme.TEXT);
@@ -1465,6 +1617,9 @@ public class MOManagementFrame extends JFrame {
         setReviewText(pane, pane.getText());
     }
 
+    /**
+     * Plays a short background flash so manual refreshes feel visible to users.
+     */
     private void playRefreshEffect() {
         if (workspaceShell == null) {
             return;
@@ -1490,18 +1645,27 @@ public class MOManagementFrame extends JFrame {
         timer.start();
     }
 
+    /**
+     * Wraps any text component in the standard themed scroll pane.
+     */
     private JScrollPane wrapArea(JTextComponent area) {
         JScrollPane scrollPane = new JScrollPane(area);
         UiTheme.styleScrollPane(scrollPane);
         return scrollPane;
     }
 
+    /**
+     * Returns only the jobs the current user is allowed to manage.
+     */
     private List<JobPosting> getScopedJobs() {
         return jobService.getAllJobs().stream()
                 .filter(job -> canManageModule(job.getModuleCode()))
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Summarizes the current module-management scope for the workspace header.
+     */
     private String buildScopeSummary() {
         if (managedModuleCodes.isEmpty()) {
             return adminMode
