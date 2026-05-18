@@ -23,7 +23,7 @@ import java.util.Optional;
  * - Input validation and normalization
  * - Automatic creation of applicant profiles for TA users
  * - Duplicate username prevention
- * - Secure password handling (basic implementation)
+ * - Secure password handling with SHA-256 hashes and legacy demo-data migration
  *
  * The service follows security best practices by:
  * - Normalizing and validating all user inputs
@@ -31,8 +31,8 @@ import java.util.Optional;
  * - Using role-based authentication
  * - Providing clear error messages for failed operations
  *
- * Note: This implementation uses simple password comparison. In a production system,
- * passwords should be hashed using a secure algorithm like bcrypt or Argon2.
+ * Note: This coursework implementation stores SHA-256 password hashes. A production
+ * system should use salted adaptive hashing such as bcrypt or Argon2.
  *
  * @author TA Recruitment System Development Team
  * @version 1.0.0
@@ -87,7 +87,7 @@ public class AuthService {
      * with a descriptive error message.
      *
      * @param username The user's username (typically an email address).
-     * @param password The user's password in plain text.
+     * @param password The raw password entered by the user for verification.
      * @param role     The expected role of the user (TA, MO, or ADMIN).
      * @return The authenticated User object if login is successful.
      * @throws IllegalArgumentException if validation fails or credentials are incorrect.

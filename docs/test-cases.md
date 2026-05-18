@@ -47,8 +47,10 @@
 | US37 | One-off activity deadline | TC-JOB-04 | Create or load an invigilation/demo-support activity | Application deadline is before the activity start date; invalid on/after-start deadlines are rejected | Pass |
 
 ## Automated Unit Tests
+- `AccountCleanupServiceTest`
 - `ApplicationServiceTest`
 - `AuthServiceTest`
+- `CvStorageServiceTest`
 - `JsonDataStoreTest`
 - `JobServiceTest`
 - `MatchingServiceTest`
@@ -58,7 +60,15 @@
 - `WorkloadServiceTest`
 - `SampleDataLoaderTest`
 
-Latest local JUnit run: 64 tests found, 64 successful, 0 failed.
+Latest local JUnit run: 75 tests run, 75 successful, 0 failed, 0 errors.
+
+## Testing Strategy
+
+The testing approach follows the lecture testing model:
+- Unit testing / white-box testing: JUnit tests exercise internal service logic such as authentication, validation, application status transitions, matching, workload calculation, JSON persistence, and cleanup of secondary records.
+- System testing: manual end-to-end checks run the complete Swing application across TA, MO, and Admin workflows.
+- Acceptance testing / black-box testing: demo accounts and realistic local JSON data are used to check that the system meets the recruitment requirements from the user's point of view.
+- Regression testing: `mvn test` is run after changes to confirm that new fixes do not break existing workflows.
 
 ## Manual Demo Checklist
 - Admin: log in as `admin@bupt.edu.cn`, inspect all jobs, workload monitor, Application Reviews, notifications, CSV export, and sample-data reset/load.

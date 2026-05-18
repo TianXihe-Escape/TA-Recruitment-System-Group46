@@ -156,23 +156,5 @@
     "password" : "008c70392e3abfbd0fa47bbc2ed96aa99bd49e159727fcba0f2e6abeb3a9d601",
     "role" : "TA",
     "managedModuleCodes" : [ ]
-  },
-  {
-    "userId" : "user-mo-01",
-    "name" : "abc",
-    "username" : "1234@qq.com",
-    "password" : "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
-    "role" : "MO",
-    "managedModuleCodes" : [
-      "COMP1001"
-    ]
-  },
-  {
-    "userId" : "user-ta-01",
-    "name" : "abcd",
-    "username" : "123@qq.com",
-    "password" : "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4",
-    "role" : "TA",
-    "managedModuleCodes" : [ ]
   }
 ]
