@@ -47,6 +47,8 @@ import java.util.stream.Collectors;
  * so applicants can complete their full workflow from one screen.
  */
 public class TADashboardFrame extends JFrame {
+    // File chooser text is centralized so the same wording appears anywhere the
+    // applicant is asked to upload or replace a CV.
     /**
      * Description shown in the CV file chooser.
      */
@@ -60,6 +62,9 @@ public class TADashboardFrame extends JFrame {
      * Service for loading and saving applicant profiles.
      */
     private final ApplicantService applicantService;
+    /**
+     * Authentication service used for password changes and account actions.
+     */
     private final AuthService authService;
     /**
      * Service for querying jobs.
@@ -69,7 +74,13 @@ public class TADashboardFrame extends JFrame {
      * Service for submission and application workflow actions.
      */
     private final ApplicationService applicationService;
+    /**
+     * Notification helper for unread badges and applicant-facing alerts.
+     */
     private final NotificationService notificationService;
+    /**
+     * Message helper for TA/MO conversation threads.
+     */
     private final MessageService messageService;
     /**
      * Validation helper for parsing form input.
@@ -85,6 +96,7 @@ public class TADashboardFrame extends JFrame {
      * Cached profile for the logged-in TA.
      */
     private ApplicantProfile profile;
+    // Profile-editor controls reused whenever the TA opens the modal edit dialog.
     private final JTextField nameField = new JTextField();
     private final JTextField emailField = new JTextField();
     private final JTextField phoneField = new JTextField();
@@ -98,10 +110,12 @@ public class TADashboardFrame extends JFrame {
     private final JTextField supportingDocumentPathField = new JTextField();
     private final JButton chooseCvButton = UiTheme.createSecondaryButton("Choose File");
     private final JButton chooseSupportingDocumentButton = UiTheme.createSecondaryButton("Choose Files");
+    // Shared filter controls for the opportunities and favourites workspaces.
     private final JTextField jobSearchField = new JTextField();
     private final JComboBox<String> moduleFilterBox = new JComboBox<>();
     private final JComboBox<String> categoryFilterBox = new JComboBox<>();
     private boolean syncingJobFilters;
+    // Table models back the five card-based TA workspace views.
     private final DefaultTableModel jobTableModel = new DefaultTableModel(
             new Object[]{"Job ID", "Module", "Job Type", "Schedule", "Location", "Workload", "TA Demand", "Deadline", "Skills", "Favourite", "Status"}, 0);
     private final JTable jobTable = new PlaceholderTable(jobTableModel, "No open jobs are available right now.");
@@ -120,6 +134,7 @@ public class TADashboardFrame extends JFrame {
     private final JLabel notificationStatusLabel = new JLabel();
     private final JLabel messageStatusLabel = new JLabel();
     private JPanel workspaceShell;
+    // CardLayout view indexes used by the left navigation rail.
     private static final int VIEW_AVAILABLE_JOBS = 0;
     private static final int VIEW_FAVOURITE_JOBS = 1;
     private static final int VIEW_APPLICATIONS = 2;
@@ -136,6 +151,7 @@ public class TADashboardFrame extends JFrame {
     private final List<JToggleButton> navigationButtons = new ArrayList<>();
     private final AvatarButton avatarButton = new AvatarButton("TA");
     private int currentWorkspaceView = VIEW_AVAILABLE_JOBS;
+    // Contextual actions are rebuilt per workspace so the top action strip stays focused.
     private final JButton viewDetailsButton = createIconButton("View Job Details", SimpleLineIcon.Type.EYE, false);
     private final JButton viewApplicationButton = createIconButton("View Application Details", SimpleLineIcon.Type.DOCUMENT, false);
     private final JButton withdrawButton = createIconButton("Withdraw Application", SimpleLineIcon.Type.LOGOUT, false);
@@ -169,6 +185,8 @@ public class TADashboardFrame extends JFrame {
         );
         this.notificationService = new NotificationService(dataService.getNotificationRepository());
         this.messageService = new MessageService(dataService.getMessageRepository());
+        // The dashboard keeps one cached profile object and refreshes it from the
+        // repository whenever the workspace regains focus or saves profile changes.
         this.profile = applicantService.getProfileByUserId(currentUser.getUserId());
 
         setTitle("TA Dashboard - " + Constants.APP_TITLE);
@@ -194,6 +212,8 @@ public class TADashboardFrame extends JFrame {
         root.add(buildWorkspacePanel(), BorderLayout.CENTER);
         add(root);
 
+        // Initial load populates every workspace so tab switches later feel
+        // immediate and all unread badges start from a real repository snapshot.
         loadProfile();
         refreshJobs();
         refreshApplications();
@@ -208,6 +228,8 @@ public class TADashboardFrame extends JFrame {
      * and layout, while the event handlers remain easy to scan in one block.
      */
     private void wireActions() {
+        // Centralizing the bindings here keeps construction readable and makes
+        // it easier to scan all user-triggered flows from one place.
         avatarButton.addActionListener(event -> showProfileMenu());
         viewDetailsButton.addActionListener(event -> viewSelectedJob());
         viewApplicationButton.addActionListener(event -> viewSelectedApplication());
@@ -240,6 +262,8 @@ public class TADashboardFrame extends JFrame {
             @Override
             public void mouseClicked(MouseEvent event) {
                 if (event.getClickCount() == 2) {
+                    // Double-click opens the full message body without forcing an
+                    // extra toolbar button just for read-only detail viewing.
                     showSelectedConversationMessage();
                 }
             }
@@ -250,6 +274,8 @@ public class TADashboardFrame extends JFrame {
      * Builds the left navigation rail with profile identity and workspace tabs.
      */
     private JPanel buildSidebar() {
+        // The sidebar stays stable across all TA tasks; only the main card area
+        // changes as the applicant moves between opportunities and tracking views.
         JPanel sidebar = new JPanel(new BorderLayout(0, 18));
         sidebar.setPreferredSize(new Dimension(214, 0));
         sidebar.setBackground(new Color(235, 242, 252));
@@ -294,6 +320,8 @@ public class TADashboardFrame extends JFrame {
      * swaps between opportunities, favourites, applications, notifications, and messages.
      */
     private JPanel buildWorkspacePanel() {
+        // The shell owns the shared title area, filter strip, and contextual
+        // actions while CardLayout swaps the actual workspace content below.
         workspaceShell = new JPanel(new BorderLayout(0, 14));
         workspaceShell.setBackground(UiTheme.SURFACE);
         workspaceShell.setBorder(BorderFactory.createCompoundBorder(
@@ -320,6 +348,8 @@ public class TADashboardFrame extends JFrame {
         header.add(titlePanel, BorderLayout.NORTH);
         header.add(actionRow, BorderLayout.SOUTH);
 
+        // Only job-browsing views need the filter row, so the container stays in
+        // the shell and is shown/hidden when the active workspace changes.
         jobFilterContainer.setOpaque(false);
         jobFilterContainer.add(buildJobFilterPanel(), BorderLayout.CENTER);
 
@@ -365,6 +395,8 @@ public class TADashboardFrame extends JFrame {
      * Creates a themed action button with a shared line icon style.
      */
     private JButton createIconButton(String text, SimpleLineIcon.Type iconType, boolean primary) {
+        // Toolbar-style action buttons all reuse the same icon spacing so the
+        // contextual action strip feels consistent across every workspace card.
         JButton button = primary ? UiTheme.createPrimaryButton(text) : UiTheme.createSecondaryButton(text);
         button.setIcon(new SimpleLineIcon(iconType, Color.WHITE));
         button.setIconTextGap(8);
@@ -513,6 +545,8 @@ public class TADashboardFrame extends JFrame {
      * feeling visually noisy on every window activation.
      */
     private void refreshCurrentWorkspaceWithoutEffect() {
+        // Refresh all cards, not just the visible one, so switching tabs after a
+        // profile save or external update always shows up-to-date information.
         profile = applicantService.getProfileByUserId(currentUser.getUserId());
         loadProfile();
         refreshJobs();
@@ -529,6 +563,8 @@ public class TADashboardFrame extends JFrame {
         if (workspaceShell == null) {
             return;
         }
+        // A short shell-background flash acknowledges manual refreshes without
+        // adding persistent animation that could distract from dense tables.
         Color original = workspaceShell.getBackground();
         Color[] frames = {
                 new Color(225, 236, 255),
@@ -554,6 +590,8 @@ public class TADashboardFrame extends JFrame {
      * Opens the profile/account menu anchored to the avatar button.
      */
     private void showProfileMenu() {
+        // Profile/account actions are grouped in a popup so the main toolbar can
+        // stay focused on job and application workflow actions instead.
         JPopupMenu menu = new JPopupMenu();
         menu.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(UiTheme.BORDER),
@@ -634,6 +672,8 @@ public class TADashboardFrame extends JFrame {
      */
     private void showProfileDialog() {
         loadProfile();
+        // The modal editor owns all profile fields so the main workspace tables
+        // never need to make room for a large inline form.
         JDialog dialog = new JDialog(this, "Edit Profile", true);
         dialog.setSize(600, 720);
         dialog.setMinimumSize(new Dimension(520, 560));
@@ -695,6 +735,8 @@ public class TADashboardFrame extends JFrame {
 
             @Override
             public void changedUpdate(DocumentEvent event) {
+                // Plain text fields rarely fire this in Swing, but implementing
+                // all three callbacks keeps the listener complete and reusable.
                 refreshJobs();
             }
         });
@@ -747,6 +789,8 @@ public class TADashboardFrame extends JFrame {
      * Copies the current profile model into the visible form fields.
      */
     private void loadProfile() {
+        // The visible form fields are always reloaded from the cached profile
+        // object so dialogs and sidebar identity stay in sync after updates.
         nameField.setText(profile.getName());
         emailField.setText(profile.getEmail());
         phoneField.setText(profile.getPhone());
@@ -801,6 +845,8 @@ public class TADashboardFrame extends JFrame {
             if (!profileErrors.isEmpty()) {
                 throw new IllegalArgumentException(String.join("\n", profileErrors));
             }
+            // CV and supporting documents are stored through CvStorageService so
+            // the profile ultimately saves managed relative paths rather than raw chooser paths.
             String storedCvPath = cvStorageService.storeCvForApplicant(
                     profile.getApplicantId(),
                     cvPathField.getText().trim(),
@@ -822,6 +868,8 @@ public class TADashboardFrame extends JFrame {
             sidebarNameLabel.setText(valueOrDash(profile.getName()));
             sidebarRoleLabel.setText("TA Applicant");
             UiMessage.info(this, "Profile saved successfully.");
+            // Refresh dependent tables because a profile edit can change match
+            // scores, favourite indicators, and application completeness checks.
             refreshJobs();
             refreshApplications();
         } catch (Exception ex) {
@@ -837,6 +885,8 @@ public class TADashboardFrame extends JFrame {
         favoriteJobTableModel.setRowCount(0);
         refreshJobFilterOptions();
 
+        // Filters are resolved up front so both the full opportunities list and
+        // the favourites subset are built from the exact same filtered job set.
         String module = String.valueOf(moduleFilterBox.getSelectedItem());
         if ("All Modules".equals(module)) {
             module = "";
@@ -849,6 +899,8 @@ public class TADashboardFrame extends JFrame {
         for (JobPosting job : jobs) {
             Object[] row = buildJobRow(job);
             jobTableModel.addRow(row);
+            // Favourites are presented as a filtered projection of the same job
+            // rows rather than as a separately queried dataset.
             if (profile != null && profile.isFavoriteJob(job.getJobId())) {
                 favoriteJobTableModel.addRow(row);
             }
@@ -936,6 +988,8 @@ public class TADashboardFrame extends JFrame {
     private void refreshApplications() {
         applicationTableModel.setRowCount(0);
         for (ApplicationRecord record : applicationService.getApplicationsForApplicant(profile.getApplicantId())) {
+            // Reviewer notes are normalised to a placeholder so rejected or
+            // pending applications do not display visually empty cells.
             applicationTableModel.addRow(new Object[]{
                     record.getApplicationId(),
                     record.getJobId(),
@@ -1020,6 +1074,8 @@ public class TADashboardFrame extends JFrame {
         }
         List<String> profileIssues = getProfileIssuesForApplication();
         if (!profileIssues.isEmpty()) {
+            // The TA must fix profile gaps before applying so downstream matching,
+            // recruiter review, and file access all have the required data.
             UiMessage.error(this,
                     "Please complete your profile before applying.\nMissing or invalid items:\n- "
                             + String.join("\n- ", profileIssues)
@@ -1030,6 +1086,8 @@ public class TADashboardFrame extends JFrame {
         try {
             JobPosting job = findJob(jobId)
                     .orElseThrow(() -> new IllegalStateException("This job is no longer available. Please refresh the table."));
+            // ApplicationService owns duplicate checks, matching calculation, and
+            // persistence; the dashboard just coordinates the user feedback.
             ApplicationRecord record = applicationService.apply(profile, job);
             notificationService.notifyUser(currentUser.getUserId(), "Application submitted for " + job.getModuleCode() + " " + job.getModuleTitle() + ".");
             notificationService.notifyUser(job.getPostedBy(), profile.getName() + " submitted an application for " + job.getModuleCode() + " " + job.getModuleTitle() + ".");
@@ -1064,6 +1122,8 @@ public class TADashboardFrame extends JFrame {
         notificationStatusLabel.setText(unreadCount == 0
                 ? "All notifications are read."
                 : "Unread notifications: " + unreadCount + ". Click Mark Notifications Read to clear the badge.");
+        // Badge state is recalculated here so the sidebar and top actions stay
+        // aligned with the table content the user is currently seeing.
         updateUnreadBadges();
     }
 
@@ -1074,6 +1134,8 @@ public class TADashboardFrame extends JFrame {
         messageTableModel.setRowCount(0);
         int unreadCount = 0;
         for (MessageRecord message : messageService.getConversationForUser(currentUser.getUserId())) {
+            // Each row flattens job context, direction, and status into one
+            // grid so the TA can triage conversations without opening each thread.
             JobPosting job = findJob(message.getJobId()).orElse(null);
             boolean incoming = currentUser.getUserId().equals(message.getRecipientUserId());
             if (incoming && !message.isRead()) {
@@ -1105,11 +1167,14 @@ public class TADashboardFrame extends JFrame {
         String time = String.valueOf(notificationTableModel.getValueAt(row, 0));
         String status = String.valueOf(notificationTableModel.getValueAt(row, 1));
         String message = String.valueOf(notificationTableModel.getValueAt(row, 2));
-        UiMessage.info(this,
+        JOptionPane.showMessageDialog(
+                this,
                 "Time: " + time + "\n"
                         + "Status: " + status + "\n\n"
                         + message,
-                "Notification Details");
+                "Notification Details",
+                JOptionPane.INFORMATION_MESSAGE
+        );
     }
 
     /**
@@ -1125,13 +1190,16 @@ public class TADashboardFrame extends JFrame {
         String direction = String.valueOf(messageTableModel.getValueAt(row, 3));
         String status = String.valueOf(messageTableModel.getValueAt(row, 4));
         String message = String.valueOf(messageTableModel.getValueAt(row, 5));
-        UiMessage.info(this,
+        JOptionPane.showMessageDialog(
+                this,
                 "Time: " + time + "\n"
                         + "Job: " + job + "\n"
                         + "Direction: " + direction + "\n"
                         + "Status: " + status + "\n\n"
                         + message,
-                "Message Details");
+                "Message Details",
+                JOptionPane.INFORMATION_MESSAGE
+        );
     }
 
     /**
@@ -1160,6 +1228,8 @@ public class TADashboardFrame extends JFrame {
         }
 
         try {
+            // Message threads keep both job and optional application context so
+            // follow-up replies still make sense from either dashboard side.
             MessageRecord sent = messageService.sendMessage(
                     job.getJobId(),
                     application == null ? null : application.getApplicationId(),
@@ -1194,6 +1264,8 @@ public class TADashboardFrame extends JFrame {
         }
 
         try {
+            // Replies preserve the original job/application linkage instead of
+            // starting a detached conversation record with no recruiting context.
             MessageRecord reply = messageService.sendMessage(
                     selected.getJobId(),
                     selected.getApplicationId(),
@@ -1679,10 +1751,12 @@ public class TADashboardFrame extends JFrame {
         UiTheme.styleTable(applicationTable);
         UiTheme.styleTable(notificationTable);
         UiTheme.styleTable(messageTable);
-        jobTable.getColumnModel().getColumn(6).setCellRenderer(new DeadlineWarningRenderer());
-        jobTable.getColumnModel().getColumn(9).setCellRenderer(new StatusBadgeRenderer());
-        favoriteJobTable.getColumnModel().getColumn(6).setCellRenderer(new DeadlineWarningRenderer());
-        favoriteJobTable.getColumnModel().getColumn(9).setCellRenderer(new StatusBadgeRenderer());
+        // The deadline and status renderers must target the actual deadline/status
+        // columns rather than the TA-demand/favourite columns.
+        jobTable.getColumnModel().getColumn(7).setCellRenderer(new DeadlineWarningRenderer());
+        jobTable.getColumnModel().getColumn(10).setCellRenderer(new StatusBadgeRenderer());
+        favoriteJobTable.getColumnModel().getColumn(7).setCellRenderer(new DeadlineWarningRenderer());
+        favoriteJobTable.getColumnModel().getColumn(10).setCellRenderer(new StatusBadgeRenderer());
         applicationTable.getColumnModel().getColumn(2).setCellRenderer(new StatusBadgeRenderer());
         UiTheme.setColumnWidths(jobTable, 90, 260, 140, 260, 180, 110, 100, 120, 220, 90, 90);
         UiTheme.setColumnWidths(favoriteJobTable, 90, 260, 140, 260, 180, 110, 100, 120, 220, 90, 90);
