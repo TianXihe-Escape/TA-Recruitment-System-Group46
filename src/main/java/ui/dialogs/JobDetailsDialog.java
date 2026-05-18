@@ -1,6 +1,7 @@
 package ui.dialogs;
 
 import model.JobPosting;
+import ui.UiFormat;
 import ui.UiTheme;
 
 import javax.swing.*;
@@ -41,8 +42,15 @@ public class JobDetailsDialog extends JDialog {
         area.setText(
                 "Job ID: " + jobPosting.getJobId() + "\n" +
                         "Module: " + jobPosting.getModuleCode() + " - " + jobPosting.getModuleTitle() + "\n" +
+                        "Category: " + (jobPosting.getCategory() == null ? "-" : jobPosting.getCategory().getDisplayName()) + "\n" +
+                        "Job Type: " + UiFormat.valueOrDash(jobPosting.getJobType()) + "\n" +
+                        "Semester: " + (jobPosting.getSemester() == null || jobPosting.getSemester().isBlank() ? "-" : jobPosting.getSemester()) + "\n" +
+                        "Period: " + UiFormat.period(jobPosting) + "\n" +
+                        "Schedule: " + UiFormat.valueOrDash(jobPosting.getSchedule()) + "\n" +
+                        "Location: " + UiFormat.valueOrDash(jobPosting.getLocation()) + "\n" +
                         "Duties: " + jobPosting.getDuties() + "\n" +
-                        "Hours: " + jobPosting.getHours() + "\n" +
+                        "Workload Type: " + UiFormat.valueOrDash(jobPosting.getWorkloadType()) + "\n" +
+                        "Workload Hours: " + UiFormat.workload(jobPosting) + "\n" +
                         "TA Needed: " + jobPosting.getRequiredTaCount() + "\n" +
                         (taDemandSummary == null || taDemandSummary.isBlank() ? "" : "Applications / Needed: " + taDemandSummary + "\n") +
                         "Required Skills: " + String.join(", ", jobPosting.getRequiredSkills()) + "\n" +

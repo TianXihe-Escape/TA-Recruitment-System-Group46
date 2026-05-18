@@ -1,0 +1,35 @@
+Section,ID,Name,Related ID,Status,Hours,Category,Semester,Details
+Job,job-ebu6304,EBU6304 Software Engineering - 2025/26,user-mo-ling,OPEN,6,Module TA,2025/26,applications=2; requiredTAs=3; jobType=COURSE_SUPPORT; workloadType=WEEKLY; period=2026-03-06 to 2026-05-24; schedule=Friday 14:00-16:00 lab support; flexible coursework support; location=Software Engineering Lab
+Job,job-ebu6475,EBU6475 Microprocessor Systems Design - 2025/26,user-mo-chao-shu,OPEN,6,Module TA,2025/26,applications=2; requiredTAs=2; jobType=COURSE_SUPPORT; workloadType=WEEKLY; period=2026-03-06 to 2026-05-24; schedule=Tuesday 10:00-12:00 lab support; location=Embedded Systems Lab
+Job,job-ebu6366,"EBU6366 Microwave, Millimeterwave and Optical Transmission - 2025/26",user-mo-jin-zhang,OPEN,5,Module TA,2025/26,applications=3; requiredTAs=2; jobType=COURSE_SUPPORT; workloadType=WEEKLY; period=2026-03-06 to 2026-05-24; schedule=Wednesday 15:00-17:00 tutorial support; location=RF and Microwave Lab
+Job,job-ebu5606,EBU5606 Product Development and Marketing - 2025/26,user-mo-nickos,OPEN,4,Module TA,2025/26,applications=2; requiredTAs=2; jobType=COURSE_SUPPORT; workloadType=WEEKLY; period=2026-03-06 to 2026-05-24; schedule=Monday 13:00-15:00 workshop support; location=Business Innovation Classroom
+Job,job-ebu5042,EBU5042 Advanced Network Programming - 2025/26,user-mo-paula,OPEN,5,Module TA,2025/26,applications=1; requiredTAs=2; jobType=COURSE_SUPPORT; workloadType=WEEKLY; period=2026-03-06 to 2026-05-24; schedule=Thursday 10:00-12:00 programming lab; location=Network Programming Lab
+Job,job-cbu5201,CBU5201 Machine Learning - 2025/26,user-mo-chao-liu,OPEN,5,Module TA,2025/26,applications=2; requiredTAs=2; jobType=COURSE_SUPPORT; workloadType=WEEKLY; period=2026-03-06 to 2026-05-24; schedule=Tuesday 15:00-17:00 tutorial support; location=AI Teaching Lab
+Job,job-ebu6335,EBU6335 Digital Systems Design - 2025/26,user-mo-athen,OPEN,5,Module TA,2025/26,applications=1; requiredTAs=2; jobType=COURSE_SUPPORT; workloadType=WEEKLY; period=2026-03-06 to 2026-05-24; schedule=Friday 10:00-12:00 digital systems lab; location=Digital Systems Lab
+Job,job-ebu6304-invigilation,EBU6304 Invigilation Assistant for EBU6304 Final Assessment,user-mo-ling,OPEN,3,Invigilation,2025/26,applications=1; requiredTAs=2; jobType=INVIGILATION; workloadType=TOTAL; period=2026-05-24 to 2026-05-24; schedule=09:00-12:00; location=Teaching Building Room 302
+Job,job-ebu6304-demo,EBU6304 Demo Support Assistant for EBU6304 Final Assessment,user-mo-ling,OPEN,4,Other Activity,2025/26,applications=1; requiredTAs=2; jobType=DEMO_SUPPORT; workloadType=TOTAL; period=2026-05-24 to 2026-05-24; schedule=13:00-17:00; location=Software Engineering Lab
+Application,apply-01,Alice Chen,job-ebu6304,SHORTLISTED,,,,match=100%; missing=
+Application,apply-02,Ben Wang,job-ebu6475,INTERVIEW_INVITED,,,,match=100%; missing=
+Application,apply-03,Chloe Li,job-ebu6366,SHORTLISTED,,,,match=80%; missing=Optical Transmission
+Application,apply-04,Daniel Zhang,job-ebu5606,SUBMITTED,,,,match=100%; missing=
+Application,apply-05,Emma Liu,job-ebu6304,REJECTED,,,,match=0%; missing=Java|Software Engineering|Agile Development|GitHub|Testing
+Application,apply-06,Frank Zhao,job-ebu6475,ACCEPTED,,,,match=40%; missing=Microcontrollers|Embedded Systems|Digital Systems
+Application,apply-07,Frank Zhao,job-ebu6366,ACCEPTED,,,,match=20%; missing=Microwave Engineering|RF Systems|Optical Transmission|Signal Analysis
+Application,apply-08,Grace Xu,job-ebu5042,SHORTLISTED,,,,match=100%; missing=
+Application,apply-09,Henry Sun,job-cbu5201,INTERVIEW_INVITED,,,,match=100%; missing=
+Application,apply-10,Ivy Huang,job-ebu6335,SHORTLISTED,,,,match=100%; missing=
+Application,apply-11,Jason Wu,job-ebu5606,ACCEPTED,,,,match=40%; missing=Product Development|Marketing|Business Analysis
+Application,apply-12,Jason Wu,job-ebu6366,SUBMITTED,,,,match=20%; missing=Microwave Engineering|RF Systems|Optical Transmission|Signal Analysis
+Application,apply-13,Emma Liu,job-cbu5201,SHORTLISTED,,,,match=80%; missing=Jupyter Notebook
+Application,apply-14,Alice Chen,job-ebu6304-invigilation,ACCEPTED,,,,match=0%; missing=Responsibility|Communication|Time Management|Exam Procedure Awareness
+Application,apply-15,Jason Wu,job-ebu6304-demo,ACCEPTED,,,,match=50%; missing=Software Engineering|Testing
+Workload,applicant-frank,Frank Zhao,job-ebu6475|job-ebu6366,OVERLOAD,11h/week,,,"weekly=EBU6475 Microprocessor Systems Design - 2025/26 (6h/week)|EBU6366 Microwave, Millimeterwave and Optical Transmission - 2025/26 (5h/week); oneOff=0h total "
+Workload,applicant-jason,Jason Wu,job-ebu5606|job-ebu6304-demo,OK,4h/week,,,weekly=EBU5606 Product Development and Marketing - 2025/26 (4h/week); oneOff=4h total EBU6304 Demo Support Assistant for EBU6304 Final Assessment (4h total)
+Workload,applicant-alice,Alice Chen,job-ebu6304-invigilation,OK,0h/week,,,weekly=; oneOff=3h total EBU6304 Invigilation Assistant for EBU6304 Final Assessment (3h total)
+Workload,applicant-ben,Ben Wang,,OK,0h/week,,,weekly=; oneOff=0h total 
+Workload,applicant-chloe,Chloe Li,,OK,0h/week,,,weekly=; oneOff=0h total 
+Workload,applicant-daniel,Daniel Zhang,,OK,0h/week,,,weekly=; oneOff=0h total 
+Workload,applicant-emma,Emma Liu,,OK,0h/week,,,weekly=; oneOff=0h total 
+Workload,applicant-grace,Grace Xu,,OK,0h/week,,,weekly=; oneOff=0h total 
+Workload,applicant-henry,Henry Sun,,OK,0h/week,,,weekly=; oneOff=0h total 
+Workload,applicant-ivy,Ivy Huang,,OK,0h/week,,,weekly=; oneOff=0h total 

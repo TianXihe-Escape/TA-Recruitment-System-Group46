@@ -52,6 +52,21 @@ public class DataService {
     private final ApplicationRepository applicationRepository;
 
     /**
+     * Repository for user-facing notification records.
+     */
+    private final NotificationRepository notificationRepository;
+
+    /**
+     * Repository for TA/MO message records.
+     */
+    private final MessageRepository messageRepository;
+
+    /**
+     * Repository for accepted applicant allocation records.
+     */
+    private final AllocationRepository allocationRepository;
+
+    /**
      * Repository for managing system configuration settings.
      * Stores application-wide settings and preferences.
      */
@@ -84,11 +99,23 @@ public class DataService {
         this.profileRepository = new ApplicantProfileRepository(dataStore, Constants.PROFILES_FILE);
         this.jobRepository = new JobRepository(dataStore, Constants.JOBS_FILE);
         this.applicationRepository = new ApplicationRepository(dataStore, Constants.APPLICATIONS_FILE);
+        this.notificationRepository = new NotificationRepository(dataStore, Constants.NOTIFICATIONS_FILE);
+        this.messageRepository = new MessageRepository(dataStore, Constants.MESSAGES_FILE);
+        this.allocationRepository = new AllocationRepository(dataStore, Constants.ALLOCATIONS_FILE);
         this.configRepository = new ConfigRepository(dataStore, Constants.CONFIG_FILE);
 
         // Create the sample data loader with access to all repositories
         // This allows loading predefined test data across all entities
-        this.sampleDataLoader = new SampleDataLoader(userRepository, profileRepository, jobRepository, applicationRepository, configRepository);
+        this.sampleDataLoader = new SampleDataLoader(
+                userRepository,
+                profileRepository,
+                jobRepository,
+                applicationRepository,
+                notificationRepository,
+                messageRepository,
+                allocationRepository,
+                configRepository
+        );
     }
 
     /**
@@ -127,6 +154,18 @@ public class DataService {
         return applicationRepository;
     }
 
+    public NotificationRepository getNotificationRepository() {
+        return notificationRepository;
+    }
+
+    public MessageRepository getMessageRepository() {
+        return messageRepository;
+    }
+
+    public AllocationRepository getAllocationRepository() {
+        return allocationRepository;
+    }
+
     /**
      * Gets the configuration repository for accessing system settings.
      *
@@ -151,6 +190,9 @@ public class DataService {
         profileRepository.findAll();
         jobRepository.findAll();
         applicationRepository.findAll();
+        notificationRepository.findAll();
+        messageRepository.findAll();
+        allocationRepository.findAll();
 
         // Load configuration, which might have different initialization logic
         configRepository.load();

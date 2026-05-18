@@ -1,0 +1,10 @@
+Section,ID,Name,Related ID,Status,Hours,Category,Semester,Details
+Job,job-01,COMP1001 Programming Fundamentals,user-mo-01,CLOSED,6,Module TA,2026 Spring,applications=1; requiredTAs=1
+Job,job-02,DATA2002 Data Analytics,user-mo-01,OPEN,8,Module TA,2026 Spring,applications=1; requiredTAs=3
+Job,job-03,COMP3003 Introduction to AI,user-mo-02,OPEN,5,Module TA,2026 Spring,applications=1; requiredTAs=2
+Application,apply-01,Li Hua,job-01,ACCEPTED,,,,match=100%; missing=
+Application,apply-02,Zhang Wei,job-02,SHORTLISTED,,,,match=100%; missing=
+Application,apply-03,Chen Yu,job-03,SUBMITTED,,,,match=100%; missing=
+Workload,applicant-01,Li Hua,job-01,OK,6,,,COMP1001 Programming Fundamentals
+Workload,applicant-02,Zhang Wei,,OK,0,,,
+Workload,applicant-03,Chen Yu,,OK,0,,,

@@ -1,4 +1,4 @@
-﻿package service;
+package service;
 
 import model.JobPosting;
 import model.JobStatus;
@@ -27,6 +27,19 @@ class ValidationServiceTest {
     @Test
     void shouldRejectInvalidPhoneNumber() {
         assertFalse(validationService.validateApplicantProfile("Li Hua", "li@bupt.edu.cn", "12-abc").isEmpty());
+    }
+
+    @Test
+    void shouldValidateAcademicProfileFields() {
+        assertTrue(validationService.validateAcademicProfile("Software Engineering", "Year 3").isEmpty());
+        assertFalse(validationService.validateAcademicProfile("", "Year 3").isEmpty());
+        assertFalse(validationService.validateAcademicProfile("Software Engineering", "").isEmpty());
+    }
+
+    @Test
+    void shouldValidateSupportingDocumentExtensions() {
+        assertTrue(validationService.validateSupportingDocumentPath("transcript.pdf").isEmpty());
+        assertFalse(validationService.validateSupportingDocumentPath("transcript.exe").isEmpty());
     }
 
     @Test
@@ -70,6 +83,7 @@ class ValidationServiceTest {
         JobPosting job = new JobPosting();
         job.setModuleCode("comp1001");
         job.setModuleTitle("Intro to Programming");
+        job.setSemester("2026 Spring");
         job.setHours(6);
         job.setStatus(JobStatus.OPEN);
         job.setApplicationDeadline(LocalDate.now().minusDays(1));
@@ -77,5 +91,25 @@ class ValidationServiceTest {
         job.setDuties("Support labs.");
 
         assertFalse(validationService.validateJobPosting(job).isEmpty());
+    }
+
+    @Test
+    void shouldRejectOneOffActivityDeadlineOnOrAfterStartDate() {
+        JobPosting job = new JobPosting();
+        job.setModuleCode("EBU6304");
+        job.setModuleTitle("Demo Support");
+        job.setSemester("2025/26");
+        job.setHours(4);
+        job.setRequiredTaCount(1);
+        job.setStatus(JobStatus.OPEN);
+        job.setJobType(JobPosting.JOB_TYPE_DEMO_SUPPORT);
+        job.setWorkloadType(JobPosting.WORKLOAD_TYPE_TOTAL);
+        job.setStartDate(LocalDate.now().plusDays(7).toString());
+        job.setApplicationDeadline(LocalDate.now().plusDays(7));
+        job.setRequiredSkills(List.of("Communication"));
+        job.setDuties("Support a one-off assessment activity.");
+
+        assertTrue(validationService.validateJobPosting(job)
+                .contains("Application deadline must be before the activity start date."));
     }
 }

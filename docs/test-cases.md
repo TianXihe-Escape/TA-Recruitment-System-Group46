@@ -2,31 +2,92 @@
 
 | Req ID | Feature | Test Case ID | Input / Action | Expected Result | Actual Result |
 |---|---|---|---|---|---|
-| R1 | Register TA | TC-REG-01 | Enter valid email and matching password | Account created and TA can log in | TBD |
-| R1 | Register Validation | TC-REG-02 | Empty email | Error shown | TBD |
-| R1 | Register Validation | TC-REG-03 | Invalid email | Error shown | TBD |
-| R2 | Login TA | TC-LOG-01 | Valid TA account and role | TA dashboard opens | TBD |
-| R2 | Login Validation | TC-LOG-02 | Wrong password | Error shown | TBD |
-| R3 | Edit Profile | TC-PRO-01 | Update profile and save | Profile saved to JSON | TBD |
-| R3 | Profile Validation | TC-PRO-02 | Empty name | Error shown | TBD |
-| R4 | CV Path | TC-CV-01 | Save CV path | Path stored in JSON | TBD |
-| R4 | CV Path Validation | TC-CV-02 | Apply without CV path | Error shown | TBD |
-| R5 | Browse Jobs | TC-JOB-01 | Open job tab | Jobs listed | TBD |
-| R6 | Apply Job | TC-APP-01 | Apply to open job | Application saved with `SUBMITTED` | TBD |
-| R6 | Duplicate Apply | TC-APP-02 | Apply twice to same job | Duplicate rejected | TBD |
-| R6 | Closed Job | TC-APP-03 | Apply to closed job | Error shown | TBD |
-| R7 | MO Post Job | TC-MO-01 | Fill form and save | Job appears in table | TBD |
-| R8 | MO Review Applicants | TC-MO-02 | Select job and load applicants | Applicants displayed | TBD |
-| R8 | MO Accept Applicant | TC-MO-03 | Accept applicant | Status becomes `ACCEPTED`, job closes | TBD |
-| R8 | MO Reject Applicant | TC-MO-04 | Reject applicant | Status becomes `REJECTED` | TBD |
-| R9 | TA Status Tracking | TC-STA-01 | TA logs in after review | Updated status visible | TBD |
-| R10 | Admin Workload | TC-ADM-01 | Open admin dashboard | Workload totals shown | TBD |
-| R10 | Overload Flag | TC-ADM-02 | Accepted hours exceed threshold | Flag shows `YES` and row highlights | TBD |
-| R11 | Skill Match Score | TC-AI-01 | Match 2 of 3 skills | Score `67%`, missing skill shown | TBD |
+| US01 | Register TA | TC-REG-01 | Enter valid email/name/password | Account and profile created | Pass |
+| US01 | Register validation | TC-REG-02 | Invalid email/name or duplicate email | Error shown, no record saved | Pass |
+| US02 | Login | TC-LOG-01 | Valid role credentials | Correct dashboard opens | Pass |
+| US02 | Login validation | TC-LOG-02 | Wrong password or role | Error shown | Pass |
+| US03 | Reset password | TC-RST-01 | Existing email and matching new password | Password updates and login succeeds | Pass |
+| US04 | Edit profile | TC-PRO-01 | Save name/email/phone/programme/year/skills | Profile saved to JSON | Pass |
+| US05 | Upload documents | TC-DOC-01 | Choose CV/multiple supporting documents and save | Files copied to managed folders and paths saved | Pass |
+| US06 | Browse jobs | TC-JOB-01 | Open TA dashboard | Open, non-expired jobs listed | Pass |
+| US07 | Job details | TC-JOB-02 | Select job and open details | Category, semester, duties, job type, schedule, location, workload type, hours, deadline shown | Pass |
+| US08 | Search/filter jobs | TC-JOB-03 | Search keyword, module, or category | Matching jobs only are shown | Pass |
+| US09 | Apply job | TC-APP-01 | Apply with complete profile | Application saved as `SUBMITTED` | Pass |
+| US09 | Duplicate apply | TC-APP-02 | Apply twice to active application | Duplicate rejected | Pass |
+| US10 | Withdraw | TC-WDR-01 | Withdraw before deadline | Status becomes `WITHDRAWN` | Pass |
+| US10 | Withdraw after deadline | TC-WDR-02 | Withdraw after deadline | Error shown | Pass |
+| US11 | Track status | TC-STA-01 | TA opens My Applications | Status, notes, missing skills visible | Pass |
+| US12 | Favourite jobs | TC-FAV-01 | Toggle favourite | Favourite Jobs tab updates and persists | Pass |
+| US13 | Post vacancy | TC-MO-01 | MO saves valid vacancy | Job appears in tables | Pass |
+| US14 | Edit/close vacancy | TC-MO-02 | Update fields or close/open job | Saved with guarded workflow | Pass |
+| US15 | Selection criteria | TC-MO-03 | Enter required skills | Criteria saved and shown in review | Pass |
+| US16 | Review applicants | TC-MO-04 | Load applicants for job | Linked applicants listed | Pass |
+| US17 | Review profile/CV | TC-MO-05 | Click CV/supporting document line | Correct file opens or clear error shown | Pass |
+| US18 | Shortlist/remove shortlist | TC-MO-06 | Shortlist then remove shortlist | Status moves `SUBMITTED` / `SHORTLISTED` correctly | Pass |
+| US19 | Hiring decision | TC-MO-07 | Accept/reject applicant | Decision timestamp/history updated | Pass |
+| US19 | Interview invitation | TC-MO-09 | Invite shortlisted applicant to interview | Status becomes `INTERVIEW_INVITED` and notification is sent | Pass |
+| US20 | Allocation | TC-ADM-01 | Accept applicant | Active allocation record created | Pass |
+| US21 | Workload dashboard | TC-ADM-02 | Open admin dashboard | Accepted weekly workload and one-off event workload shown separately | Pass |
+| US22 | Workload warning | TC-MO-08 | Accept overloaded TA | Confirmation warning shown before accepting | Pass |
+| US23 | Notifications | TC-NOT-01 | Submit/status change/export | Notifications created and visible | Pass |
+| US24 | Export CSV | TC-EXP-01 | Admin clicks Export CSV | CSV report written to `exports/` | Pass |
+| US25 | Skill matching | TC-AI-01 | Applicant matches some required skills | Score and matched/missing skills shown | Pass |
+| US26 | Missing-skill suggestion | TC-AI-02 | TA views application details | Missing skills converted to improvement suggestion | Pass |
+| US27 | Role permissions | TC-SEC-01 | TA/MO/Admin login | Only role dashboard/actions are accessible | Pass |
+| US28 | JSON storage | TC-DAT-01 | Save/read entities | JSON files persist and reload data | Pass |
+| US29 | TA/MO messages | TC-MSG-01 | TA sends message and MO replies | `messages.json` stores both directions with read tracking | Pass |
+| US30 | Demo data integrity | TC-SEED-01 | Load demo data | All job owners, applications, messages, notifications, and allocations reference existing local JSON users/jobs/profiles | Pass |
+| US31 | Course-specific demo | TC-SEED-02 | Load demo data | EBU6304, EBU6475, EBU6366, EBU5606, EBU5042, CBU5201, and EBU6335 jobs exist with the requested MO accounts | Pass |
+| US32 | Self/MO evaluation | TC-SEED-03 | Load demo data and open TA/MO dashboards | TA self evaluation appears via profile experience summary; MO evaluation appears via reviewer notes | Pass |
+| US33 | Workload demo | TC-SEED-04 | Open Admin workload monitor | Demo threshold is 10 hours/week; Frank Zhao has two accepted weekly jobs totalling 11 hours/week and triggers the weekly workload warning | Pass |
+| US34 | Admin application review overview | TC-ADM-03 | Admin opens Application Reviews | All applications show TA, course, job type, schedule, location, workload, MO, status, match score, missing skills, and reviewer notes | Pass |
+| US35 | One-off workload demo | TC-SEED-05 | Load demo data and open Admin workload monitor | Alice Chen has 3 h total invigilation and Jason Wu has 4 h total demo support; these are shown separately from weekly threshold calculation | Pass |
+| US36 | Multiple supporting documents | TC-SEED-06 | Load demo data and open a TA/MO profile document area | Each fictional TA has demo PDF supporting documents, the profile experience summary mentions them, and the UI allows selecting which supporting document to open | Pass |
+| US36 | Flexible supporting document upload | TC-DOC-02 | Select any number of local supporting documents and save the TA profile | All selected files are copied into `supporting-documents/` and stored in the profile document list | Pass |
+| US37 | One-off activity deadline | TC-JOB-04 | Create or load an invigilation/demo-support activity | Application deadline is before the activity start date; invalid on/after-start deadlines are rejected | Pass |
 
 ## Automated Unit Tests
-- `MatchingServiceTest`
-- `WorkloadServiceTest`
-- `ValidationServiceTest`
+- `AccountCleanupServiceTest`
 - `ApplicationServiceTest`
+- `AuthServiceTest`
+- `CvStorageServiceTest`
 - `JsonDataStoreTest`
+- `JobServiceTest`
+- `MatchingServiceTest`
+- `NotificationServiceTest`
+- `MessageServiceTest`
+- `ValidationServiceTest`
+- `WorkloadServiceTest`
+- `SampleDataLoaderTest`
+
+Latest local JUnit run: 75 tests run, 75 successful, 0 failed, 0 errors.
+
+## Testing Strategy
+
+The testing approach follows the lecture testing model:
+- Unit testing / white-box testing: JUnit tests exercise internal service logic such as authentication, validation, application status transitions, matching, workload calculation, JSON persistence, and cleanup of secondary records.
+- System testing: manual end-to-end checks run the complete Swing application across TA, MO, and Admin workflows.
+- Acceptance testing / black-box testing: demo accounts and realistic local JSON data are used to check that the system meets the recruitment requirements from the user's point of view.
+- Regression testing: `mvn test` is run after changes to confirm that new fixes do not break existing workflows.
+
+## Manual Demo Checklist
+- Admin: log in as `admin@bupt.edu.cn`, inspect all jobs, workload monitor, Application Reviews, notifications, CSV export, and sample-data reset/load.
+- Dr Ling Ma: log in as `ling.ma@qmul.ac.uk`, load `EBU6304` applicants, review Alice Chen and Emma Liu, and edit reviewer notes.
+- Dr Chao Shu: log in as `chao.shu@qmul.ac.uk`, load `EBU6475` applicants, and review Ben Wang / Frank Zhao.
+- Dr Jin Zhang: log in as `jin.zhang@qmul.ac.uk`, load `EBU6366` applicants, and review Chloe Li / Frank Zhao.
+- Dr Nickos Paltalidis: log in as `n.paltalidis@qmul.ac.uk`, load `EBU5606` applicants, and review Daniel Zhang / Jason Wu.
+- Dr Paula Fonseca: log in as `paula.fonseca@qmul.ac.uk`, load `EBU5042` applicants, and review Grace Xu.
+- Dr Chao Liu: log in as `chao.liu@qmul.ac.uk`, load `CBU5201` applicants, and review Henry Sun / Emma Liu.
+- Dr Athen Ma: log in as `a.ma@qmul.ac.uk`, load `EBU6335` applicants, and review Ivy Huang.
+- Alice Chen: log in as `alice.chen@demo.local`, check shortlisted status, MO evaluation, notifications, and messages.
+- Emma Liu: log in as `emma.liu@demo.local`, check rejected `EBU6304` application, missing skills, and reviewer notes.
+- Frank Zhao: log in as `frank.zhao@demo.local`, check accepted applications and workload-related notification.
+- Alice Chen: confirm EBU6304 final assessment invigilation is shown as `3 h total`.
+- Jason Wu: log in as `jason.wu@demo.local`, compare EBU5606 support notes with EBU6366 missing RF skills and confirm EBU6304 demo support is shown as `4 h total`.
+
+## Workload Design Notes
+The system separates schedule and workload. Schedule explains when and where the work happens, while workload measures effort. Course support jobs use weekly workload. One-off jobs such as invigilation and demo support use total workload.
+
+Admin workload monitor calculates accepted weekly jobs separately from accepted one-off jobs. Weekly workload is compared with the threshold. One-off workload is displayed as event workload and is not mixed with weekly threshold calculation.
+
+Future work could expand the lightweight schedule conflict check into calendar-based workload planning.

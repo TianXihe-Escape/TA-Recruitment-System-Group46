@@ -35,6 +35,16 @@ public class ApplicantProfile {
     private String phone;
 
     /**
+     * Academic programme or major entered by the applicant.
+     */
+    private String programme;
+
+    /**
+     * Current year of study.
+     */
+    private String yearOfStudy;
+
+    /**
      * Skills entered by the applicant for matching against job requirements.
      */
     private List<String> skills = new ArrayList<>();
@@ -58,6 +68,23 @@ public class ApplicantProfile {
      * Local file path to the applicant CV selected in the UI.
      */
     private String cvPath;
+
+    /**
+     * Legacy single supporting document path. Kept for compatibility with older
+     * JSON files and code paths that still expect one primary document.
+     */
+    private String supportingDocumentPath;
+
+    /**
+     * Optional supporting documents, such as transcripts, certificates, or proof
+     * materials. The first entry is mirrored into supportingDocumentPath.
+     */
+    private List<String> supportingDocumentPaths = new ArrayList<>();
+
+    /**
+     * Jobs saved by the applicant for later review.
+     */
+    private List<String> favoriteJobIds = new ArrayList<>();
 
     /**
      * No-args constructor used by JSON deserialization and empty object creation.
@@ -116,6 +143,22 @@ public class ApplicantProfile {
         this.phone = phone;
     }
 
+    public String getProgramme() {
+        return programme;
+    }
+
+    public void setProgramme(String programme) {
+        this.programme = programme;
+    }
+
+    public String getYearOfStudy() {
+        return yearOfStudy;
+    }
+
+    public void setYearOfStudy(String yearOfStudy) {
+        this.yearOfStudy = yearOfStudy;
+    }
+
     public List<String> getSkills() {
         return skills;
     }
@@ -155,5 +198,48 @@ public class ApplicantProfile {
 
     public void setCvPath(String cvPath) {
         this.cvPath = cvPath;
+    }
+
+    public String getSupportingDocumentPath() {
+        return supportingDocumentPath;
+    }
+
+    public void setSupportingDocumentPath(String supportingDocumentPath) {
+        String normalizedPath = supportingDocumentPath == null ? "" : supportingDocumentPath.trim();
+        this.supportingDocumentPath = normalizedPath;
+        this.supportingDocumentPaths = new ArrayList<>();
+        if (!normalizedPath.isBlank()) {
+            this.supportingDocumentPaths.add(normalizedPath);
+        }
+    }
+
+    public List<String> getSupportingDocumentPaths() {
+        return new ArrayList<>(supportingDocumentPaths);
+    }
+
+    public void setSupportingDocumentPaths(List<String> supportingDocumentPaths) {
+        this.supportingDocumentPaths = new ArrayList<>();
+        if (supportingDocumentPaths != null) {
+            for (String documentPath : supportingDocumentPaths) {
+                if (documentPath != null && !documentPath.trim().isBlank()) {
+                    this.supportingDocumentPaths.add(documentPath.trim());
+                }
+            }
+        }
+        this.supportingDocumentPath = this.supportingDocumentPaths.isEmpty()
+                ? ""
+                : this.supportingDocumentPaths.get(0);
+    }
+
+    public List<String> getFavoriteJobIds() {
+        return new ArrayList<>(favoriteJobIds);
+    }
+
+    public void setFavoriteJobIds(List<String> favoriteJobIds) {
+        this.favoriteJobIds = favoriteJobIds == null ? new ArrayList<>() : new ArrayList<>(favoriteJobIds);
+    }
+
+    public boolean isFavoriteJob(String jobId) {
+        return jobId != null && favoriteJobIds.contains(jobId);
     }
 }
