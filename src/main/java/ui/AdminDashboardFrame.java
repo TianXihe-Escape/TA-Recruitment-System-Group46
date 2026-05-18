@@ -9,11 +9,15 @@ import model.WorkloadRecord;
 import service.ApplicantService;
 import service.ApplicationService;
 import service.AuthService;
+import service.AccountCleanupService;
+import service.CvStorageService;
 import service.DataService;
 import service.JobService;
 import service.MatchingService;
+import service.NotificationService;
 import service.ValidationService;
 import service.WorkloadService;
+import service.ExportService;
 import ui.dialogs.UiMessage;
 import util.Constants;
 
@@ -21,6 +25,7 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -31,6 +36,10 @@ import java.util.Set;
  * and system-level account management.
  */
 public class AdminDashboardFrame extends JFrame {
+    private static final int VIEW_DASHBOARD = 0;
+    private static final int VIEW_RECRUITMENT = 1;
+    private static final int VIEW_APPLICATION_REVIEWS = 2;
+    private static final String[] VIEW_KEYS = {"dashboard", "recruitment", "applicationReviews"};
     /**
      * Preferred height for directory scroll areas.
      */
@@ -56,6 +65,8 @@ public class AdminDashboardFrame extends JFrame {
      * Service used for application cleanup so job status stays synchronized.
      */
     private final ApplicationService applicationService;
+    private final NotificationService notificationService;
+    private final ExportService exportService;
     /**
      * Matching helper used for rebalance suggestions.
      */
@@ -68,22 +79,48 @@ public class AdminDashboardFrame extends JFrame {
      * Auth service used by admins to create MO accounts.
      */
     private final AuthService authService;
+    private final CvStorageService cvStorageService;
     private final JLabel openJobsValue = createMetricValueLabel();
     private final JLabel closedJobsValue = createMetricValueLabel();
     private final JLabel applicationCountValue = createMetricValueLabel();
     private final JLabel acceptedCountValue = createMetricValueLabel();
     private final DefaultTableModel workloadTableModel = new DefaultTableModel(
-            new Object[]{"TA", "Modules", "Total Hours", "Overload"}, 0);
+            new Object[]{"TA Name", "Email", "Weekly Workload", "One-off Workload", "Threshold", "Status / Warning"}, 0);
     private final JTable workloadTable = new PlaceholderTable(workloadTableModel, "No workload records are available yet.");
+    private final DefaultTableModel applicationReviewTableModel = new DefaultTableModel(
+            new Object[]{"Application ID", "TA", "TA Email", "Course", "Course Name", "Job Type", "Period / Schedule", "Location", "Workload", "MO", "Status", "Match Score", "Missing Skills", "Reviewer Notes"}, 0) {
+        @Override
+        public boolean isCellEditable(int row, int column) {
+            return false;
+        }
+    };
+    private final JTable applicationReviewTable = new PlaceholderTable(applicationReviewTableModel, "No applications are available yet.");
+    private final JTextArea applicationReviewDetailArea = new JTextArea();
     private final JPanel taDirectoryPanel = createDirectoryListPanel();
     private final JPanel moDirectoryPanel = createDirectoryListPanel();
-    private final JTextArea jobSummaryArea = new JTextArea();
+    private final DefaultTableModel jobSummaryTableModel = new DefaultTableModel(
+            new Object[]{"Job ID", "Course", "Job Type", "Status", "Period", "Schedule / Location", "Workload", "Applicants", "Accepted"}, 0) {
+        @Override
+        public boolean isCellEditable(int row, int column) {
+            return false;
+        }
+    };
+    private final JTable jobSummaryTable = new PlaceholderTable(jobSummaryTableModel, "No jobs are available yet.");
     private final JTextArea suggestionArea = new JTextArea();
     private final JTextField moNameField = new JTextField();
     private final JTextField moEmailField = new JTextField();
     private final JPasswordField moPasswordField = new JPasswordField();
     private final JPasswordField moConfirmField = new JPasswordField();
     private final JTextField moModulesField = new JTextField();
+    private final JPanel workspaceCards = new JPanel(new CardLayout());
+    private final List<JToggleButton> navigationButtons = new ArrayList<>();
+    private final AvatarButton avatarButton = new AvatarButton("AD");
+    private final JLabel sidebarNameLabel = new JLabel();
+    private final JLabel sidebarRoleLabel = new JLabel("System Administrator");
+    private final JLabel workspaceTitleLabel = new JLabel();
+    private final JLabel workspaceSubtitleLabel = new JLabel();
+    private JPanel workspaceShell;
+    private int currentWorkspaceView = VIEW_DASHBOARD;
 
     /**
      * Constructs the admin dashboard and immediately refreshes all summary data.
@@ -92,6 +129,7 @@ public class AdminDashboardFrame extends JFrame {
         this.dataService = dataService;
         this.currentUser = currentUser;
         this.validationService = new ValidationService();
+        this.cvStorageService = new CvStorageService();
         this.authService = new AuthService(
                 dataService.getUserRepository(),
                 dataService.getProfileRepository(),
@@ -102,8 +140,11 @@ public class AdminDashboardFrame extends JFrame {
         this.applicationService = new ApplicationService(
                 dataService.getApplicationRepository(),
                 dataService.getJobRepository(),
-                new MatchingService()
+                new MatchingService(),
+                new service.AllocationService(dataService.getAllocationRepository())
         );
+        this.notificationService = new NotificationService(dataService.getNotificationRepository());
+        this.exportService = new ExportService();
         this.workloadService = new WorkloadService();
         this.matchingService = new MatchingService();
 
@@ -114,50 +155,286 @@ public class AdminDashboardFrame extends JFrame {
         setLocationRelativeTo(null);
         UiTheme.styleFrame(this);
         styleComponents();
-
         workloadTable.setDefaultRenderer(Object.class, new WorkloadRenderer());
-        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, buildTopPanel(), buildBottomPanel());
-        splitPane.setResizeWeight(0.55);
-        UiTheme.styleSplitPane(splitPane);
+        avatarButton.addActionListener(event -> showAccountMenu());
 
-        JPanel root = UiTheme.createPagePanel();
-        root.add(UiTheme.createHeader("Admin Control Center", "Audit workloads, repopulate demo data, and rebalance staffing decisions."), BorderLayout.NORTH);
-        root.add(splitPane, BorderLayout.CENTER);
-        add(UiTheme.wrapPage(root));
+        JPanel root = new JPanel(new BorderLayout(18, 0));
+        root.setBackground(UiTheme.BACKGROUND);
+        root.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+        root.add(buildSidebar(), BorderLayout.WEST);
+        root.add(UiTheme.wrapPage(buildWorkspacePanel()), BorderLayout.CENTER);
+        add(root);
 
         refreshData();
+        showWorkspace(VIEW_DASHBOARD);
+    }
+
+    /**
+     * Builds the left admin navigation rail with account identity and workspace tabs.
+     */
+    private JPanel buildSidebar() {
+        JPanel sidebar = new JPanel(new BorderLayout(0, 18));
+        sidebar.setPreferredSize(new Dimension(226, 0));
+        sidebar.setBackground(new Color(235, 242, 252));
+        sidebar.setBorder(BorderFactory.createEmptyBorder(14, 12, 14, 12));
+
+        JPanel accountPanel = new JPanel(new BorderLayout(10, 0));
+        accountPanel.setOpaque(false);
+        avatarButton.setInitials(initialsFor(displayName()));
+        accountPanel.add(avatarButton, BorderLayout.WEST);
+
+        JPanel identity = new JPanel();
+        identity.setOpaque(false);
+        identity.setLayout(new BoxLayout(identity, BoxLayout.Y_AXIS));
+        sidebarNameLabel.setText(displayName());
+        sidebarNameLabel.setFont(UiTheme.uiFont(Font.BOLD, 15));
+        sidebarNameLabel.setForeground(UiTheme.TEXT);
+        sidebarRoleLabel.setFont(UiTheme.uiFont(Font.PLAIN, 12));
+        sidebarRoleLabel.setForeground(UiTheme.MUTED_TEXT);
+        identity.add(sidebarNameLabel);
+        identity.add(Box.createVerticalStrut(4));
+        identity.add(sidebarRoleLabel);
+        accountPanel.add(identity, BorderLayout.CENTER);
+        sidebar.add(accountPanel, BorderLayout.NORTH);
+
+        JPanel navigation = new JPanel();
+        navigation.setOpaque(false);
+        navigation.setLayout(new BoxLayout(navigation, BoxLayout.Y_AXIS));
+        navigation.add(createNavButton("Control Center", SimpleLineIcon.Type.BRIEFCASE, VIEW_DASHBOARD));
+        navigation.add(Box.createVerticalStrut(8));
+        navigation.add(createNavButton("Recruitment", SimpleLineIcon.Type.DOCUMENT, VIEW_RECRUITMENT));
+        navigation.add(Box.createVerticalStrut(8));
+        navigation.add(createNavButton("Application Reviews", SimpleLineIcon.Type.FILE, VIEW_APPLICATION_REVIEWS));
+        sidebar.add(navigation, BorderLayout.CENTER);
+        return sidebar;
+    }
+
+    /**
+     * Builds the admin shell that holds the title area and the card-based workspaces.
+     */
+    private JPanel buildWorkspacePanel() {
+        workspaceShell = new JPanel(new BorderLayout(0, 14));
+        workspaceShell.setBackground(UiTheme.SURFACE);
+        workspaceShell.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(UiTheme.BORDER),
+                BorderFactory.createEmptyBorder(18, 18, 18, 18)
+        ));
+
+        JPanel titlePanel = new JPanel();
+        titlePanel.setOpaque(false);
+        titlePanel.setLayout(new BoxLayout(titlePanel, BoxLayout.Y_AXIS));
+        workspaceTitleLabel.setFont(UiTheme.uiFont(Font.BOLD, 22));
+        workspaceTitleLabel.setForeground(UiTheme.TEXT);
+        workspaceSubtitleLabel.setFont(UiTheme.uiFont(Font.PLAIN, 13));
+        workspaceSubtitleLabel.setForeground(UiTheme.MUTED_TEXT);
+        workspaceSubtitleLabel.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
+        titlePanel.add(workspaceTitleLabel);
+        titlePanel.add(workspaceSubtitleLabel);
+
+        workspaceCards.setOpaque(false);
+        workspaceCards.add(buildTopPanel(), VIEW_KEYS[VIEW_DASHBOARD]);
+        workspaceCards.add(buildBottomPanel(), VIEW_KEYS[VIEW_RECRUITMENT]);
+        workspaceCards.add(buildApplicationReviewPanel(), VIEW_KEYS[VIEW_APPLICATION_REVIEWS]);
+
+        workspaceShell.add(titlePanel, BorderLayout.NORTH);
+        workspaceShell.add(workspaceCards, BorderLayout.CENTER);
+        return workspaceShell;
+    }
+
+    /**
+     * Creates one sidebar navigation button for the admin workspace switcher.
+     */
+    private JToggleButton createNavButton(String text, SimpleLineIcon.Type iconType, int viewIndex) {
+        JToggleButton button = new JToggleButton(text);
+        button.setIcon(new SimpleLineIcon(iconType, UiTheme.MUTED_TEXT));
+        button.setIconTextGap(10);
+        button.setHorizontalAlignment(SwingConstants.LEFT);
+        button.setFont(UiTheme.uiFont(Font.BOLD, 14));
+        button.setForeground(UiTheme.TEXT);
+        button.setBackground(new Color(235, 242, 252));
+        button.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        button.setFocusPainted(false);
+        button.setContentAreaFilled(true);
+        button.setOpaque(true);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 46));
+        button.addActionListener(event -> showWorkspace(viewIndex));
+        navigationButtons.add(button);
+        return button;
+    }
+
+    /**
+     * Switches the visible admin workspace and rewrites the header copy to match it.
+     */
+    private void showWorkspace(int viewIndex) {
+        currentWorkspaceView = viewIndex;
+        ((CardLayout) workspaceCards.getLayout()).show(workspaceCards, VIEW_KEYS[viewIndex]);
+        for (int i = 0; i < navigationButtons.size(); i++) {
+            JToggleButton button = navigationButtons.get(i);
+            boolean selected = i == viewIndex;
+            button.setSelected(selected);
+            button.setBackground(selected ? Color.WHITE : new Color(235, 242, 252));
+            button.setForeground(selected ? UiTheme.PRIMARY : UiTheme.TEXT);
+        }
+        if (viewIndex == VIEW_DASHBOARD) {
+            workspaceTitleLabel.setText("Admin Control Center");
+            workspaceSubtitleLabel.setText("Audit workloads, repopulate demo data, export reports, and rebalance staffing decisions.");
+        } else if (viewIndex == VIEW_RECRUITMENT) {
+            workspaceTitleLabel.setText("Recruitment Management");
+            workspaceSubtitleLabel.setText("Review job summaries, generate suggestions, and provision MO accounts.");
+        } else {
+            workspaceTitleLabel.setText("Application Review Overview");
+            workspaceSubtitleLabel.setText("Read all application outcomes, matching evidence, and MO reviewer notes in one place.");
+        }
+    }
+
+    /**
+     * Opens the admin account menu anchored to the avatar button.
+     */
+    private void showAccountMenu() {
+        JPopupMenu menu = new JPopupMenu();
+        menu.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(UiTheme.BORDER),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        menu.add(buildAccountHeader());
+        menu.addSeparator();
+        menu.add(menuItem("Change Password", SimpleLineIcon.Type.SAVE, this::showChangePasswordDialog));
+        menu.add(menuItem("Admin Reset Password", SimpleLineIcon.Type.TRASH, this::showAdminResetPasswordDialog));
+        menu.add(menuItem("View Notifications", SimpleLineIcon.Type.BELL, this::showNotifications));
+        menu.add(menuItem("Refresh", SimpleLineIcon.Type.REFRESH, this::refreshData));
+        menu.addSeparator();
+        menu.add(menuItem("Logout", SimpleLineIcon.Type.LOGOUT, this::returnToLogin));
+        menu.show(avatarButton, 0, avatarButton.getHeight() + 6);
+    }
+
+    /**
+     * Builds the identity header displayed at the top of the admin popup menu.
+     */
+    private JPanel buildAccountHeader() {
+        JPanel panel = new JPanel(new BorderLayout(12, 0));
+        panel.setBackground(UiTheme.SURFACE);
+        AvatarButton preview = new AvatarButton(initialsFor(displayName()));
+        preview.setEnabled(false);
+        panel.add(preview, BorderLayout.WEST);
+
+        JPanel text = new JPanel();
+        text.setOpaque(false);
+        text.setLayout(new BoxLayout(text, BoxLayout.Y_AXIS));
+        JLabel name = new JLabel(displayName());
+        name.setFont(UiTheme.uiFont(Font.BOLD, 16));
+        name.setForeground(UiTheme.TEXT);
+        JLabel username = new JLabel(currentUser.getUsername());
+        username.setFont(UiTheme.uiFont(Font.PLAIN, 12));
+        username.setForeground(UiTheme.MUTED_TEXT);
+        JLabel role = new JLabel("Role: Administrator");
+        role.setFont(UiTheme.uiFont(Font.PLAIN, 12));
+        role.setForeground(UiTheme.MUTED_TEXT);
+        text.add(name);
+        text.add(Box.createVerticalStrut(4));
+        text.add(username);
+        text.add(Box.createVerticalStrut(3));
+        text.add(role);
+        panel.add(text, BorderLayout.CENTER);
+        panel.setPreferredSize(new Dimension(320, 74));
+        return panel;
+    }
+
+    /**
+     * Creates one popup-menu entry with shared icon and spacing rules.
+     */
+    private JMenuItem menuItem(String text, SimpleLineIcon.Type iconType, Runnable action) {
+        JMenuItem item = new JMenuItem(text);
+        item.setIcon(new SimpleLineIcon(iconType, UiTheme.MUTED_TEXT));
+        item.setFont(UiTheme.uiFont(Font.PLAIN, 14));
+        item.setForeground(UiTheme.TEXT);
+        item.setIconTextGap(10);
+        item.setBorder(BorderFactory.createEmptyBorder(9, 8, 9, 8));
+        item.addActionListener(event -> action.run());
+        return item;
+    }
+
+    /**
+     * Applies the shared white-icon treatment used by admin action buttons.
+     */
+    private void decorateButton(AbstractButton button, SimpleLineIcon.Type iconType) {
+        button.setIcon(new SimpleLineIcon(iconType, Color.WHITE));
+        button.setIconTextGap(8);
+    }
+
+    /**
+     * Opens the standard password-change dialog for the logged-in admin.
+     */
+    private void showChangePasswordDialog() {
+        new ChangePasswordFrame(authService, currentUser).setVisible(true);
+    }
+
+    /**
+     * Opens the administrator-only password reset dialog.
+     */
+    private void showAdminResetPasswordDialog() {
+        new AdminResetPasswordFrame(authService).setVisible(true);
+    }
+
+    /**
+     * Returns the best available admin display name for headers and notifications.
+     */
+    private String displayName() {
+        if (currentUser.getName() != null && !currentUser.getName().isBlank()) {
+            return currentUser.getName();
+        }
+        if (currentUser.getUsername() != null && !currentUser.getUsername().isBlank()) {
+            return currentUser.getUsername();
+        }
+        return "Admin";
+    }
+
+    /**
+     * Derives short avatar initials from a display name string.
+     */
+    private String initialsFor(String value) {
+        if (value == null || value.isBlank()) {
+            return "AD";
+        }
+        String trimmed = value.trim();
+        if (trimmed.contains(" ")) {
+            String[] parts = trimmed.split("\\s+");
+            StringBuilder builder = new StringBuilder();
+            for (String part : parts) {
+                if (!part.isBlank()) {
+                    builder.append(part.charAt(0));
+                }
+                if (builder.length() == 2) {
+                    break;
+                }
+            }
+            return builder.isEmpty() ? "AD" : builder.toString();
+        }
+        return trimmed.length() <= 2 ? trimmed : trimmed.substring(0, 2);
     }
 
     /**
      * Builds the upper half of the dashboard with metrics and control buttons.
      */
     private JPanel buildTopPanel() {
-        JPanel panel = UiTheme.createCard("Workload Monitor", "Track assigned hours across TAs and quickly reset or repopulate the demo environment.");
+        JPanel panel = UiTheme.createCard("Workload Monitor", "Track assigned hours across TAs and identify staffing risks.");
 
-        JButton backButton = UiTheme.createSecondaryButton("Back to Login");
-        JButton refreshButton = UiTheme.createSecondaryButton("Refresh");
         JButton hiringButton = UiTheme.createSecondaryButton("Open Hiring Management");
-        JButton loadSampleButton = UiTheme.createSecondaryButton("Load Demo Data");
-        JButton resetButton = UiTheme.createDangerButton("Reset Demo Data");
         JButton suggestButton = UiTheme.createPrimaryButton("Rebalance Suggestion");
+        JButton exportButton = UiTheme.createSecondaryButton("Export CSV");
+        JButton notificationsButton = UiTheme.createSecondaryButton("View Notifications");
+        decorateButton(hiringButton, SimpleLineIcon.Type.EDIT);
+        decorateButton(suggestButton, SimpleLineIcon.Type.STAR);
+        decorateButton(exportButton, SimpleLineIcon.Type.SAVE);
+        decorateButton(notificationsButton, SimpleLineIcon.Type.BELL);
 
-        backButton.addActionListener(event -> returnToLogin());
-        refreshButton.addActionListener(event -> refreshData());
         hiringButton.addActionListener(event -> openHiringManagement());
-        loadSampleButton.addActionListener(event -> {
-            dataService.loadSampleData();
-            refreshData();
-            UiMessage.info(this, "Sample data loaded.");
+        suggestButton.addActionListener(event -> {
+            showWorkspace(VIEW_RECRUITMENT);
+            generateSuggestions();
         });
-        resetButton.addActionListener(event -> {
-            if (!UiMessage.confirm(this, "Resetting demo data will overwrite the current JSON files. Continue?", "Confirm Reset")) {
-                return;
-            }
-            dataService.resetData();
-            refreshData();
-            UiMessage.info(this, "Demo data reset.");
-        });
-        suggestButton.addActionListener(event -> generateSuggestions());
+        exportButton.addActionListener(event -> exportCsvReport());
+        notificationsButton.addActionListener(event -> showNotifications());
 
         JPanel centerPanel = new JPanel(new BorderLayout(0, 12));
         centerPanel.setOpaque(false);
@@ -166,7 +443,7 @@ public class AdminDashboardFrame extends JFrame {
 
         JPanel body = new JPanel(new BorderLayout(0, 18));
         body.setOpaque(false);
-        body.add(UiTheme.createButtonRow(FlowLayout.LEFT, backButton, refreshButton, hiringButton, loadSampleButton, resetButton, suggestButton), BorderLayout.NORTH);
+        body.add(UiTheme.createButtonRow(FlowLayout.LEFT, hiringButton, suggestButton, exportButton, notificationsButton), BorderLayout.NORTH);
         body.add(centerPanel, BorderLayout.CENTER);
         panel.add(body, BorderLayout.CENTER);
         return panel;
@@ -239,11 +516,18 @@ public class AdminDashboardFrame extends JFrame {
      */
     private JSplitPane buildBottomPanel() {
         JPanel jobsCard = UiTheme.createCard("Jobs and Assignments", "High-level list of current postings, hours, and statuses.");
-        jobsCard.add(wrapArea(jobSummaryArea), BorderLayout.CENTER);
+        JScrollPane jobTableScrollPane = UiTheme.wrapTable(jobSummaryTable);
+        jobTableScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+        jobsCard.add(jobTableScrollPane, BorderLayout.CENTER);
 
         JPanel suggestionsCard = UiTheme.createCard("Rebalance and MO Accounts", "Create MO accounts while reviewing staffing recommendations.");
+        JButton generateButton = UiTheme.createPrimaryButton("Generate Rebalance Suggestions");
+        decorateButton(generateButton, SimpleLineIcon.Type.STAR);
+        generateButton.addActionListener(event -> generateSuggestions());
+
         JPanel suggestionContent = new JPanel(new BorderLayout(0, 16));
         suggestionContent.setOpaque(false);
+        suggestionContent.add(UiTheme.createButtonRow(FlowLayout.LEFT, generateButton), BorderLayout.NORTH);
         suggestionContent.add(wrapArea(suggestionArea), BorderLayout.CENTER);
         suggestionContent.add(buildMoAccountPanel(), BorderLayout.SOUTH);
         suggestionsCard.add(suggestionContent, BorderLayout.CENTER);
@@ -259,10 +543,42 @@ public class AdminDashboardFrame extends JFrame {
     }
 
     /**
+     * Builds the read-only application review overview for admin auditing.
+     */
+    private JPanel buildApplicationReviewPanel() {
+        JPanel panel = UiTheme.createCard("Application Review Overview", "All applications with TA, course, MO, matching result, and reviewer notes.");
+
+        applicationReviewTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        applicationReviewTable.getSelectionModel().addListSelectionListener(event -> {
+            if (!event.getValueIsAdjusting()) {
+                updateApplicationReviewDetails();
+            }
+        });
+
+        JScrollPane tableScrollPane = UiTheme.wrapTable(applicationReviewTable);
+        tableScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+        tableScrollPane.setPreferredSize(new Dimension(0, 360));
+
+        JPanel detailCard = UiTheme.createCard("Selected Review Details", "Full reviewer notes for the selected application.");
+        applicationReviewDetailArea.setRows(8);
+        detailCard.add(wrapArea(applicationReviewDetailArea), BorderLayout.CENTER);
+
+        JPanel body = new JPanel(new BorderLayout(0, 14));
+        body.setOpaque(false);
+        body.add(tableScrollPane, BorderLayout.CENTER);
+        body.add(detailCard, BorderLayout.SOUTH);
+        panel.add(body, BorderLayout.CENTER);
+        return panel;
+    }
+
+    /**
      * Reloads all repository-backed data and refreshes every admin widget.
      */
     private void refreshData() {
+        playRefreshEffect();
         workloadTableModel.setRowCount(0);
+        jobSummaryTableModel.setRowCount(0);
+        applicationReviewTableModel.setRowCount(0);
         List<User> users = dataService.getUserRepository().findAll();
         List<ApplicantProfile> profiles = dataService.getProfileRepository().findAll();
         List<JobPosting> jobs = dataService.getJobRepository().findAll();
@@ -273,9 +589,11 @@ public class AdminDashboardFrame extends JFrame {
         for (WorkloadRecord record : workloads) {
             workloadTableModel.addRow(new Object[]{
                     record.getApplicantName(),
-                    String.join("; ", record.getAssignedModules()),
-                    record.getTotalHours(),
-                    record.isOverload() ? "YES" : "NO"
+                    valueOrDash(record.getEmail()),
+                    record.getWeeklyHours() + " h/week",
+                    record.getOneOffHours() + " h total",
+                    threshold + " h/week",
+                    record.getWarningMessage()
             });
         }
 
@@ -290,9 +608,8 @@ public class AdminDashboardFrame extends JFrame {
         acceptedCountValue.setText(String.valueOf(acceptedApplications));
         refreshTaDirectory(profiles, applications);
         refreshMoDirectory(users);
+        refreshApplicationReviewOverview(users, profiles, jobs, applications);
 
-        // The lower summary is intentionally plain text so it can double as a quick audit view in demos.
-        StringBuilder builder = new StringBuilder("Jobs and Assignments\n\n");
         for (JobPosting job : jobs) {
             long applicationCount = applications.stream()
                     .filter(application -> job.getJobId().equals(application.getJobId()))
@@ -301,16 +618,47 @@ public class AdminDashboardFrame extends JFrame {
                     .filter(application -> job.getJobId().equals(application.getJobId()))
                     .filter(application -> application.getStatus() == model.ApplicationStatus.ACCEPTED)
                     .count();
-            builder.append(job.getJobId()).append(" | ")
-                    .append(job.getModuleCode()).append(" ").append(job.getModuleTitle())
-                    .append(" | ").append(job.getStatus())
-                    .append(" | ").append(job.getHours()).append("h")
-                    .append(" | applicants ").append(applicationCount).append("/").append(job.getRequiredTaCount())
-                    .append(" | accepted ").append(acceptedCount).append("/").append(job.getRequiredTaCount())
-                    .append("\n");
+            jobSummaryTableModel.addRow(new Object[]{
+                    job.getJobId(),
+                    job.getModuleCode() + " - " + job.getModuleTitle(),
+                    UiFormat.valueOrDash(job.getJobType()),
+                    job.getStatus(),
+                    UiFormat.period(job),
+                    UiFormat.scheduleLocation(job),
+                    UiFormat.workload(job),
+                    applicationCount + "/" + job.getRequiredTaCount(),
+                    acceptedCount + "/" + job.getRequiredTaCount()
+            });
         }
-        jobSummaryArea.setText(builder.toString());
-        suggestionArea.setText("Click 'Rebalance Suggestion' to recommend lower-load TAs for open jobs.");
+        suggestionArea.setText("Click 'Generate Rebalance Suggestions' to recommend lower-load TAs for open jobs.");
+    }
+
+    /**
+     * Plays a brief shell-background flash after full admin refreshes.
+     */
+    private void playRefreshEffect() {
+        if (workspaceShell == null) {
+            return;
+        }
+        Color original = workspaceShell.getBackground();
+        Color[] frames = {
+                new Color(225, 236, 255),
+                new Color(239, 246, 255),
+                UiTheme.SURFACE
+        };
+        final int[] index = {0};
+        Timer timer = new Timer(80, null);
+        timer.addActionListener(event -> {
+            workspaceShell.setBackground(frames[index[0]]);
+            workspaceShell.repaint();
+            index[0]++;
+            if (index[0] >= frames.length) {
+                workspaceShell.setBackground(original);
+                workspaceShell.repaint();
+                timer.stop();
+            }
+        });
+        timer.start();
     }
 
     /**
@@ -367,6 +715,100 @@ public class AdminDashboardFrame extends JFrame {
     }
 
     /**
+     * Rebuilds the read-only admin overview of every application review.
+     */
+    private void refreshApplicationReviewOverview(List<User> users,
+                                                  List<ApplicantProfile> profiles,
+                                                  List<JobPosting> jobs,
+                                                  List<ApplicationRecord> applications) {
+        applicationReviewTableModel.setRowCount(0);
+        for (ApplicationRecord application : applications) {
+            ApplicantProfile profile = findProfile(profiles, application.getApplicantId());
+            JobPosting job = findJob(jobs, application.getJobId());
+            User mo = job == null ? null : findUser(users, job.getPostedBy());
+            applicationReviewTableModel.addRow(new Object[]{
+                    valueOrDash(application.getApplicationId()),
+                    profile == null ? "[Deleted TA]" : valueOrDash(profile.getName()),
+                    profile == null ? "-" : valueOrDash(profile.getEmail()),
+                    job == null ? "[Deleted Job]" : valueOrDash(job.getModuleCode()),
+                    job == null ? "-" : valueOrDash(job.getModuleTitle()),
+                    job == null ? "-" : UiFormat.valueOrDash(job.getJobType()),
+                    job == null ? "-" : UiFormat.period(job) + " | " + UiFormat.valueOrDash(job.getSchedule()),
+                    job == null ? "-" : UiFormat.valueOrDash(job.getLocation()),
+                    job == null ? "-" : UiFormat.workload(job),
+                    mo == null ? "-" : valueOrDash(mo.getName()),
+                    application.getStatus() == null ? "-" : application.getStatus().name(),
+                    application.getMatchScore() + "%",
+                    missingSkillsText(application),
+                    reviewerNotesOrPending(application.getReviewerNotes())
+            });
+        }
+        if (applicationReviewTableModel.getRowCount() > 0) {
+            applicationReviewTable.setRowSelectionInterval(0, 0);
+        } else {
+            applicationReviewDetailArea.setText("No applications are available yet.");
+        }
+    }
+
+    /**
+     * Expands the selected review row into a readable audit summary block.
+     */
+    private void updateApplicationReviewDetails() {
+        int selectedRow = applicationReviewTable.getSelectedRow();
+        if (selectedRow < 0) {
+            applicationReviewDetailArea.setText("Select an application to view reviewer notes.");
+            return;
+        }
+        int modelRow = applicationReviewTable.convertRowIndexToModel(selectedRow);
+        String details = "Application ID: " + applicationReviewTableModel.getValueAt(modelRow, 0) + "\n"
+                + "TA: " + applicationReviewTableModel.getValueAt(modelRow, 1)
+                + " <" + applicationReviewTableModel.getValueAt(modelRow, 2) + ">\n"
+                + "Course: " + applicationReviewTableModel.getValueAt(modelRow, 3)
+                + " - " + applicationReviewTableModel.getValueAt(modelRow, 4) + "\n"
+                + "Job Type: " + applicationReviewTableModel.getValueAt(modelRow, 5) + "\n"
+                + "Period / Schedule: " + applicationReviewTableModel.getValueAt(modelRow, 6) + "\n"
+                + "Location: " + applicationReviewTableModel.getValueAt(modelRow, 7) + "\n"
+                + "Workload: " + applicationReviewTableModel.getValueAt(modelRow, 8) + "\n"
+                + "MO: " + applicationReviewTableModel.getValueAt(modelRow, 9) + "\n"
+                + "Status: " + applicationReviewTableModel.getValueAt(modelRow, 10) + "\n"
+                + "Match Score: " + applicationReviewTableModel.getValueAt(modelRow, 11) + "\n"
+                + "Missing Skills: " + applicationReviewTableModel.getValueAt(modelRow, 12) + "\n\n"
+                + "Reviewer Notes:\n" + applicationReviewTableModel.getValueAt(modelRow, 13);
+        applicationReviewDetailArea.setText(details);
+        applicationReviewDetailArea.setCaretPosition(0);
+    }
+
+    /**
+     * Finds one applicant profile by applicant id from a preloaded list.
+     */
+    private ApplicantProfile findProfile(List<ApplicantProfile> profiles, String applicantId) {
+        return profiles.stream()
+                .filter(profile -> applicantId != null && applicantId.equals(profile.getApplicantId()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * Finds one job posting by job id from a preloaded list.
+     */
+    private JobPosting findJob(List<JobPosting> jobs, String jobId) {
+        return jobs.stream()
+                .filter(job -> jobId != null && jobId.equals(job.getJobId()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * Finds one user by user id from a preloaded list.
+     */
+    private User findUser(List<User> users, String userId) {
+        return users.stream()
+                .filter(user -> userId != null && userId.equals(user.getUserId()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
      * Builds the embedded form used to provision a new MO account.
      */
     private JPanel buildMoAccountPanel() {
@@ -395,6 +837,8 @@ public class AdminDashboardFrame extends JFrame {
 
         JButton clearButton = UiTheme.createSecondaryButton("Clear");
         JButton createButton = UiTheme.createPrimaryButton("Create MO Account");
+        decorateButton(clearButton, SimpleLineIcon.Type.REFRESH);
+        decorateButton(createButton, SimpleLineIcon.Type.SAVE);
         clearButton.addActionListener(event -> clearMoAccountForm());
         createButton.addActionListener(event -> createMoAccount());
 
@@ -432,6 +876,45 @@ public class AdminDashboardFrame extends JFrame {
     }
 
     /**
+     * Exports the current recruitment snapshot to CSV and notifies the admin.
+     */
+    private void exportCsvReport() {
+        try {
+            List<ApplicantProfile> profiles = dataService.getProfileRepository().findAll();
+            List<JobPosting> jobs = dataService.getJobRepository().findAll();
+            List<ApplicationRecord> applications = dataService.getApplicationRepository().findAll();
+            int threshold = dataService.getConfig().getWorkloadThreshold();
+            List<WorkloadRecord> workloads = workloadService.buildWorkloadRecords(profiles, jobs, applications, threshold);
+            Path output = exportService.exportRecruitmentReport(profiles, jobs, applications, workloads);
+            notificationService.notifyUser(currentUser.getUserId(), "Recruitment CSV report exported to " + output + ".");
+            UiMessage.info(this, "CSV report exported:\n" + output);
+        } catch (Exception ex) {
+            UiMessage.error(this, ex.getMessage());
+        }
+    }
+
+    /**
+     * Shows the admin notification inbox in a simple modal summary and marks
+     * everything as read once displayed.
+     */
+    private void showNotifications() {
+        StringBuilder builder = new StringBuilder();
+        for (model.NotificationRecord notification : notificationService.getNotificationsForUser(currentUser.getUserId())) {
+            builder.append(UiFormat.dateTime(notification.getCreatedAt()))
+                    .append(" | ")
+                    .append(notification.isRead() ? "Read" : "New")
+                    .append("\n")
+                    .append(notification.getMessage())
+                    .append("\n\n");
+        }
+        if (builder.isEmpty()) {
+            builder.append("No notifications yet.");
+        }
+        notificationService.markAllRead(currentUser.getUserId());
+        UiMessage.info(this, builder.toString());
+    }
+
+    /**
      * Returns to the login frame and closes the admin dashboard.
      */
     private void returnToLogin() {
@@ -460,6 +943,8 @@ public class AdminDashboardFrame extends JFrame {
             );
             refreshData();
             clearMoAccountForm();
+            notificationService.notifyUser(currentUser.getUserId(), "MO account created for " + user.getUsername() + ".");
+            notificationService.notifyUser(user.getUserId(), "Your MO account has been created for modules: " + String.join(", ", user.getManagedModuleCodes()) + ".");
             UiMessage.info(this, "MO account created for " + user.getUsername() + ".");
         } catch (Exception ex) {
             UiMessage.error(this, ex.getMessage());
@@ -491,11 +976,15 @@ public class AdminDashboardFrame extends JFrame {
      */
     private void styleComponents() {
         UiTheme.styleTable(workloadTable);
-        UiTheme.styleTextArea(jobSummaryArea, 14);
+        UiTheme.styleTable(jobSummaryTable);
+        UiTheme.styleTable(applicationReviewTable);
         UiTheme.styleTextArea(suggestionArea, 14);
-        UiTheme.setColumnWidths(workloadTable, 180, 420, 120, 100);
-        jobSummaryArea.setEditable(false);
+        UiTheme.styleTextArea(applicationReviewDetailArea, 14);
+        UiTheme.setColumnWidths(workloadTable, 160, 210, 130, 130, 120, 220);
+        UiTheme.setColumnWidths(jobSummaryTable, 120, 320, 130, 90, 170, 280, 110, 100, 100);
+        UiTheme.setColumnWidths(applicationReviewTable, 110, 140, 190, 90, 240, 140, 260, 190, 110, 150, 120, 80, 220, 360);
         suggestionArea.setEditable(false);
+        applicationReviewDetailArea.setEditable(false);
     }
 
     /**
@@ -617,7 +1106,13 @@ public class AdminDashboardFrame extends JFrame {
         try {
             // Reuse the service-layer deletion path so removing a TA also reopens any
             // jobs whose accepted headcount drops below the required demand.
+            Set<String> deletedApplicationIds = dataService.getApplicationRepository().findByApplicantId(profile.getApplicantId()).stream()
+                    .map(ApplicationRecord::getApplicationId)
+                    .collect(java.util.stream.Collectors.toSet());
             applicationService.removeApplicationsForApplicant(profile.getApplicantId());
+            cvStorageService.deleteManagedCv(profile.getCvPath());
+            cvStorageService.deleteManagedSupportingDocuments(profile.getSupportingDocumentPaths());
+            cleanupService().cleanupDeletedApplicant(profile.getApplicantId(), profile.getUserId(), deletedApplicationIds);
 
             List<ApplicantProfile> profiles = new ArrayList<>(dataService.getProfileRepository().findAll());
             profiles.removeIf(existingProfile -> profile.getApplicantId().equals(existingProfile.getApplicantId()));
@@ -659,8 +1154,13 @@ public class AdminDashboardFrame extends JFrame {
             dataService.getJobRepository().saveAll(jobs);
 
             List<ApplicationRecord> applications = new ArrayList<>(dataService.getApplicationRepository().findAll());
+            Set<String> deletedApplicationIds = applications.stream()
+                    .filter(application -> deletedJobIds.contains(application.getJobId()))
+                    .map(ApplicationRecord::getApplicationId)
+                    .collect(java.util.stream.Collectors.toSet());
             applications.removeIf(application -> deletedJobIds.contains(application.getJobId()));
             dataService.getApplicationRepository().saveAll(applications);
+            cleanupService().cleanupDeletedModuleOrganiser(moUser.getUserId(), deletedJobIds, deletedApplicationIds);
 
             List<User> users = new ArrayList<>(dataService.getUserRepository().findAll());
             users.removeIf(user -> moUser.getUserId().equals(user.getUserId()));
@@ -671,6 +1171,17 @@ public class AdminDashboardFrame extends JFrame {
         } catch (Exception ex) {
             UiMessage.error(this, ex.getMessage());
         }
+    }
+
+    /**
+     * Builds the cleanup helper used by account-deletion workflows.
+     */
+    private AccountCleanupService cleanupService() {
+        return new AccountCleanupService(
+                dataService.getAllocationRepository(),
+                dataService.getMessageRepository(),
+                dataService.getNotificationRepository()
+        );
     }
 
     /**
@@ -704,6 +1215,23 @@ public class AdminDashboardFrame extends JFrame {
     }
 
     /**
+     * Provides a stable placeholder when an application has no reviewer notes yet.
+     */
+    private String reviewerNotesOrPending(String value) {
+        return value == null || value.isBlank() ? "Not yet reviewed" : value;
+    }
+
+    /**
+     * Converts an application's missing-skill list into a compact table-friendly string.
+     */
+    private String missingSkillsText(ApplicationRecord application) {
+        if (application.getMissingSkills() == null || application.getMissingSkills().isEmpty()) {
+            return "None";
+        }
+        return String.join(", ", application.getMissingSkills());
+    }
+
+    /**
      * Creates the emphasized numeric label used inside metric cards.
      */
     private static JLabel createMetricValueLabel() {
@@ -722,9 +1250,11 @@ public class AdminDashboardFrame extends JFrame {
                                                        boolean hasFocus, int row, int column) {
             Component component = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
             // A single red-tinted row is enough to surface overload risk without introducing another status widget.
-            Object overloadFlag = table.getValueAt(row, 3);
-            if (!isSelected && "YES".equals(overloadFlag)) {
+            Object status = table.getValueAt(row, 5);
+            if (!isSelected && status != null && String.valueOf(status).contains("Over weekly threshold")) {
                 component.setBackground(new Color(255, 224, 224));
+            } else if (!isSelected && status != null && String.valueOf(status).contains("Check event workload")) {
+                component.setBackground(new Color(255, 246, 217));
             } else if (!isSelected) {
                 component.setBackground(Color.WHITE);
             }

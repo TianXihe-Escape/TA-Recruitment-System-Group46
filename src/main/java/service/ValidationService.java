@@ -1,10 +1,12 @@
-﻿package service;
+package service;
 
+import model.JobCategory;
 import model.JobPosting;
 import util.FileUtil;
 
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -26,6 +28,9 @@ public class ValidationService {
     private static final int MAX_SKILL_LENGTH = 30;
     private static final int MAX_MODULE_CODE_LENGTH = 20;
     private static final int MAX_MODULE_TITLE_LENGTH = 80;
+    private static final int MAX_PROGRAMME_LENGTH = 80;
+    private static final int MAX_YEAR_LENGTH = 20;
+    private static final int MAX_SEMESTER_LENGTH = 40;
     private static final int MAX_DUTIES_LENGTH = 300;
     private static final int MAX_REQUIRED_TA_COUNT = 20;
     private static final List<String> ALLOWED_CV_EXTENSIONS = List.of("pdf", "doc", "docx", "rtf", "txt");
@@ -83,11 +88,29 @@ public class ValidationService {
         return errors;
     }
 
+    public List<String> validateAcademicProfile(String programme, String yearOfStudy) {
+        List<String> errors = new ArrayList<>();
+        String normalizedProgramme = normalizeText(programme);
+        String normalizedYear = normalizeText(yearOfStudy);
+        if (FileUtil.isBlank(normalizedProgramme)) {
+            errors.add("Programme is required.");
+        } else if (normalizedProgramme.length() > MAX_PROGRAMME_LENGTH) {
+            errors.add("Programme must be 80 characters or fewer.");
+        }
+        if (FileUtil.isBlank(normalizedYear)) {
+            errors.add("Year of study is required.");
+        } else if (normalizedYear.length() > MAX_YEAR_LENGTH) {
+            errors.add("Year of study must be 20 characters or fewer.");
+        }
+        return errors;
+    }
+
     public List<String> validateSkillInput(String rawSkills, String fieldLabel, boolean required) {
         List<String> errors = new ArrayList<>();
         List<String> tokens = splitSkillTokens(rawSkills);
         String normalizedFieldLabel = normalizeText(fieldLabel).isBlank() ? "Skills" : normalizeText(fieldLabel);
 
+        // Validate parsed tokens rather than raw text so punctuation and spacing are normalized first.
         if (required && tokens.isEmpty()) {
             errors.add("At least one " + normalizedFieldLabel.toLowerCase(Locale.ROOT) + " item is required.");
             return errors;
@@ -138,8 +161,16 @@ public class ValidationService {
     }
 
     public List<String> validateCvPath(String cvPath) {
+        return validateDocumentPath(cvPath, "CV file");
+    }
+
+    public List<String> validateSupportingDocumentPath(String documentPath) {
+        return validateDocumentPath(documentPath, "Supporting document");
+    }
+
+    private List<String> validateDocumentPath(String documentPath, String label) {
         List<String> errors = new ArrayList<>();
-        String normalizedPath = normalizeText(cvPath);
+        String normalizedPath = normalizeText(documentPath);
         if (FileUtil.isBlank(normalizedPath)) {
             return errors;
         }
@@ -149,13 +180,13 @@ public class ValidationService {
                 : Path.of(normalizedPath).getFileName().toString();
         int extensionIndex = fileName.lastIndexOf('.');
         if (extensionIndex < 0) {
-            errors.add("CV file must use a common resume format: PDF, DOC, DOCX, RTF, or TXT.");
+            errors.add(label + " must use a common document format: PDF, DOC, DOCX, RTF, or TXT.");
             return errors;
         }
 
         String extension = fileName.substring(extensionIndex + 1).toLowerCase(Locale.ROOT);
         if (!ALLOWED_CV_EXTENSIONS.contains(extension)) {
-            errors.add("CV file must use a common resume format: PDF, DOC, DOCX, RTF, or TXT.");
+            errors.add(label + " must use a common document format: PDF, DOC, DOCX, RTF, or TXT.");
         }
         return errors;
     }
@@ -164,6 +195,7 @@ public class ValidationService {
         List<String> errors = new ArrayList<>();
         String moduleCode = normalizeModuleCode(jobPosting.getModuleCode());
         String moduleTitle = normalizeText(jobPosting.getModuleTitle());
+        String semester = normalizeText(jobPosting.getSemester());
         String duties = normalizeMultilineText(jobPosting.getDuties());
         List<String> requiredSkills = parseSkills(String.join(", ", jobPosting.getRequiredSkills()));
 
@@ -176,6 +208,14 @@ public class ValidationService {
             errors.add("Module title is required.");
         } else if (moduleTitle.length() > MAX_MODULE_TITLE_LENGTH) {
             errors.add("Module title must be 80 characters or fewer.");
+        }
+        if (jobPosting.getCategory() == null) {
+            errors.add("Job category is required.");
+        }
+        if (FileUtil.isBlank(semester)) {
+            errors.add("Semester is required.");
+        } else if (semester.length() > MAX_SEMESTER_LENGTH) {
+            errors.add("Semester must be 40 characters or fewer.");
         }
         if (jobPosting.getHours() <= 0) {
             errors.add("Hours must be greater than 0.");
@@ -191,6 +231,11 @@ public class ValidationService {
             errors.add("Application deadline is required.");
         } else if (jobPosting.getApplicationDeadline().isBefore(LocalDate.now())) {
             errors.add("Application deadline cannot be in the past.");
+        } else if (isOneOffActivity(jobPosting)
+                && !FileUtil.isBlank(jobPosting.getStartDate())
+                && parseDateOrNull(jobPosting.getStartDate()) != null
+                && !jobPosting.getApplicationDeadline().isBefore(parseDateOrNull(jobPosting.getStartDate()))) {
+            errors.add("Application deadline must be before the activity start date.");
         }
         if (requiredSkills.isEmpty()) {
             errors.add("At least one required skill is needed.");
@@ -208,11 +253,30 @@ public class ValidationService {
         return errors;
     }
 
+    private boolean isOneOffActivity(JobPosting jobPosting) {
+        // One-off jobs should stop accepting applications before the activity itself begins.
+        return JobPosting.WORKLOAD_TYPE_TOTAL.equals(jobPosting.getWorkloadType())
+                || jobPosting.getCategory() == JobCategory.INVIGILATION
+                || jobPosting.getCategory() == JobCategory.OTHER_ACTIVITY
+                || JobPosting.JOB_TYPE_INVIGILATION.equals(jobPosting.getJobType())
+                || JobPosting.JOB_TYPE_DEMO_SUPPORT.equals(jobPosting.getJobType())
+                || JobPosting.JOB_TYPE_WORKSHOP_SUPPORT.equals(jobPosting.getJobType());
+    }
+
+    private LocalDate parseDateOrNull(String value) {
+        try {
+            return LocalDate.parse(value);
+        } catch (DateTimeParseException ex) {
+            return null;
+        }
+    }
+
     public List<String> parseSkills(String commaSeparatedSkills) {
         if (FileUtil.isBlank(commaSeparatedSkills)) {
             return new ArrayList<>();
         }
         Map<String, String> normalizedSkills = new LinkedHashMap<>();
+        // Deduplicate case-insensitively while preserving the first readable spelling entered.
         splitSkillTokens(commaSeparatedSkills).stream()
                 .forEach(value -> normalizedSkills.putIfAbsent(value.toLowerCase(Locale.ROOT), value));
         return normalizedSkills.values().stream()

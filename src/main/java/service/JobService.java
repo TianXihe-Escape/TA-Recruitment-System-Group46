@@ -1,13 +1,17 @@
 package service;
 
+import model.JobCategory;
 import model.JobPosting;
 import model.JobStatus;
 import repository.JobRepository;
 import util.IdGenerator;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -56,6 +60,19 @@ public class JobService {
     public List<JobPosting> getOpenJobs() {
         return getAllJobs().stream()
                 .filter(job -> job.getStatus() == JobStatus.OPEN)
+                // Keep expired records in storage, but hide them from applicant browsing.
+                .filter(job -> job.getApplicationDeadline() == null
+                        || !job.getApplicationDeadline().isBefore(LocalDate.now()))
+                .collect(Collectors.toList());
+    }
+
+    public List<JobPosting> searchOpenJobs(String keyword, String moduleCode, JobCategory category) {
+        String normalizedKeyword = validationService.normalizeText(keyword).toLowerCase(Locale.ROOT);
+        String normalizedModule = validationService.normalizeModuleCode(moduleCode);
+        return getOpenJobs().stream()
+                .filter(job -> normalizedModule.isBlank() || normalizedModule.equals(job.getModuleCode()))
+                .filter(job -> category == null || category == job.getCategory())
+                .filter(job -> normalizedKeyword.isBlank() || matchesKeyword(job, normalizedKeyword))
                 .collect(Collectors.toList());
     }
 
@@ -81,6 +98,7 @@ public class JobService {
         // even when different MOs type the same information in different formats.
         jobPosting.setModuleCode(validationService.normalizeModuleCode(jobPosting.getModuleCode()));
         jobPosting.setModuleTitle(validationService.normalizeText(jobPosting.getModuleTitle()));
+        jobPosting.setSemester(validationService.normalizeText(jobPosting.getSemester()));
         jobPosting.setDuties(validationService.normalizeMultilineText(jobPosting.getDuties()));
         jobPosting.setRequiredSkills(validationService.parseSkills(String.join(", ", jobPosting.getRequiredSkills())));
 
@@ -94,6 +112,7 @@ public class JobService {
             // Generate ids from the current data set so manually seeded demo data
             // and newly created jobs still share the same numbering scheme.
             jobPosting.setJobId(IdGenerator.nextJobId(
+                    jobPosting.getModuleCode(),
                     jobs.stream()
                             .map(JobPosting::getJobId)
                             .toList()
@@ -115,5 +134,67 @@ public class JobService {
             }
         }
         jobRepository.saveAll(jobs);
+        verifySaved(jobPosting);
+    }
+
+    private void verifySaved(JobPosting expected) {
+        JobPosting actual = jobRepository.findById(expected.getJobId())
+                .orElseThrow(() -> new IllegalStateException("Job was not written to the jobs data file."));
+        // Re-read the just-saved record so the UI can fail fast if persistence left stale values behind.
+        List<String> mismatches = savedJobMismatches(expected, actual);
+        if (!mismatches.isEmpty()) {
+            throw new IllegalStateException("Job save verification failed. The jobs data file still contains stale values:\n- "
+                    + String.join("\n- ", mismatches));
+        }
+    }
+
+    private List<String> savedJobMismatches(JobPosting expected, JobPosting actual) {
+        List<String> mismatches = new ArrayList<>();
+        addMismatch(mismatches, "jobId", expected.getJobId(), actual.getJobId());
+        addMismatch(mismatches, "moduleCode", expected.getModuleCode(), actual.getModuleCode());
+        addMismatch(mismatches, "moduleTitle", expected.getModuleTitle(), actual.getModuleTitle());
+        addMismatch(mismatches, "category", expected.getCategory(), actual.getCategory());
+        addMismatch(mismatches, "semester", expected.getSemester(), actual.getSemester());
+        addMismatch(mismatches, "duties", expected.getDuties(), actual.getDuties());
+        addMismatch(mismatches, "hours", expected.getHours(), actual.getHours());
+        addMismatch(mismatches, "jobType", expected.getJobType(), actual.getJobType());
+        addMismatch(mismatches, "startDate", expected.getStartDate(), actual.getStartDate());
+        addMismatch(mismatches, "endDate", expected.getEndDate(), actual.getEndDate());
+        addMismatch(mismatches, "schedule", expected.getSchedule(), actual.getSchedule());
+        addMismatch(mismatches, "location", expected.getLocation(), actual.getLocation());
+        addMismatch(mismatches, "workloadType", expected.getWorkloadType(), actual.getWorkloadType());
+        addMismatch(mismatches, "requiredTaCount", expected.getRequiredTaCount(), actual.getRequiredTaCount());
+        addMismatch(mismatches, "requiredSkills", expected.getRequiredSkills(), actual.getRequiredSkills());
+        addMismatch(mismatches, "applicationDeadline", expected.getApplicationDeadline(), actual.getApplicationDeadline());
+        addMismatch(mismatches, "status", expected.getStatus(), actual.getStatus());
+        addMismatch(mismatches, "postedBy", expected.getPostedBy(), actual.getPostedBy());
+        return mismatches;
+    }
+
+    private void addMismatch(List<String> mismatches, String fieldName, Object expected, Object actual) {
+        if (!Objects.equals(expected, actual)) {
+            mismatches.add(fieldName + ": expected [" + expected + "], actual [" + actual + "]");
+        }
+    }
+
+    private boolean matchesKeyword(JobPosting job, String keyword) {
+        // Search across the same mix of fields the user can visually inspect in the UI.
+        String haystack = String.join(" ",
+                valueOrEmpty(job.getModuleCode()),
+                valueOrEmpty(job.getModuleTitle()),
+                valueOrEmpty(job.getSemester()),
+                job.getCategory() == null ? "" : job.getCategory().getDisplayName(),
+                valueOrEmpty(job.getJobType()),
+                valueOrEmpty(job.getWorkloadType()),
+                valueOrEmpty(job.getSchedule()),
+                valueOrEmpty(job.getLocation()),
+                valueOrEmpty(job.getDuties()),
+                String.join(" ", job.getRequiredSkills())
+        ).toLowerCase(Locale.ROOT);
+        return haystack.contains(keyword);
+    }
+
+    private String valueOrEmpty(String value) {
+        return value == null ? "" : value;
     }
 }

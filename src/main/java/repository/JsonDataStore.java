@@ -3,9 +3,14 @@ package repository;
 import model.ApplicantProfile;
 import model.ApplicationRecord;
 import model.ApplicationStatus;
+import model.AllocationRecord;
+import model.JobCategory;
 import model.JobPosting;
 import model.JobStatus;
+import model.MessageRecord;
+import model.NotificationRecord;
 import model.Role;
+import model.StatusHistoryEntry;
 import model.SystemConfig;
 import model.User;
 import util.JsonUtil;
@@ -14,6 +19,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -49,7 +55,9 @@ public class JsonDataStore {
             }
             return results;
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to read data from " + path, e);
+            throw new IllegalStateException("Could not read JSON data file " + path + ".", e);
+        } catch (RuntimeException e) {
+            throw damagedFileException(path, e);
         }
     }
 
@@ -63,7 +71,7 @@ public class JsonDataStore {
             for (T value : values) {
                 serialized.add(serialize(value));
             }
-            Files.writeString(path, JsonUtil.toPrettyJson(serialized), StandardCharsets.UTF_8);
+            writeStringAtomically(path, JsonUtil.toPrettyJson(serialized));
         } catch (IOException e) {
             throw new IllegalStateException("Failed to write data to " + path, e);
         }
@@ -84,7 +92,9 @@ public class JsonDataStore {
             Map<String, Object> map = (Map<String, Object>) rawMap;
             return convertMap(clazz, map);
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to read config from " + path, e);
+            throw new IllegalStateException("Could not read JSON data file " + path + ".", e);
+        } catch (RuntimeException e) {
+            throw damagedFileException(path, e);
         }
     }
 
@@ -94,7 +104,7 @@ public class JsonDataStore {
     public <T> void writeObject(Path path, T value) {
         ensureParent(path);
         try {
-            Files.writeString(path, JsonUtil.toPrettyJson(serialize(value)), StandardCharsets.UTF_8);
+            writeStringAtomically(path, JsonUtil.toPrettyJson(serialize(value)));
         } catch (IOException e) {
             throw new IllegalStateException("Failed to write config to " + path, e);
         }
@@ -131,6 +141,26 @@ public class JsonDataStore {
         }
     }
 
+    private void writeStringAtomically(Path path, String content) throws IOException {
+        ensureParent(path);
+        Path temp = Files.createTempFile(path.getParent(), path.getFileName().toString(), ".tmp");
+        try {
+            // Write-then-move avoids leaving a half-written JSON file behind if saving is interrupted.
+            Files.writeString(temp, content, StandardCharsets.UTF_8);
+            Files.move(temp, path, StandardCopyOption.REPLACE_EXISTING);
+        } finally {
+            Files.deleteIfExists(temp);
+        }
+    }
+
+    private IllegalStateException damagedFileException(Path path, RuntimeException cause) {
+        return new IllegalStateException(
+                "The JSON data file appears to be damaged: " + path
+                        + ". Restore sample data from the application or delete the damaged file so it can be recreated.",
+                cause
+        );
+    }
+
     @SuppressWarnings("unchecked")
     /**
      * Converts a parsed JSON object map into one of the supported domain models.
@@ -154,11 +184,21 @@ public class JsonDataStore {
             profile.setName(stringValue(map.get("name")));
             profile.setEmail(stringValue(map.get("email")));
             profile.setPhone(stringValue(map.get("phone")));
+            profile.setProgramme(stringValue(map.get("programme")));
+            profile.setYearOfStudy(stringValue(map.get("yearOfStudy")));
             profile.setSkills(stringList(map.get("skills")));
             profile.setAvailability(stringValue(map.get("availability")));
             profile.setExperienceSummary(stringValue(map.get("experienceSummary")));
             profile.setPreferredDuties(stringValue(map.get("preferredDuties")));
             profile.setCvPath(stringValue(map.get("cvPath")));
+            List<String> supportingDocumentPaths = stringList(map.get("supportingDocumentPaths"));
+            if (supportingDocumentPaths.isEmpty()) {
+                // Older saved data used a single path field, so keep backward compatibility here.
+                profile.setSupportingDocumentPath(stringValue(map.get("supportingDocumentPath")));
+            } else {
+                profile.setSupportingDocumentPaths(supportingDocumentPaths);
+            }
+            profile.setFavoriteJobIds(stringList(map.get("favoriteJobIds")));
             return (T) profile;
         }
         if (clazz == JobPosting.class) {
@@ -166,8 +206,16 @@ public class JsonDataStore {
             job.setJobId(stringValue(map.get("jobId")));
             job.setModuleCode(stringValue(map.get("moduleCode")));
             job.setModuleTitle(stringValue(map.get("moduleTitle")));
+            job.setCategory(enumValueOrDefault(JobCategory.class, map.get("category"), JobCategory.MODULE_TA));
+            job.setSemester(stringValue(map.get("semester")));
             job.setDuties(stringValue(map.get("duties")));
             job.setHours(intValue(map.get("hours")));
+            job.setJobType(stringValue(map.get("jobType")));
+            job.setStartDate(stringValue(map.get("startDate")));
+            job.setEndDate(stringValue(map.get("endDate")));
+            job.setSchedule(stringValue(map.get("schedule")));
+            job.setLocation(stringValue(map.get("location")));
+            job.setWorkloadType(stringValue(map.get("workloadType")));
             Object requiredTaCount = map.get("requiredTaCount");
             job.setRequiredTaCount(requiredTaCount == null ? 1 : intValue(requiredTaCount));
             job.setRequiredSkills(stringList(map.get("requiredSkills")));
@@ -184,11 +232,52 @@ public class JsonDataStore {
             record.setJobId(stringValue(map.get("jobId")));
             String appliedAt = stringValue(map.get("appliedAt"));
             record.setAppliedAt(appliedAt == null || appliedAt.isBlank() ? null : LocalDateTime.parse(appliedAt));
+            String lastUpdatedAt = stringValue(map.get("lastUpdatedAt"));
+            record.setLastUpdatedAt(lastUpdatedAt == null || lastUpdatedAt.isBlank() ? null : LocalDateTime.parse(lastUpdatedAt));
+            String decisionAt = stringValue(map.get("decisionAt"));
+            record.setDecisionAt(decisionAt == null || decisionAt.isBlank() ? null : LocalDateTime.parse(decisionAt));
             record.setStatus(enumValue(ApplicationStatus.class, map.get("status")));
             record.setReviewerNotes(stringValue(map.get("reviewerNotes")));
             record.setMatchScore(intValue(map.get("matchScore")));
             record.setMissingSkills(stringList(map.get("missingSkills")));
+            // History may be absent in legacy files, so treat it as optional during reads.
+            record.setStatusHistory(statusHistoryList(map.get("statusHistory")));
             return (T) record;
+        }
+        if (clazz == NotificationRecord.class) {
+            NotificationRecord notification = new NotificationRecord();
+            notification.setNotificationId(stringValue(map.get("notificationId")));
+            notification.setUserId(stringValue(map.get("userId")));
+            notification.setMessage(stringValue(map.get("message")));
+            String createdAt = stringValue(map.get("createdAt"));
+            notification.setCreatedAt(createdAt == null || createdAt.isBlank() ? null : LocalDateTime.parse(createdAt));
+            notification.setRead(booleanValue(map.get("read")));
+            return (T) notification;
+        }
+        if (clazz == MessageRecord.class) {
+            MessageRecord message = new MessageRecord();
+            message.setMessageId(stringValue(map.get("messageId")));
+            message.setJobId(stringValue(map.get("jobId")));
+            message.setApplicationId(stringValue(map.get("applicationId")));
+            message.setSenderUserId(stringValue(map.get("senderUserId")));
+            message.setRecipientUserId(stringValue(map.get("recipientUserId")));
+            message.setBody(stringValue(map.get("body")));
+            String createdAt = stringValue(map.get("createdAt"));
+            message.setCreatedAt(createdAt == null || createdAt.isBlank() ? null : LocalDateTime.parse(createdAt));
+            message.setRead(booleanValue(map.get("read")));
+            return (T) message;
+        }
+        if (clazz == AllocationRecord.class) {
+            AllocationRecord allocation = new AllocationRecord();
+            allocation.setAllocationId(stringValue(map.get("allocationId")));
+            allocation.setApplicationId(stringValue(map.get("applicationId")));
+            allocation.setApplicantId(stringValue(map.get("applicantId")));
+            allocation.setJobId(stringValue(map.get("jobId")));
+            allocation.setAllocatedByUserId(stringValue(map.get("allocatedByUserId")));
+            String allocatedAt = stringValue(map.get("allocatedAt"));
+            allocation.setAllocatedAt(allocatedAt == null || allocatedAt.isBlank() ? null : LocalDateTime.parse(allocatedAt));
+            allocation.setActive(map.get("active") == null || booleanValue(map.get("active")));
+            return (T) allocation;
         }
         if (clazz == SystemConfig.class) {
             SystemConfig config = new SystemConfig();
@@ -223,11 +312,16 @@ public class JsonDataStore {
             map.put("name", profile.getName());
             map.put("email", profile.getEmail());
             map.put("phone", profile.getPhone());
+            map.put("programme", profile.getProgramme());
+            map.put("yearOfStudy", profile.getYearOfStudy());
             map.put("skills", new ArrayList<>(profile.getSkills()));
             map.put("availability", profile.getAvailability());
             map.put("experienceSummary", profile.getExperienceSummary());
             map.put("preferredDuties", profile.getPreferredDuties());
             map.put("cvPath", profile.getCvPath());
+            map.put("supportingDocumentPath", profile.getSupportingDocumentPath());
+            map.put("supportingDocumentPaths", new ArrayList<>(profile.getSupportingDocumentPaths()));
+            map.put("favoriteJobIds", new ArrayList<>(profile.getFavoriteJobIds()));
             return map;
         }
         if (value instanceof JobPosting job) {
@@ -235,8 +329,16 @@ public class JsonDataStore {
             map.put("jobId", job.getJobId());
             map.put("moduleCode", job.getModuleCode());
             map.put("moduleTitle", job.getModuleTitle());
+            map.put("category", job.getCategory() == null ? null : job.getCategory().name());
+            map.put("semester", job.getSemester());
             map.put("duties", job.getDuties());
             map.put("hours", job.getHours());
+            map.put("jobType", job.getJobType());
+            map.put("startDate", job.getStartDate());
+            map.put("endDate", job.getEndDate());
+            map.put("schedule", job.getSchedule());
+            map.put("location", job.getLocation());
+            map.put("workloadType", job.getWorkloadType());
             map.put("requiredTaCount", job.getRequiredTaCount());
             map.put("requiredSkills", new ArrayList<>(job.getRequiredSkills()));
             map.put("applicationDeadline", job.getApplicationDeadline() == null ? null : job.getApplicationDeadline().toString());
@@ -250,10 +352,49 @@ public class JsonDataStore {
             map.put("applicantId", record.getApplicantId());
             map.put("jobId", record.getJobId());
             map.put("appliedAt", record.getAppliedAt() == null ? null : record.getAppliedAt().toString());
+            map.put("lastUpdatedAt", record.getLastUpdatedAt() == null ? null : record.getLastUpdatedAt().toString());
+            map.put("decisionAt", record.getDecisionAt() == null ? null : record.getDecisionAt().toString());
             map.put("status", record.getStatus() == null ? null : record.getStatus().name());
             map.put("reviewerNotes", record.getReviewerNotes());
             map.put("matchScore", record.getMatchScore());
             map.put("missingSkills", new ArrayList<>(record.getMissingSkills()));
+            List<Object> history = new ArrayList<>();
+            for (StatusHistoryEntry entry : record.getStatusHistory()) {
+                history.add(serializeStatusHistoryEntry(entry));
+            }
+            map.put("statusHistory", history);
+            return map;
+        }
+        if (value instanceof NotificationRecord notification) {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("notificationId", notification.getNotificationId());
+            map.put("userId", notification.getUserId());
+            map.put("message", notification.getMessage());
+            map.put("createdAt", notification.getCreatedAt() == null ? null : notification.getCreatedAt().toString());
+            map.put("read", notification.isRead());
+            return map;
+        }
+        if (value instanceof MessageRecord message) {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("messageId", message.getMessageId());
+            map.put("jobId", message.getJobId());
+            map.put("applicationId", message.getApplicationId());
+            map.put("senderUserId", message.getSenderUserId());
+            map.put("recipientUserId", message.getRecipientUserId());
+            map.put("body", message.getBody());
+            map.put("createdAt", message.getCreatedAt() == null ? null : message.getCreatedAt().toString());
+            map.put("read", message.isRead());
+            return map;
+        }
+        if (value instanceof AllocationRecord allocation) {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("allocationId", allocation.getAllocationId());
+            map.put("applicationId", allocation.getApplicationId());
+            map.put("applicantId", allocation.getApplicantId());
+            map.put("jobId", allocation.getJobId());
+            map.put("allocatedByUserId", allocation.getAllocatedByUserId());
+            map.put("allocatedAt", allocation.getAllocatedAt() == null ? null : allocation.getAllocatedAt().toString());
+            map.put("active", allocation.isActive());
             return map;
         }
         if (value instanceof SystemConfig config) {
@@ -294,6 +435,45 @@ public class JsonDataStore {
         return results;
     }
 
+    private List<StatusHistoryEntry> statusHistoryList(Object value) {
+        List<StatusHistoryEntry> results = new ArrayList<>();
+        if (!(value instanceof List<?> items)) {
+            return results;
+        }
+        // Skip malformed entries instead of failing the whole application record load.
+        for (Object item : items) {
+            if (!(item instanceof Map<?, ?> rawMap)) {
+                continue;
+            }
+            @SuppressWarnings("unchecked")
+            Map<String, Object> map = (Map<String, Object>) rawMap;
+            StatusHistoryEntry entry = new StatusHistoryEntry();
+            entry.setStatus(enumValueOrDefault(ApplicationStatus.class, map.get("status"), ApplicationStatus.SUBMITTED));
+            String changedAt = stringValue(map.get("changedAt"));
+            entry.setChangedAt(changedAt == null || changedAt.isBlank() ? null : LocalDateTime.parse(changedAt));
+            entry.setActorUserId(stringValue(map.get("actorUserId")));
+            entry.setNote(stringValue(map.get("note")));
+            results.add(entry);
+        }
+        return results;
+    }
+
+    private Map<String, Object> serializeStatusHistoryEntry(StatusHistoryEntry entry) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("status", entry.getStatus() == null ? null : entry.getStatus().name());
+        map.put("changedAt", entry.getChangedAt() == null ? null : entry.getChangedAt().toString());
+        map.put("actorUserId", entry.getActorUserId());
+        map.put("note", entry.getNote());
+        return map;
+    }
+
+    private boolean booleanValue(Object value) {
+        if (value instanceof Boolean bool) {
+            return bool;
+        }
+        return Boolean.parseBoolean(String.valueOf(value));
+    }
+
     /**
      * Converts a stored enum name back into the target enum constant.
      */
@@ -301,6 +481,14 @@ public class JsonDataStore {
         if (value == null) {
             return null;
         }
+        return Enum.valueOf(enumClass, String.valueOf(value));
+    }
+
+    private <E extends Enum<E>> E enumValueOrDefault(Class<E> enumClass, Object value, E defaultValue) {
+        if (value == null || String.valueOf(value).isBlank()) {
+            return defaultValue;
+        }
+        // Defaults let newer code read older JSON files that did not yet store the enum field.
         return Enum.valueOf(enumClass, String.valueOf(value));
     }
 }
