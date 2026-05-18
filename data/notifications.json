@@ -68,5 +68,75 @@
     "message" : "Your Machine Learning application is a strong match.",
     "createdAt" : "2026-05-17T14:47:07.626877800",
     "read" : false
+  },
+  {
+    "notificationId" : "note-11",
+    "userId" : "user-ta-alice",
+    "message" : "Application submitted for CBU5201 Machine Learning - 2025/26.",
+    "createdAt" : "2026-05-18T10:48:26.440143100",
+    "read" : true
+  },
+  {
+    "notificationId" : "note-12",
+    "userId" : "user-mo-chao-liu",
+    "message" : "Alice Chen submitted an application for CBU5201 Machine Learning - 2025/26.",
+    "createdAt" : "2026-05-18T10:48:26.449932600",
+    "read" : false
+  },
+  {
+    "notificationId" : "note-13",
+    "userId" : "user-ta-jason",
+    "message" : "Your application for EBU6304 Demo Support Assistant for EBU6304 Final Assessment is now SHORTLISTED.",
+    "createdAt" : "2026-05-18T12:31:23.018413600",
+    "read" : false
+  },
+  {
+    "notificationId" : "note-14",
+    "userId" : "user-mo-ling",
+    "message" : "Application apply-15 for EBU6304 Demo Support Assistant for EBU6304 Final Assessment updated to SHORTLISTED.",
+    "createdAt" : "2026-05-18T12:31:23.028234800",
+    "read" : true
+  },
+  {
+    "notificationId" : "note-15",
+    "userId" : "user-ta-jason",
+    "message" : "Your application for EBU6304 Demo Support Assistant for EBU6304 Final Assessment is now ACCEPTED.",
+    "createdAt" : "2026-05-18T12:31:45.476120700",
+    "read" : false
+  },
+  {
+    "notificationId" : "note-16",
+    "userId" : "user-mo-ling",
+    "message" : "Application apply-15 for EBU6304 Demo Support Assistant for EBU6304 Final Assessment updated to ACCEPTED.",
+    "createdAt" : "2026-05-18T12:31:45.485028600",
+    "read" : true
+  },
+  {
+    "notificationId" : "note-17",
+    "userId" : "user-ta-alice",
+    "message" : "Your application for EBU6304 Software Engineering - 2025/26 is now SUBMITTED.",
+    "createdAt" : "2026-05-18T12:32:06.318469600",
+    "read" : false
+  },
+  {
+    "notificationId" : "note-18",
+    "userId" : "user-mo-ling",
+    "message" : "Application apply-01 for EBU6304 Software Engineering - 2025/26 updated to SUBMITTED.",
+    "createdAt" : "2026-05-18T12:32:06.328526900",
+    "read" : true
+  },
+  {
+    "notificationId" : "note-19",
+    "userId" : "user-ta-alice",
+    "message" : "Your application for EBU6304 Software Engineering - 2025/26 is now SHORTLISTED.",
+    "createdAt" : "2026-05-18T12:32:09.525614200",
+    "read" : false
+  },
+  {
+    "notificationId" : "note-20",
+    "userId" : "user-mo-ling",
+    "message" : "Application apply-01 for EBU6304 Software Engineering - 2025/26 updated to SHORTLISTED.",
+    "createdAt" : "2026-05-18T12:32:09.535034700",
+    "read" : true
   }
 ]

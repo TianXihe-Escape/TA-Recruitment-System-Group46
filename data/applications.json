@@ -4,10 +4,10 @@
     "applicantId" : "applicant-alice",
     "jobId" : "job-ebu6304",
     "appliedAt" : "2026-05-11T19:47:07.626877800",
-    "lastUpdatedAt" : "2026-05-12T03:47:07.626877800",
+    "lastUpdatedAt" : "2026-05-18T12:32:09.513250",
     "decisionAt" : null,
     "status" : "SHORTLISTED",
-    "reviewerNotes" : "Strong match for software engineering labs. Good Java and GitHub background. Recommended for shortlist.",
+    "reviewerNotes" : "Strong match for software engineering labs. Good Java and GitHub background. Recommended for shortlist.\nShortlist status removed.",
     "matchScore" : 100,
     "missingSkills" : [ ],
     "statusHistory" : [
@@ -22,6 +22,18 @@
         "changedAt" : "2026-05-12T03:47:07.626877800",
         "actorUserId" : "user-mo-ling",
         "note" : "Strong match for software engineering labs. Good Java and GitHub background. Recommended for shortlist."
+      },
+      {
+        "status" : "SUBMITTED",
+        "changedAt" : "2026-05-18T12:32:06.305069700",
+        "actorUserId" : "user-mo-ling",
+        "note" : "Shortlist status removed."
+      },
+      {
+        "status" : "SHORTLISTED",
+        "changedAt" : "2026-05-18T12:32:09.513250",
+        "actorUserId" : "user-mo-ling",
+        "note" : "Strong match for software engineering labs. Good Java and GitHub background. Recommended for shortlist.\nShortlist status removed."
       }
     ]
   },
@@ -401,10 +413,10 @@
     "applicantId" : "applicant-jason",
     "jobId" : "job-ebu6304-demo",
     "appliedAt" : "2026-05-17T09:47:07.626877800",
-    "lastUpdatedAt" : "2026-05-17T17:47:07.626877800",
-    "decisionAt" : "2026-05-17T17:47:07.626877800",
+    "lastUpdatedAt" : "2026-05-18T12:31:45.440903300",
+    "decisionAt" : "2026-05-18T12:31:45.440903300",
     "status" : "ACCEPTED",
-    "reviewerNotes" : "Broad technical background and presentation support experience. Accepted for final demo logistics and technical checks.",
+    "reviewerNotes" : "Broad technical background and presentation support experience. Accepted for final demo logistics and technical checks.\nAcceptance cancelled and the job was reopened.",
     "matchScore" : 50,
     "missingSkills" : [
       "Software Engineering",
@@ -422,6 +434,44 @@
         "changedAt" : "2026-05-17T17:47:07.626877800",
         "actorUserId" : "user-mo-ling",
         "note" : "Broad technical background and presentation support experience. Accepted for final demo logistics and technical checks."
+      },
+      {
+        "status" : "SHORTLISTED",
+        "changedAt" : "2026-05-18T12:31:22.978636400",
+        "actorUserId" : "user-mo-ling",
+        "note" : "Acceptance cancelled and the job was reopened."
+      },
+      {
+        "status" : "ACCEPTED",
+        "changedAt" : "2026-05-18T12:31:45.440903300",
+        "actorUserId" : "user-mo-ling",
+        "note" : "Broad technical background and presentation support experience. Accepted for final demo logistics and technical checks.\nAcceptance cancelled and the job was reopened."
+      }
+    ]
+  },
+  {
+    "applicationId" : "apply-16",
+    "applicantId" : "applicant-alice",
+    "jobId" : "job-cbu5201",
+    "appliedAt" : "2026-05-18T10:48:26.436345200",
+    "lastUpdatedAt" : "2026-05-18T10:48:26.436345200",
+    "decisionAt" : null,
+    "status" : "SUBMITTED",
+    "reviewerNotes" : null,
+    "matchScore" : 0,
+    "missingSkills" : [
+      "Python",
+      "Machine Learning",
+      "Data Analysis",
+      "Mathematics",
+      "Jupyter Notebook"
+    ],
+    "statusHistory" : [
+      {
+        "status" : "SUBMITTED",
+        "changedAt" : "2026-05-18T10:48:26.436345200",
+        "actorUserId" : "user-ta-alice",
+        "note" : "Application submitted."
       }
     ]
   }
