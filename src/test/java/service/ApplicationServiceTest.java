@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -193,6 +194,48 @@ class ApplicationServiceTest {
     }
 
     @Test
+    void shouldSaveReviewerNotesWithoutChangingStatus() {
+        ApplicationRecord record = new ApplicationRecord();
+        record.setApplicationId("x1");
+        record.setApplicantId("a1");
+        record.setJobId("j1");
+        record.setStatus(ApplicationStatus.SUBMITTED);
+        applicationRepository.saveAll(new ArrayList<>(List.of(record)));
+
+        applicationService.saveReviewerNotes("x1", "Good technical background. Keep under review.");
+
+        ApplicationRecord updated = applicationRepository.findAll().get(0);
+        assertEquals(ApplicationStatus.SUBMITTED, updated.getStatus());
+        assertEquals("Good technical background. Keep under review.", updated.getReviewerNotes());
+        assertNotNull(updated.getLastUpdatedAt());
+        assertEquals(0, updated.getStatusHistory().size());
+    }
+
+    @Test
+    void shouldPreserveReviewerNotesWhenUpdatingOperationalStatus() {
+        ApplicationRecord record = new ApplicationRecord();
+        record.setApplicationId("x1");
+        record.setApplicantId("a1");
+        record.setJobId("j1");
+        record.setStatus(ApplicationStatus.SHORTLISTED);
+        record.setReviewerNotes("Strong match for lab support.");
+        applicationRepository.saveAll(new ArrayList<>(List.of(record)));
+        jobRepository.saveAll(List.of(buildJob()));
+
+        applicationService.updateStatusPreservingReviewerNotes(
+                "x1",
+                ApplicationStatus.INTERVIEW_INVITED,
+                "Interview invited. Time: Monday 10:00.",
+                "mo1");
+
+        ApplicationRecord updated = applicationRepository.findAll().get(0);
+        assertEquals(ApplicationStatus.INTERVIEW_INVITED, updated.getStatus());
+        assertEquals("Strong match for lab support.", updated.getReviewerNotes());
+        assertEquals(1, updated.getStatusHistory().size());
+        assertTrue(updated.getStatusHistory().get(0).getNote().contains("Monday 10:00"));
+    }
+
+    @Test
     void shouldRemoveShortlistStatus() {
         ApplicationRecord record = new ApplicationRecord();
         record.setApplicationId("x1");
@@ -205,8 +248,9 @@ class ApplicationServiceTest {
 
         ApplicationRecord updated = applicationRepository.findAll().get(0);
         assertEquals(ApplicationStatus.SUBMITTED, updated.getStatus());
-        assertTrue(updated.getReviewerNotes().contains("Shortlist status removed"));
+        assertEquals("not selected yet", updated.getReviewerNotes());
         assertEquals(1, updated.getStatusHistory().size());
+        assertTrue(updated.getStatusHistory().get(0).getNote().contains("Shortlist status removed"));
     }
 
     @Test
@@ -250,6 +294,7 @@ class ApplicationServiceTest {
         record.setApplicantId("a1");
         record.setJobId("j1");
         record.setStatus(ApplicationStatus.ACCEPTED);
+        record.setReviewerNotes("Original MO evaluation.");
         applicationRepository.saveAll(new ArrayList<>(List.of(record)));
         jobRepository.saveAll(List.of(buildJob()));
 
@@ -259,7 +304,8 @@ class ApplicationServiceTest {
         JobPosting updatedJob = jobRepository.findById("j1").orElseThrow();
 
         assertEquals(ApplicationStatus.SHORTLISTED, records.get(0).getStatus());
-        assertTrue(records.get(0).getReviewerNotes().contains("job was reopened"));
+        assertEquals("Original MO evaluation.", records.get(0).getReviewerNotes());
+        assertTrue(records.get(0).getStatusHistory().get(0).getNote().contains("job was reopened"));
         assertEquals(JobStatus.OPEN, updatedJob.getStatus());
         assertTrue(allocationRepository.findAll().stream().noneMatch(allocation -> allocation.isActive()));
     }
@@ -364,7 +410,8 @@ class ApplicationServiceTest {
         JobPosting updatedJob = jobRepository.findById("j1").orElseThrow();
 
         assertEquals(ApplicationStatus.SHORTLISTED, updatedRecord.getStatus());
-        assertTrue(updatedRecord.getReviewerNotes().contains("MO cancelled the offer"));
+        assertEquals("MO cancelled the offer", updatedRecord.getReviewerNotes());
+        assertTrue(updatedRecord.getStatusHistory().get(0).getNote().contains("Acceptance cancelled"));
         assertEquals(JobStatus.OPEN, updatedJob.getStatus());
     }
 
@@ -375,13 +422,15 @@ class ApplicationServiceTest {
         record.setApplicantId("a1");
         record.setJobId("j1");
         record.setStatus(ApplicationStatus.SUBMITTED);
+        record.setReviewerNotes("Original MO evaluation.");
         applicationRepository.saveAll(new ArrayList<>(List.of(record)));
 
         applicationService.withdrawApplication("x1");
 
         ApplicationRecord updated = applicationRepository.findAll().get(0);
         assertEquals(ApplicationStatus.WITHDRAWN, updated.getStatus());
-        assertTrue(updated.getReviewerNotes().contains("Withdrawn by applicant"));
+        assertEquals("Original MO evaluation.", updated.getReviewerNotes());
+        assertTrue(updated.getStatusHistory().get(0).getNote().contains("Withdrawn by applicant"));
     }
 
     @Test
