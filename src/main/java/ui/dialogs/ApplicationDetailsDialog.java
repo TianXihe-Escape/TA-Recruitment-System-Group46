@@ -18,7 +18,30 @@ public class ApplicationDetailsDialog extends JDialog {
      * Opens the dialog for one submitted application.
      */
     public ApplicationDetailsDialog(Frame owner, ApplicationRecord application, JobPosting job, String taDemandSummary) {
-        this(owner, application, job, taDemandSummary, null);
+        this(owner, application, job, taDemandSummary, null, null);
+    }
+
+    /**
+     * Opens the dialog with a TA-facing module organiser summary.
+     */
+    public ApplicationDetailsDialog(Frame owner,
+                                    ApplicationRecord application,
+                                    JobPosting job,
+                                    String taDemandSummary,
+                                    String moduleOrganiserSummary) {
+        this(owner, application, job, taDemandSummary, moduleOrganiserSummary, null, null);
+    }
+
+    /**
+     * Opens the dialog with caller-provided actions below the read-only details.
+     */
+    public ApplicationDetailsDialog(Frame owner,
+                                    ApplicationRecord application,
+                                    JobPosting job,
+                                    String taDemandSummary,
+                                    String moduleOrganiserSummary,
+                                    JComponent actionPanel) {
+        this(owner, application, job, taDemandSummary, moduleOrganiserSummary, actionPanel, null);
     }
 
     /**
@@ -29,6 +52,16 @@ public class ApplicationDetailsDialog extends JDialog {
                                     JobPosting job,
                                     String taDemandSummary,
                                     BooleanSupplier deleteAction) {
+        this(owner, application, job, taDemandSummary, null, null, deleteAction);
+    }
+
+    private ApplicationDetailsDialog(Frame owner,
+                                     ApplicationRecord application,
+                                     JobPosting job,
+                                     String taDemandSummary,
+                                     String moduleOrganiserSummary,
+                                     JComponent actionPanel,
+                                     BooleanSupplier deleteAction) {
         super(owner, "Application Details", true);
         getContentPane().setBackground(UiTheme.BACKGROUND);
 
@@ -40,6 +73,10 @@ public class ApplicationDetailsDialog extends JDialog {
                 ? "[Deleted Job]"
                 : job.getModuleCode() + " - " + job.getModuleTitle()));
         row += 2;
+        if (moduleOrganiserSummary != null && !moduleOrganiserSummary.isBlank()) {
+            UiTheme.addFormRow(details, row, "Module Organiser", readOnlyValue(moduleOrganiserSummary));
+            row += 2;
+        }
         UiTheme.addFormRow(details, row, "Job ID", readOnlyValue(application.getJobId()));
         row += 2;
         UiTheme.addFormRow(details, row, "Status", readOnlyValue(String.valueOf(application.getStatus())));
@@ -75,7 +112,9 @@ public class ApplicationDetailsDialog extends JDialog {
         JPanel root = UiTheme.createPagePanel();
         JPanel card = UiTheme.createCard("Application Summary", "Read-only details for the selected application and its linked job.");
         card.add(UiTheme.wrapPage(details), BorderLayout.CENTER);
-        if (deleteAction != null) {
+        if (actionPanel != null) {
+            card.add(actionPanel, BorderLayout.SOUTH);
+        } else if (deleteAction != null) {
             card.add(buildManagementButtons(application, deleteAction), BorderLayout.SOUTH);
         }
         root.add(card, BorderLayout.CENTER);

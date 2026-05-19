@@ -230,7 +230,7 @@ public class ValidationService {
         if (jobPosting.getApplicationDeadline() == null) {
             errors.add("Application deadline is required.");
         } else if (jobPosting.getApplicationDeadline().isBefore(LocalDate.now())) {
-            errors.add("Application deadline cannot be in the past.");
+            errors.add("Application deadline cannot be before today.");
         } else if (isOneOffActivity(jobPosting)
                 && !FileUtil.isBlank(jobPosting.getStartDate())
                 && parseDateOrNull(jobPosting.getStartDate()) != null
